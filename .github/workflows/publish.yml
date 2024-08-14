@@ -32,6 +32,9 @@ jobs:
       - name: Build Next
         run: npx next build
 
+      - name: debug
+        run: ls -hal
+
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
