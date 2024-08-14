@@ -4,4 +4,4 @@ const nextConfig = {
   basePath: '/game-timer'
 };
 
-export default nextConfig;
+module.exports = nextConfig;
