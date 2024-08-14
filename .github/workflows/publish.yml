@@ -32,9 +32,6 @@ jobs:
       - name: Build Next
         run: npx next build
 
-      - name: Export Next
-        run: npx next export
-
       - name: debug
         run: ls -hal
 
