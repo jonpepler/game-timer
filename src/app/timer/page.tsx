@@ -11,10 +11,12 @@ import {
 } from "react-timer-hook";
 import "react-circular-progressbar/dist/styles.css";
 import { useImmutableList } from "@/hooks/useImmutableList";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 const initialTime = 5 * 60;
 
 export default function Home() {
+  const { height, width } = useWindowSize();
   const [started, setStarted] = useState(false);
   const timer = useTimer({ autoStart: false, expiryTimestamp: new Date() });
   const stopwatch = useStopwatch({ autoStart: false });
@@ -48,15 +50,12 @@ export default function Home() {
       startTimer();
       return;
     }
-    console.log(averageTime, timer.totalSeconds);
     const timePassed =
       averageTime -
       timer.totalSeconds +
       (timerFinished ? stopwatch.totalSeconds : 0);
-    console.log({ timePassed });
     const newAverageTime = getNewAverageTime(timePassed);
     addTime(timePassed);
-    console.log({ newAverageTime });
     setAverageTime(newAverageTime);
     timer.restart(getDateSecondsFromNow(newAverageTime));
   };
@@ -67,31 +66,42 @@ export default function Home() {
   const getTimerString = () => getTimeString(timer);
   const getStopwatchString = () => getTimeString(stopwatch);
 
+  const size = (Math.min(...[height, width]) / 3) * 2;
+
   return (
     <main className={styles.main} onClick={resetTimer}>
-      <CircularProgressbar
-        value={(timer.totalSeconds / averageTime) * 100}
-        background={timerFinished}
-        styles={{
-          path: {
-            // Path color
-            // stroke: `rgba(62, 152, 199, 50)`,
-            // Whether to use rounded or flat corners on the ends - can use 'butt' or 'round'
-            strokeLinecap: "butt",
-            strokeDasharray: "20,10",
-            // Customize transition animation
-            // transition: "stroke-dashoffset 0.5s ease 0s",
-            // Rotate the path
-            // transform: "rotate(0.25turn)",
-            // transformOrigin: "center center",
-          },
-          text: {
-            fontFamily: "monospace",
-          },
-          background: {},
-        }}
-        text={timerFinished ? "+" + getStopwatchString() : getTimerString()}
-      />
+      <div style={{ width: size, height: size }}>
+        <CircularProgressbar
+          value={(timer.totalSeconds / averageTime) * 100}
+          styles={{
+            root: {
+              // stroke: "red",
+            },
+            path: {
+              // Path color
+              stroke: "rgba(255, 255, 255)",
+              // Whether to use rounded or flat corners on the ends - can use 'butt' or 'round'
+              strokeLinecap: "butt",
+              strokeWidth: "2",
+              strokeDasharray: "10, 5",
+              // Customize transition animation
+              // transition: "stroke-dashoffset 0.5s ease 0s",
+              // Rotate the path
+              // transform: "rotate(0.25turn)",
+              // transformOrigin: "center center",
+            },
+            trail: {
+              strokeWidth: "0.2",
+            },
+            text: {
+              fontFamily: "monospace",
+              fill: "white",
+            },
+            background: {},
+          }}
+          text={timerFinished ? "+" + getStopwatchString() : getTimerString()}
+        />
+      </div>
     </main>
   );
 }
