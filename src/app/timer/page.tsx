@@ -12,8 +12,10 @@ import {
 import "react-circular-progressbar/dist/styles.css";
 import { useImmutableList } from "@/hooks/useImmutableList";
 import { useWindowSize } from "@/hooks/useWindowSize";
+import { useTurnCounter } from "@/hooks/useTurnCounter";
 
 const initialTime = 5 * 60;
+const expectedTurns = 90;
 
 export default function Home() {
   const { height, width } = useWindowSize();
@@ -22,6 +24,7 @@ export default function Home() {
   const stopwatch = useStopwatch({ autoStart: false });
   const [times, addTime] = useImmutableList<number>();
   const [averageTime, setAverageTime] = useState(initialTime);
+  const { turns, remainingTurns, nextTurn } = useTurnCounter(expectedTurns);
 
   const timerFinished = timer.totalSeconds === 0 && started;
 
@@ -58,6 +61,8 @@ export default function Home() {
     addTime(timePassed);
     setAverageTime(newAverageTime);
     timer.restart(getDateSecondsFromNow(newAverageTime));
+
+    nextTurn();
   };
 
   const getTimeString = (t: TimerResult | StopwatchResult) =>
@@ -74,21 +79,11 @@ export default function Home() {
         <CircularProgressbar
           value={(timer.totalSeconds / averageTime) * 100}
           styles={{
-            root: {
-              // stroke: "red",
-            },
             path: {
-              // Path color
               stroke: "rgba(255, 255, 255)",
-              // Whether to use rounded or flat corners on the ends - can use 'butt' or 'round'
               strokeLinecap: "butt",
               strokeWidth: "2",
               strokeDasharray: "10, 5",
-              // Customize transition animation
-              // transition: "stroke-dashoffset 0.5s ease 0s",
-              // Rotate the path
-              // transform: "rotate(0.25turn)",
-              // transformOrigin: "center center",
             },
             trail: {
               strokeWidth: "0.2",
@@ -101,6 +96,11 @@ export default function Home() {
           }}
           text={timerFinished ? "+" + getStopwatchString() : getTimerString()}
         />
+      </div>
+      <div>{remainingTurns}</div>
+      <div>
+        Predicted game finish:{" "}
+        {getDateSecondsFromNow(remainingTurns * averageTime).toTimeString()}
       </div>
     </main>
   );
