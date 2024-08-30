@@ -21,8 +21,12 @@ const expectedTurns = 90;
 export default function Home() {
   const { height, width } = useWindowSize();
   const [started, setStarted] = useState(false);
-  const timer = useTimer({ autoStart: false, expiryTimestamp: new Date() });
   const stopwatch = useStopwatch({ autoStart: false });
+  const timer = useTimer({
+    autoStart: false,
+    expiryTimestamp: new Date(),
+    onExpire: () => stopwatch.reset(),
+  });
   const [times, addTime] = useImmutableList<number>();
   const [averageTime, setAverageTime] = useState(initialTime);
   const { remainingTurns, nextTurn, setExpectedTurns } =
@@ -34,9 +38,9 @@ export default function Home() {
     [timer, stopwatch],
   );
 
-  useEffect(() => {
-    if (timerFinished) stopwatch.reset();
-  }, [timerFinished]);
+  // useEffect(() => {
+  //   if (timerFinished) stopwatch.reset();
+  // }, [timerFinished]);
 
   const getDateSecondsFromNow = (seconds: number) => {
     const date = new Date();
@@ -100,6 +104,7 @@ export default function Home() {
           <div style={{ width: size, height: size }}>
             <CircularProgressbar
               value={(timer.totalSeconds / averageTime) * 100}
+              background
               styles={{
                 path: {
                   stroke: paused ? "grey" : "white",
@@ -114,7 +119,14 @@ export default function Home() {
                   fontFamily: "monospace",
                   fill: paused ? "grey" : "white",
                 },
-                background: {},
+                background: {
+                  fill: "red",
+                  fillOpacity: timerFinished
+                    ? stopwatch.totalSeconds / averageTime
+                    : 0,
+                  transitionProperty: "fill-opacity",
+                  transitionDuration: "2s",
+                },
               }}
               text={
                 timerFinished ? "+" + getStopwatchString() : getTimerString()
