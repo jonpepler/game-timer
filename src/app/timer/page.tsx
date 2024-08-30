@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "../page.module.css";
 import { CircularProgressbar } from "react-circular-progressbar";
 import {
@@ -14,11 +14,13 @@ import { useImmutableList } from "@/hooks/useImmutableList";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { useTurnCounter } from "@/hooks/useTurnCounter";
 import { EditableField } from "@/components/EditableField";
+import { FullScreen, useFullScreenHandle } from "react-full-screen";
 
 const initialTime = 5 * 60;
 const expectedTurns = 90;
 
 export default function Home() {
+  const handle = useFullScreenHandle();
   const { height, width } = useWindowSize();
   const [started, setStarted] = useState(false);
   const stopwatch = useStopwatch({ autoStart: false });
@@ -93,7 +95,7 @@ export default function Home() {
   };
 
   return (
-    <>
+    <FullScreen handle={handle}>
       <div
         className={styles.container}
         onClick={() => {
@@ -159,6 +161,18 @@ export default function Home() {
           ).toLocaleTimeString()}
         </span>
       </footer>
-    </>
+
+      <div className={styles.menuContainer}>
+        {handle.active ? (
+          <button className={styles.button} onClick={handle.exit}>
+            x
+          </button>
+        ) : (
+          <button className={styles.button} onClick={handle.enter}>
+            ⛶
+          </button>
+        )}
+      </div>
+    </FullScreen>
   );
 }
