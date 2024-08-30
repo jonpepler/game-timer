@@ -15,19 +15,24 @@ import { useWindowSize } from "@/hooks/useWindowSize";
 import { useTurnCounter } from "@/hooks/useTurnCounter";
 import { EditableField } from "@/components/EditableField";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
+import { useSounds } from "@/hooks/useSounds";
 
 const initialTime = 5 * 60;
 const expectedTurns = 90;
 
 export default function Home() {
   const handle = useFullScreenHandle();
+  const { playNext, playOvertime } = useSounds();
   const { height, width } = useWindowSize();
   const [started, setStarted] = useState(false);
   const stopwatch = useStopwatch({ autoStart: false });
   const timer = useTimer({
     autoStart: false,
     expiryTimestamp: new Date(),
-    onExpire: () => stopwatch.reset(),
+    onExpire: () => {
+      stopwatch.reset();
+      if (playOvertime) playOvertime();
+    },
   });
   const [times, addTime] = useImmutableList<number>();
   const [averageTime, setAverageTime] = useState(initialTime);
@@ -39,10 +44,6 @@ export default function Home() {
     () => !timer.isRunning && !stopwatch.isRunning,
     [timer, stopwatch],
   );
-
-  // useEffect(() => {
-  //   if (timerFinished) stopwatch.reset();
-  // }, [timerFinished]);
 
   const getDateSecondsFromNow = (seconds: number) => {
     const date = new Date();
@@ -74,6 +75,7 @@ export default function Home() {
     setAverageTime(newAverageTime);
     timer.restart(getDateSecondsFromNow(newAverageTime));
 
+    if (playNext) playNext();
     nextTurn();
   };
 
