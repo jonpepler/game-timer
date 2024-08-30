@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "../page.module.css";
 import { CircularProgressbar } from "react-circular-progressbar";
 import {
@@ -28,8 +28,11 @@ export default function Home() {
   const { remainingTurns, nextTurn, setExpectedTurns } =
     useTurnCounter(expectedTurns);
   const [preventClickCapture, setPreventClickCapture] = useState(false);
-
   const timerFinished = timer.totalSeconds === 0 && started;
+  const paused = useMemo(
+    () => !timer.isRunning && !stopwatch.isRunning,
+    [timer, stopwatch],
+  );
 
   useEffect(() => {
     if (timerFinished) stopwatch.reset();
@@ -76,37 +79,50 @@ export default function Home() {
 
   const size = (Math.min(...[height, width]) / 3) * 2;
 
+  const pause = () => {
+    timer.pause();
+    stopwatch.pause();
+  };
+  const unpause = () => {
+    if (!timerFinished) timer.resume();
+    stopwatch.start();
+  };
+
   return (
-    <div
-      className={styles.container}
-      onClick={() => {
-        if (!preventClickCapture) resetTimer();
-      }}
-    >
-      <main className={styles.main}>
-        <div style={{ width: size, height: size }}>
-          <CircularProgressbar
-            value={(timer.totalSeconds / averageTime) * 100}
-            styles={{
-              path: {
-                stroke: "rgba(255, 255, 255)",
-                strokeLinecap: "butt",
-                strokeWidth: "2",
-                strokeDasharray: "10, 5",
-              },
-              trail: {
-                strokeWidth: "0.2",
-              },
-              text: {
-                fontFamily: "monospace",
-                fill: "white",
-              },
-              background: {},
-            }}
-            text={timerFinished ? "+" + getStopwatchString() : getTimerString()}
-          />
-        </div>
-      </main>
+    <>
+      <div
+        className={styles.container}
+        onClick={() => {
+          if (!preventClickCapture) resetTimer();
+        }}
+      >
+        <main className={styles.main}>
+          <div style={{ width: size, height: size }}>
+            <CircularProgressbar
+              value={(timer.totalSeconds / averageTime) * 100}
+              styles={{
+                path: {
+                  stroke: paused ? "grey" : "white",
+                  strokeLinecap: "butt",
+                  strokeWidth: "2",
+                  strokeDasharray: "10, 5",
+                },
+                trail: {
+                  strokeWidth: "0.2",
+                },
+                text: {
+                  fontFamily: "monospace",
+                  fill: paused ? "grey" : "white",
+                },
+                background: {},
+              }}
+              text={
+                timerFinished ? "+" + getStopwatchString() : getTimerString()
+              }
+            />
+          </div>
+        </main>
+      </div>
       <footer className={styles.footer}>
         <EditableField
           text={"Remaining Turns: " + remainingTurns}
@@ -114,13 +130,23 @@ export default function Home() {
           onChange={(text) => setExpectedTurns(Number(text))}
           onEditingChange={setPreventClickCapture}
         />
-        <span>
+        {paused ? (
+          <button onClick={unpause} className={styles.button}>
+            ⏵
+          </button>
+        ) : (
+          <button onClick={pause} className={styles.button}>
+            ⏸
+          </button>
+        )}
+
+        <span suppressHydrationWarning={true}>
           Predicted game finish:{" "}
           {getDateSecondsFromNow(
             remainingTurns * averageTime,
           ).toLocaleTimeString()}
         </span>
       </footer>
-    </div>
+    </>
   );
 }

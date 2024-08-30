@@ -7,9 +7,13 @@
 }
 
 .footer {
+  position: absolute;
   display: flex;
   justify-content: space-between;
+  align-items: flex-end;
   margin: 15px 15px;
+  width: 98vw;
+  bottom: 0;
 }
 
 .container {
@@ -17,4 +21,10 @@
   flex-direction: column;
   justify-content: space-between;
   height: 100vh;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif
+}
+
+.button {
+  padding: 0px 10px;
+  font-size: 30px;
 }
