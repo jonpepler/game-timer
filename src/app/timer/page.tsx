@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "../page.module.css";
+import styles from "./page.module.css";
 import { CircularProgressbar } from "react-circular-progressbar";
 import {
   StopwatchResult,
@@ -145,18 +145,25 @@ export default function Home() {
           value={remainingTurns.toString()}
           onChange={(text) => setExpectedTurns(Number(text))}
           onEditingChange={setPreventClickCapture}
+          className={styles.footerLeft}
         />
         {paused ? (
-          <button onClick={unpause} className={styles.button}>
+          <button
+            onClick={unpause}
+            className={`${styles.button} ${styles.footerCenter}`}
+          >
             ⏵
           </button>
         ) : (
-          <button onClick={pause} className={styles.button}>
+          <button
+            onClick={pause}
+            className={`${styles.button} ${styles.footerCenter}`}
+          >
             ⏸
           </button>
         )}
 
-        <span suppressHydrationWarning={true}>
+        <span suppressHydrationWarning={true} className={styles.footerRight}>
           Predicted game finish:{" "}
           {getDateSecondsFromNow(
             remainingTurns * averageTime,

@@ -6,9 +6,12 @@ export default function Home() {
   return (
     <>
       <main className={styles.main}>
-        <Link href="/timer">New Game</Link>
+        <Link href="/timer" className={styles.button}>
+          New Game
+        </Link>
       </main>
-      <footer>
+      <footer className={styles.footer}>
+        <span>Sound Credits</span>
         <span>Chime 0011.wav - radian</span>
         <span>Chime-Improper.flac - drooler</span>
       </footer>

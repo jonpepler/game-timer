@@ -5,6 +5,7 @@ type Props = {
   value: string;
   onChange: (text: string) => void;
   onEditingChange: (editing: boolean) => void;
+  className: string;
 };
 
 export const EditableField = ({
@@ -12,6 +13,7 @@ export const EditableField = ({
   value,
   onChange,
   onEditingChange,
+  className,
 }: Props) => {
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
@@ -21,7 +23,7 @@ export const EditableField = ({
   }, [editing]);
 
   return editing ? (
-    <>
+    <div className={className}>
       <textarea
         value={newValue}
         onChange={(event) => setNewValue(event.target.value ?? "")}
@@ -34,9 +36,9 @@ export const EditableField = ({
       >
         Save
       </button>
-    </>
+    </div>
   ) : (
-    <div onClick={() => setEditing(true)}>
+    <div onClick={() => setEditing(true)} className={className}>
       <p>{text}</p>
     </div>
   );
