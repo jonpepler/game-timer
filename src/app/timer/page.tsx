@@ -1,94 +1,65 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import styles from "./page.module.css";
 import { CircularProgressbar } from "react-circular-progressbar";
-import {
-  StopwatchResult,
-  TimerResult,
-  useStopwatch,
-  useTimer,
-} from "react-timer-hook";
+
 import "react-circular-progressbar/dist/styles.css";
-import { useImmutableList } from "@/hooks/useImmutableList";
 import { useWindowSize } from "@/hooks/useWindowSize";
-import { useTurnCounter } from "@/hooks/useTurnCounter";
-import { useSounds } from "@/hooks/useSounds";
 import { Footer } from "@/components/timer/Footer";
-import { getDateSecondsFromNow } from "@/utils/getDateSecondsFromNow";
 import { FullScreen } from "@/components/FullScreen";
+import { useTurnCounter } from "@/hooks/useTurnCounter";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTimer } from "@/hooks/useTimer";
+import { PlayerArcs } from "@/components/timer/PlayerArcs";
+import { useGameSetup } from "@/hooks/useGameSetupModal";
+import { GameConfig } from "@/components/GameSetupModal";
 
 const initialTime = 5 * 60;
 const expectedTurns = 90;
 
 export default function Home() {
-  const { playNext, playOvertime } = useSounds();
   const { height, width } = useWindowSize();
-  const [started, setStarted] = useState(false);
-  const stopwatch = useStopwatch({ autoStart: false });
-  const timer = useTimer({
-    autoStart: false,
-    expiryTimestamp: new Date(),
-    onExpire: () => {
-      stopwatch.reset();
-      if (playOvertime) playOvertime();
-    },
-  });
-  const [times, addTime] = useImmutableList<number>();
-  const [averageTime, setAverageTime] = useState(initialTime);
-  const { remainingTurns, nextTurn, setExpectedTurns } =
+  const { turns, remainingTurns, nextTurn, setExpectedTurns } =
     useTurnCounter(expectedTurns);
-  const [preventClickCapture, setPreventClickCapture] = useState(false);
-  const timerFinished = timer.totalSeconds === 0 && started;
-  const paused = useMemo(
-    () => !timer.isRunning && !stopwatch.isRunning,
-    [timer, stopwatch],
-  );
 
-  const getNewAverageTime = (newTime: number) =>
-    Math.floor(
-      times.reduce((total, sum) => total + sum, newTime) / (times.length + 1),
-    );
-
-  const startTimer = () => {
-    timer.restart(getDateSecondsFromNow(averageTime));
-    setStarted(true);
-  };
-
-  const resetTimer = () => {
-    if (!started) {
-      startTimer();
-      return;
-    }
-    const timePassed =
-      averageTime -
-      timer.totalSeconds +
-      (timerFinished ? stopwatch.totalSeconds : 0);
-    const newAverageTime = getNewAverageTime(timePassed);
-    addTime(timePassed);
-    setAverageTime(newAverageTime);
-    timer.restart(getDateSecondsFromNow(newAverageTime));
-
-    if (playNext) playNext();
+  const nextTurnWithPlayerTracking = useCallback(() => {
+    turn++;
+    activeplayer++;
     nextTurn();
-  };
+  }, []);
 
-  const getTimeString = (t: TimerResult | StopwatchResult) =>
-    `${t.hours ? t.hours + ":" : ""}${t.minutes.toString().padStart(2, "0")}:${t.seconds.toString().padStart(2, "0")}`;
+  const {
+    getTimerString,
+    getStopwatchString,
+    size,
+    pause,
+    unpause,
+    resetTimer,
+    paused,
+    timerTotalSeconds,
+    stopwatchTotalSeconds,
+    averageTime,
+    timerFinished,
+  } = useTimer({ initialTime, height, width, nextTurn });
+  const [preventClickCapture, setPreventClickCapture] = useState(false);
 
-  const getTimerString = () => getTimeString(timer);
-  const getStopwatchString = () => getTimeString(stopwatch);
-
-  const size = (Math.min(...[height, width]) / 3) * 2;
-
-  const pause = () => {
-    timer.pause();
-    stopwatch.pause();
-  };
-  const unpause = () => {
-    if (!timerFinished) timer.resume();
-    stopwatch.start();
-  };
+  const [config, setConfig] = useState<GameConfig>();
+  const { open, isOpen, modal } = useGameSetup(setConfig);
+  const [firstOpen, setFirstOpen] = useState(true);
+  useEffect(() => {
+    if (firstOpen) {
+      setFirstOpen(false);
+      open();
+    }
+  }, [open, firstOpen]);
+  useEffect(() => {
+    setPreventClickCapture(isOpen);
+  }, [isOpen]);
+  const numPlayers = useMemo(() => config?.players?.length, [config]);
+  const currentPlayerIndex = useMemo(
+    () => turns % (numPlayers || 0),
+    [turns, numPlayers],
+  );
 
   return (
     <FullScreen>
@@ -98,10 +69,19 @@ export default function Home() {
           if (!preventClickCapture) resetTimer();
         }}
       >
+        {modal}
         <main className={styles.main}>
-          <div style={{ width: size, height: size }}>
+          <div style={{ width: size, height: size, position: "relative" }}>
+            {config?.players && (
+              <PlayerArcs
+                players={config?.players}
+                activeIndex={currentPlayerIndex}
+                containerSize={size}
+                internalSizeOffset={40}
+              />
+            )}
             <CircularProgressbar
-              value={(timer.totalSeconds / averageTime) * 100}
+              value={(timerTotalSeconds / averageTime) * 100}
               background
               styles={{
                 path: {
@@ -120,7 +100,7 @@ export default function Home() {
                 background: {
                   fill: "red",
                   fillOpacity: timerFinished
-                    ? stopwatch.totalSeconds / averageTime
+                    ? stopwatchTotalSeconds / averageTime
                     : 0,
                   transitionProperty: "fill-opacity",
                   transitionDuration: "2s",

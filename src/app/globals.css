@@ -112,3 +112,26 @@ button {
   width: 50px;
   height: 40px;
 }
+
+dialog {
+  /* Centering — replaces the browser's default top-biased positioning */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Background — native dialog is transparent by default in some browsers */
+  background: black;
+
+  z-index: 100;
+}
+
+fieldset {
+  label {
+    padding: 20px;
+    margin: 15px;
+  }
+  legend {
+    padding-bottom: 20px;
+    padding-top: 10px;
+  }
+}
