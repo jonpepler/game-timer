@@ -14,7 +14,7 @@ export const useGameSetup = (
 ): UseGameSetupReturn => {
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState<GameConfig | null>(null);
-  console.log({ isOpen });
+
   const handleSubmit = (incoming: GameConfig) => {
     setConfig(incoming);
     setIsOpen(false);

@@ -13,6 +13,8 @@ import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
 import { GameConfig } from "@/components/GameSetupModal";
+import { getPlayerStats } from "@/utils/getPlayerStats";
+import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 
 const initialTime = 5 * 60;
 const expectedTurns = 90;
@@ -34,6 +36,7 @@ export default function Home() {
     stopwatchTotalSeconds,
     averageTime,
     timerFinished,
+    times,
   } = useTimer({ initialTime, height, width, nextTurn });
   const [preventClickCapture, setPreventClickCapture] = useState(false);
 
@@ -54,7 +57,16 @@ export default function Home() {
     () => turns % (numPlayers || 0),
     [turns, numPlayers],
   );
-
+  const playerTimes = useMemo(
+    () =>
+      times.map((time, index) => ({
+        time,
+        playerIndex: index % (numPlayers || 0),
+      })),
+    [times, numPlayers],
+  );
+  const playerStats = useMemo(() => getPlayerStats(playerTimes), [playerTimes]);
+  console.log(playerStats);
   return (
     <FullScreen>
       <div
@@ -107,6 +119,7 @@ export default function Home() {
           </div>
         </main>
       </div>
+      <PlayerTimeShare stats={playerStats} players={config?.players || []} />
       <Footer
         {...{
           remainingTurns,

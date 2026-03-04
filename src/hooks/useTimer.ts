@@ -100,5 +100,6 @@ export const useTimer = ({
     stopwatchTotalSeconds: stopwatch.totalSeconds,
     averageTime,
     timerFinished,
+    times,
   };
 };
