@@ -1,3 +1,11 @@
+# Game Timer
+[Website](https://jonpepler.github.io/game-timer/)
+
+Quick tool for board games to time turns and provide a projected board game length.
+The tool does not set a limit for turn length, instead it tracks the average turn length, informing the current player that when they are the reason the average is going up. The principle behind this is to allow people space to take longer turns when they need to, but also to make data available to players so they can make informed choices about the game length.
+
+# Development
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
