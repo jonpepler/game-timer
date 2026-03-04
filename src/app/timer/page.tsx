@@ -8,7 +8,7 @@ import { useWindowSize } from "@/hooks/useWindowSize";
 import { Footer } from "@/components/timer/Footer";
 import { FullScreen } from "@/components/FullScreen";
 import { useTurnCounter } from "@/hooks/useTurnCounter";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
@@ -21,12 +21,6 @@ export default function Home() {
   const { height, width } = useWindowSize();
   const { turns, remainingTurns, nextTurn, setExpectedTurns } =
     useTurnCounter(expectedTurns);
-
-  const nextTurnWithPlayerTracking = useCallback(() => {
-    turn++;
-    activeplayer++;
-    nextTurn();
-  }, []);
 
   const {
     getTimerString,
