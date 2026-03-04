@@ -13,15 +13,15 @@ import "react-circular-progressbar/dist/styles.css";
 import { useImmutableList } from "@/hooks/useImmutableList";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { useTurnCounter } from "@/hooks/useTurnCounter";
-import { EditableField } from "@/components/EditableField";
-import { FullScreen, useFullScreenHandle } from "react-full-screen";
 import { useSounds } from "@/hooks/useSounds";
+import { Footer } from "@/components/timer/Footer";
+import { getDateSecondsFromNow } from "@/utils/getDateSecondsFromNow";
+import { FullScreen } from "@/components/FullScreen";
 
 const initialTime = 5 * 60;
 const expectedTurns = 90;
 
 export default function Home() {
-  const handle = useFullScreenHandle();
   const { playNext, playOvertime } = useSounds();
   const { height, width } = useWindowSize();
   const [started, setStarted] = useState(false);
@@ -44,12 +44,6 @@ export default function Home() {
     () => !timer.isRunning && !stopwatch.isRunning,
     [timer, stopwatch],
   );
-
-  const getDateSecondsFromNow = (seconds: number) => {
-    const date = new Date();
-    date.setSeconds(date.getSeconds() + seconds);
-    return date;
-  };
 
   const getNewAverageTime = (newTime: number) =>
     Math.floor(
@@ -97,7 +91,7 @@ export default function Home() {
   };
 
   return (
-    <FullScreen handle={handle}>
+    <FullScreen>
       <div
         className={styles.container}
         onClick={() => {
@@ -139,49 +133,17 @@ export default function Home() {
           </div>
         </main>
       </div>
-      <footer className={styles.footer}>
-        <EditableField
-          text={"Remaining Turns: " + remainingTurns}
-          value={remainingTurns.toString()}
-          onChange={(text) => setExpectedTurns(Number(text))}
-          onEditingChange={setPreventClickCapture}
-          className={styles.footerLeft}
-        />
-        {paused ? (
-          <button
-            onClick={unpause}
-            className={`${styles.button} ${styles.footerCenter}`}
-          >
-            ⏵
-          </button>
-        ) : (
-          <button
-            onClick={pause}
-            className={`${styles.button} ${styles.footerCenter}`}
-          >
-            ⏸
-          </button>
-        )}
-
-        <span suppressHydrationWarning={true} className={styles.footerRight}>
-          Predicted game finish:{" "}
-          {getDateSecondsFromNow(
-            remainingTurns * averageTime,
-          ).toLocaleTimeString()}
-        </span>
-      </footer>
-
-      <div className={styles.menuContainer}>
-        {handle.active ? (
-          <button className={styles.button} onClick={handle.exit}>
-            x
-          </button>
-        ) : (
-          <button className={styles.button} onClick={handle.enter}>
-            ⛶
-          </button>
-        )}
-      </div>
+      <Footer
+        {...{
+          remainingTurns,
+          setExpectedTurns,
+          setPreventClickCapture,
+          paused,
+          pause,
+          unpause,
+          averageTime,
+        }}
+      />
     </FullScreen>
   );
 }

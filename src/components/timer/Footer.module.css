@@ -1,0 +1,21 @@
+.footer {
+  position: absolute;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: flex-end;
+  margin: 15px 15px;
+  width: 98vw;
+  bottom: 0;
+}
+
+.footerLeft {
+  justify-self: start;
+}
+
+.footerCenter {
+  justify-self: center;
+}
+
+.footerRight {
+  justify-self: end;
+}
