@@ -158,6 +158,165 @@ describe("gameSessionReducer", () => {
   });
 });
 
+describe("score subsystem", () => {
+  const scoreConfig = {
+    displayStyle: "linearTrack" as const,
+    min: 0,
+    max: 30,
+    increment: 1,
+    victory: { type: "firstToMax" as const },
+  };
+
+  const initWithScore = () =>
+    gameSessionReducer(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: [
+          { name: "A", color: "#fff" },
+          { name: "B", color: "#000" },
+        ],
+        scoreConfig,
+      }),
+      { type: "START", at: 0 },
+    );
+
+  it("SET_SCORE writes a clamped value", () => {
+    const state = initWithScore();
+    const set = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 12,
+    });
+    expect(set.scores[0]).toBe(12);
+  });
+
+  it("SET_SCORE clamps to [min, max]", () => {
+    const state = initWithScore();
+    const high = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 999,
+    });
+    expect(high.scores[0]).toBe(30);
+    const low = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: -5,
+    });
+    expect(low.scores[0]).toBe(0);
+  });
+
+  it("INCREMENT_SCORE adds the delta to the current score (defaulting to min)", () => {
+    const state = initWithScore();
+    const plusOne = gameSessionReducer(state, {
+      type: "INCREMENT_SCORE",
+      playerIndex: 1,
+      delta: 1,
+    });
+    expect(plusOne.scores[1]).toBe(1);
+    const plusTwoMore = gameSessionReducer(plusOne, {
+      type: "INCREMENT_SCORE",
+      playerIndex: 1,
+      delta: 2,
+    });
+    expect(plusTwoMore.scores[1]).toBe(3);
+  });
+
+  it("INCREMENT_SCORE crossing max fires firstToMax victory", () => {
+    const state = initWithScore();
+    const justUnder = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 29,
+    });
+    expect(justUnder.victor).toBeNull();
+
+    const won = gameSessionReducer(justUnder, {
+      type: "INCREMENT_SCORE",
+      playerIndex: 0,
+      delta: 1,
+    });
+    expect(won.scores[0]).toBe(30);
+    expect(won.victor).toBe(0);
+  });
+
+  it("once a victor is set, further increments do not change the victor", () => {
+    const state = initWithScore();
+    const won = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 30,
+    });
+    expect(won.victor).toBe(0);
+    const player1Scores = gameSessionReducer(won, {
+      type: "INCREMENT_SCORE",
+      playerIndex: 1,
+      delta: 30,
+    });
+    expect(player1Scores.scores[1]).toBe(30);
+    expect(player1Scores.victor).toBe(0);
+  });
+
+  it("SET_SCORE_CONFIG to undefined clears scores and victor", () => {
+    const state = initWithScore();
+    const scored = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 30,
+    });
+    expect(scored.victor).toBe(0);
+
+    const cleared = gameSessionReducer(scored, {
+      type: "SET_SCORE_CONFIG",
+      scoreConfig: undefined,
+    });
+    expect(cleared.scoreConfig).toBeUndefined();
+    expect(cleared.scores).toEqual({});
+    expect(cleared.victor).toBeNull();
+  });
+
+  it("END_GAME records a manual victor or stalemate", () => {
+    const state = initWithScore();
+    const manual = gameSessionReducer(state, {
+      type: "END_GAME",
+      victor: 1,
+    });
+    expect(manual.victor).toBe(1);
+  });
+
+  it("RESET keeps the score subsystem config but clears scores + victor", () => {
+    const state = initWithScore();
+    const scored = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 30,
+    });
+    const reset = gameSessionReducer(scored, { type: "RESET" });
+    expect(reset.scoreConfig).toEqual(scoreConfig);
+    expect(reset.scores).toEqual({});
+    expect(reset.victor).toBeNull();
+  });
+
+  it("with no scoreConfig, increments still work but no victory fires", () => {
+    const state = gameSessionReducer(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: [{ name: "A", color: "#fff" }],
+      }),
+      { type: "START", at: 0 },
+    );
+    const after = gameSessionReducer(state, {
+      type: "INCREMENT_SCORE",
+      playerIndex: 0,
+      delta: 9999,
+    });
+    expect(after.scores[0]).toBe(9999);
+    expect(after.victor).toBeNull();
+  });
+});
+
 describe("projectAverageAfterTurn", () => {
   it("matches the average the reducer will compute on NEXT_TURN", () => {
     const state = gameSessionReducer(init(), { type: "START", at: 0 });

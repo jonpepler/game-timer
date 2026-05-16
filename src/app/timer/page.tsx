@@ -14,6 +14,9 @@ import { useGameSetup } from "@/hooks/useGameSetupModal";
 import { GameConfig } from "@/components/GameSetupModal";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
+import { ScorePanel } from "@/components/ScorePanel";
+import { VictoryBanner } from "@/components/VictoryBanner";
+import { findDefinition } from "@/state/definitionRegistry";
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -40,6 +43,11 @@ export default function Home() {
     currentPlayerIndex,
     setExpectedTurns,
     setPlayers,
+    setScoreConfig,
+    incrementScore,
+    scores,
+    scoreConfig,
+    victor,
   } = useTimer({
     initialTime,
     initialExpectedTurns: defaultExpectedTurns,
@@ -54,6 +62,10 @@ export default function Home() {
     setConfig(incoming);
     setExpectedTurns(incoming.expectedTurns);
     setPlayers(incoming.players);
+    const definition = findDefinition(incoming.definitionId);
+    // Score is only meaningful when player tracking is on — clear the
+    // subsystem otherwise so victories can't fire against an empty roster.
+    setScoreConfig(incoming.players ? definition?.score : undefined);
   };
 
   const { open, isOpen, modal } = useGameSetup(applyConfig);
@@ -87,6 +99,12 @@ export default function Home() {
       ? config.players[currentPlayerIndex]
       : undefined;
 
+  const victorPlayer =
+    victor !== null && config?.players ? config.players[victor] : undefined;
+
+  const scoresVisible =
+    scoreConfig !== undefined && (config?.players?.length ?? 0) > 0;
+
   return (
     <FullScreen>
       <div
@@ -97,19 +115,23 @@ export default function Home() {
       >
         {modal}
         <main className={styles.main}>
-          {activePlayer && (
-            <div
-              className={styles.activePlayer}
-              style={{ color: activePlayer.color }}
-            >
-              <span
-                className={styles.activePlayerSwatch}
-                style={{ background: activePlayer.color }}
-                aria-hidden
-              />
-              {/* eslint-disable-next-line prettier/prettier */}
-              <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
-            </div>
+          {victorPlayer ? (
+            <VictoryBanner victor={victorPlayer} />
+          ) : (
+            activePlayer && (
+              <div
+                className={styles.activePlayer}
+                style={{ color: activePlayer.color }}
+              >
+                <span
+                  className={styles.activePlayerSwatch}
+                  style={{ background: activePlayer.color }}
+                  aria-hidden
+                />
+                {/* eslint-disable-next-line prettier/prettier */}
+                <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+              </div>
+            )
           )}
           <div style={{ width: size, height: size, position: "relative" }}>
             {config?.players && currentPlayerIndex !== null && (
@@ -157,12 +179,22 @@ export default function Home() {
           </div>
         </main>
       </div>
-      {playerStats.length > 0 && (
+      {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
-          <PlayerTimeShare
-            stats={playerStats}
-            players={config?.players || []}
-          />
+          {scoresVisible && config?.players && scoreConfig && (
+            <ScorePanel
+              players={config.players}
+              scores={scores}
+              scoreConfig={scoreConfig}
+              onIncrement={incrementScore}
+            />
+          )}
+          {playerStats.length > 0 && (
+            <PlayerTimeShare
+              stats={playerStats}
+              players={config?.players || []}
+            />
+          )}
         </div>
       )}
       <Footer

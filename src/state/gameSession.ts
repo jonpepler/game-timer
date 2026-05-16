@@ -1,4 +1,5 @@
 import { createLogger } from "@/lib/logger";
+import type { ScoreConfig } from "./gameDefinition";
 
 const log = createLogger("session");
 
@@ -28,6 +29,14 @@ export interface GameSessionState {
   expectedTurns: number;
   players?: Player[];
   currentTurnStartedAt: number | null;
+  // Scores keyed by playerIndex. Missing entries treated as the score
+  // config's `min` (or 0 when no config is set).
+  scores: Record<number, number>;
+  // Active score rules. Undefined when the current definition opts out
+  // of score tracking.
+  scoreConfig?: ScoreConfig;
+  // Player index of the winner once a victory condition fires, else null.
+  victor: number | null;
 }
 
 export type GameSessionAction =
@@ -36,12 +45,17 @@ export type GameSessionAction =
   | { type: "UNDO" }
   | { type: "SET_EXPECTED_TURNS"; expectedTurns: number }
   | { type: "SET_PLAYERS"; players: Player[] | undefined }
+  | { type: "SET_SCORE_CONFIG"; scoreConfig: ScoreConfig | undefined }
+  | { type: "SET_SCORE"; playerIndex: number; value: number }
+  | { type: "INCREMENT_SCORE"; playerIndex: number; delta: number }
+  | { type: "END_GAME"; victor: number | null }
   | { type: "RESET" };
 
 export interface GameSessionInit {
   initialAverageSeconds: number;
   expectedTurns: number;
   players?: Player[];
+  scoreConfig?: ScoreConfig;
 }
 
 export const createInitialGameSessionState = (
@@ -54,6 +68,9 @@ export const createInitialGameSessionState = (
   expectedTurns: params.expectedTurns,
   players: params.players,
   currentTurnStartedAt: null,
+  scores: {},
+  scoreConfig: params.scoreConfig,
+  victor: null,
 });
 
 const averageOf = (turns: TurnRecord[], fallback: number): number => {
@@ -80,6 +97,32 @@ export const projectAverageAfterTurn = (
   const total =
     state.turns.reduce((sum, t) => sum + t.elapsedSeconds, 0) + elapsedSeconds;
   return Math.floor(total / (state.turns.length + 1));
+};
+
+// Apply score bounds + victory detection. Pure helper used by SET_SCORE
+// and INCREMENT_SCORE; isolated so both branches stay in sync.
+const applyScore = (
+  state: GameSessionState,
+  playerIndex: number,
+  rawValue: number,
+): GameSessionState => {
+  const cfg = state.scoreConfig;
+  const min = cfg?.min ?? 0;
+  const max = cfg?.max;
+  const clamped =
+    max !== undefined ? Math.max(min, Math.min(max, rawValue)) : Math.max(min, rawValue);
+  const scores = { ...state.scores, [playerIndex]: clamped };
+  let victor = state.victor;
+  if (
+    cfg?.victory?.type === "firstToMax" &&
+    max !== undefined &&
+    clamped >= max &&
+    victor === null
+  ) {
+    victor = playerIndex;
+    log.info("victory", { playerIndex, score: clamped });
+  }
+  return { ...state, scores, victor };
 };
 
 export const gameSessionReducer = (
@@ -144,11 +187,31 @@ export const gameSessionReducer = (
       return { ...state, expectedTurns: action.expectedTurns };
     case "SET_PLAYERS":
       return { ...state, players: action.players };
+    case "SET_SCORE_CONFIG":
+      // Clearing the score subsystem also clears any in-flight scores
+      // and victor — a different game's score is meaningless here.
+      return {
+        ...state,
+        scoreConfig: action.scoreConfig,
+        scores: {},
+        victor: null,
+      };
+    case "SET_SCORE":
+      return applyScore(state, action.playerIndex, action.value);
+    case "INCREMENT_SCORE": {
+      const min = state.scoreConfig?.min ?? 0;
+      const current = state.scores[action.playerIndex] ?? min;
+      return applyScore(state, action.playerIndex, current + action.delta);
+    }
+    case "END_GAME":
+      log.info("game ended", { victor: action.victor });
+      return { ...state, victor: action.victor };
     case "RESET":
       return createInitialGameSessionState({
         initialAverageSeconds: state.initialAverageSeconds,
         expectedTurns: state.expectedTurns,
         players: state.players,
+        scoreConfig: state.scoreConfig,
       });
   }
 };
@@ -166,3 +229,8 @@ export const selectCurrentPlayerIndex = (
 export const selectTurnElapsedSecondsList = (
   state: GameSessionState,
 ): number[] => state.turns.map((t) => t.elapsedSeconds);
+
+export const selectScoreFor = (
+  state: GameSessionState,
+  playerIndex: number,
+): number => state.scores[playerIndex] ?? state.scoreConfig?.min ?? 0;

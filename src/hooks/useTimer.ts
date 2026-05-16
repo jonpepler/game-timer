@@ -18,6 +18,7 @@ import {
   type Player,
   type TurnRecord,
 } from "@/state/gameSession";
+import type { ScoreConfig } from "@/state/gameDefinition";
 
 type UseTimerProps = {
   initialTime: number;
@@ -124,6 +125,14 @@ export const useTimer = ({
     dispatch({ type: "SET_EXPECTED_TURNS", expectedTurns: n });
   const setPlayers = (players: Player[] | undefined) =>
     dispatch({ type: "SET_PLAYERS", players });
+  const setScoreConfig = (scoreConfig: ScoreConfig | undefined) =>
+    dispatch({ type: "SET_SCORE_CONFIG", scoreConfig });
+  const setScore = (playerIndex: number, value: number) =>
+    dispatch({ type: "SET_SCORE", playerIndex, value });
+  const incrementScore = (playerIndex: number, delta: number) =>
+    dispatch({ type: "INCREMENT_SCORE", playerIndex, delta });
+  const endGame = (victor: number | null) =>
+    dispatch({ type: "END_GAME", victor });
 
   return {
     state,
@@ -146,5 +155,12 @@ export const useTimer = ({
     currentPlayerIndex: selectCurrentPlayerIndex(state),
     setExpectedTurns,
     setPlayers,
+    setScoreConfig,
+    setScore,
+    incrementScore,
+    endGame,
+    scores: state.scores,
+    scoreConfig: state.scoreConfig,
+    victor: state.victor,
   };
 };

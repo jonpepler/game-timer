@@ -68,3 +68,18 @@ test("timer view baseline (with players)", async ({ page }) => {
   await page.waitForTimeout(800);
   await save(page, "05-timer-with-players");
 });
+
+test("timer view baseline (Root with scores in play)", async ({ page }) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await page.getByLabel(/track individual players/i).check();
+  await page.getByLabel(/number of players/i).fill("4");
+  await page.getByRole("button", { name: /start game/i }).click();
+  // Bump a couple of factions to non-zero so the panel looks alive.
+  const inc = (name: string) =>
+    page.getByRole("button", { name: new RegExp(`Increase score for ${name}`, "i") });
+  for (let i = 0; i < 7; i++) await inc("Marquise de Cat").click();
+  for (let i = 0; i < 4; i++) await inc("Eyrie Dynasties").click();
+  for (let i = 0; i < 12; i++) await inc("Woodland Alliance").click();
+  await save(page, "06-timer-with-scores");
+});
