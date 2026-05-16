@@ -18,6 +18,7 @@ import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
+import { ShareSessionMenu } from "@/components/ShareSessionMenu";
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -116,18 +117,21 @@ export default function Home() {
   return (
     <FullScreen
       menuExtras={
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            open();
-          }}
-          className={styles.newGameButton}
-          aria-label="Start a new game"
-        >
-          <Plus size={16} aria-hidden />
-          New game
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+            className={styles.newGameButton}
+            aria-label="Start a new game"
+          >
+            <Plus size={16} aria-hidden />
+            New game
+          </button>
+          <ShareSessionMenu />
+        </>
       }
     >
       <div
