@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type Props = {
   text: string;
@@ -6,6 +6,7 @@ type Props = {
   onChange: (text: string) => void;
   onEditingChange: (editing: boolean) => void;
   className: string;
+  renderDisplay?: () => ReactNode;
 };
 
 export const EditableField = ({
@@ -14,6 +15,7 @@ export const EditableField = ({
   onChange,
   onEditingChange,
   className,
+  renderDisplay,
 }: Props) => {
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
@@ -39,7 +41,7 @@ export const EditableField = ({
     </div>
   ) : (
     <div onClick={() => setEditing(true)} className={className}>
-      <p>{text}</p>
+      {renderDisplay ? renderDisplay() : <p>{text}</p>}
     </div>
   );
 };

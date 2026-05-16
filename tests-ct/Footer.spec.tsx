@@ -3,7 +3,7 @@ import { Footer } from "@/components/timer/Footer";
 
 const noop = () => {};
 
-test("Footer renders pause state with remaining turns", async ({
+test("Footer renders running state with remaining turns", async ({
   mount,
   page,
 }) => {
@@ -12,9 +12,8 @@ test("Footer renders pause state with remaining turns", async ({
       style={{
         position: "fixed",
         inset: 0,
-        background: "#111",
+        background: "#000",
         color: "white",
-        fontFamily: "monospace",
       }}
     >
       <Footer
@@ -29,12 +28,13 @@ test("Footer renders pause state with remaining turns", async ({
     </div>,
   );
 
-  await expect(component).toContainText("Remaining Turns: 42");
-  await expect(component).toContainText("Predicted game finish:");
-  // The predicted-finish text is derived from wall-clock time, so mask it
-  // to keep the visual baseline stable.
+  await expect(component).toContainText("42");
+  await expect(component).toContainText("turns left");
+  await expect(component).toContainText("ends at");
+  // The "ends at" timestamp is derived from wall-clock time, mask it to
+  // keep the visual baseline stable.
   await expect(component).toHaveScreenshot("footer-running.png", {
     maxDiffPixelRatio: 0.02,
-    mask: [page.locator("text=Predicted game finish")],
+    mask: [page.locator(`text=ends at`)],
   });
 });

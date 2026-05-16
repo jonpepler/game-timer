@@ -19,5 +19,5 @@ test("setup modal's expectedTurns flows into the footer", async ({ page }) => {
   await expect(turnsInput).toBeVisible();
   await turnsInput.fill("42");
   await page.getByRole("button", { name: /start game/i }).click();
-  await expect(page.getByText(/remaining turns: 42/i)).toBeVisible();
+  await expect(page.getByText(/42\s*turns\s*left/i)).toBeVisible();
 });
