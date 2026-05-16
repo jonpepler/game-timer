@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Play, X, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Dices, Play, X, Users } from "lucide-react";
 import styles from "./GameSetupModal.module.css";
+import {
+  DEFAULT_DEFINITION_ID,
+  findDefinition,
+  listDefinitions,
+} from "@/state/definitionRegistry";
+import type { GameDefinition } from "@/state/gameDefinition";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -12,17 +18,27 @@ export interface Player {
 export interface GameConfig {
   expectedTurns: number;
   players?: Player[];
+  // Definition the modal was configured against — captured so downstream
+  // features (score, victory, faction lookup) can read the rules.
+  definitionId: string;
 }
 
 interface GameSetupModalProps {
   isOpen: boolean;
   onSubmit: (config: GameConfig) => void;
   onClose?: () => void;
+  // Defaults to the built-in registry; override for tests or future
+  // user-imported definitions.
+  definitions?: GameDefinition[];
+  // Pre-selected definition id; defaults to the registry default (Generic).
+  initialDefinitionId?: string;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────
 
-const DEFAULT_COLORS = [
+// Used when a definition declares no factions of its own. Anonymous
+// "Player N" rows with a serviceable distinct palette.
+const GENERIC_PALETTE = [
   "#E8C547",
   "#E85D47",
   "#47B8E8",
@@ -31,12 +47,30 @@ const DEFAULT_COLORS = [
   "#E88947",
 ];
 
-const makePlayer = (index: number): Player => ({
-  name: `Player ${index + 1}`,
-  // Fallback is a literal hex because Player.color flows into native colour
-  // inputs and SVG strokes that require a concrete value, not a CSS var.
-  color: DEFAULT_COLORS[index] ?? "#ffffff",
-});
+const GENERIC_MAX_PLAYERS = GENERIC_PALETTE.length;
+
+const buildPlayersForDefinition = (
+  definition: GameDefinition,
+  count: number,
+): Player[] => {
+  if (definition.factions && definition.factions.length > 0) {
+    return definition.factions.slice(0, count).map((f) => ({
+      name: f.name,
+      color: f.color,
+    }));
+  }
+  return Array.from({ length: count }, (_, i) => ({
+    name: `Player ${i + 1}`,
+    color: GENERIC_PALETTE[i] ?? "#ffffff",
+  }));
+};
+
+const maxPlayersForDefinition = (definition: GameDefinition): number => {
+  if (definition.factions && definition.factions.length > 0) {
+    return definition.factions.length;
+  }
+  return GENERIC_MAX_PLAYERS;
+};
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -44,16 +78,35 @@ export const GameSetupModal = ({
   isOpen,
   onSubmit,
   onClose,
+  definitions = listDefinitions(),
+  initialDefinitionId = DEFAULT_DEFINITION_ID,
 }: GameSetupModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const [expectedTurns, setExpectedTurns] = useState<number>(90);
+  const initialDefinition = useMemo(
+    () =>
+      findDefinition(initialDefinitionId) ??
+      definitions[0] ??
+      findDefinition(DEFAULT_DEFINITION_ID)!,
+    [initialDefinitionId, definitions],
+  );
+
+  const [definitionId, setDefinitionId] = useState<string>(
+    initialDefinition.id,
+  );
+  const definition = useMemo(
+    () => definitions.find((d) => d.id === definitionId) ?? initialDefinition,
+    [definitions, definitionId, initialDefinition],
+  );
+
+  const [expectedTurns, setExpectedTurns] = useState<number>(
+    initialDefinition.defaultExpectedTurns,
+  );
   const [trackPlayers, setTrackPlayers] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
-  const [players, setPlayers] = useState<Player[]>([
-    makePlayer(0),
-    makePlayer(1),
-  ]);
+  const [players, setPlayers] = useState<Player[]>(
+    buildPlayersForDefinition(initialDefinition, 2),
+  );
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -62,12 +115,30 @@ export const GameSetupModal = ({
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
+  const applyDefinition = (next: GameDefinition) => {
+    setDefinitionId(next.id);
+    setExpectedTurns(next.defaultExpectedTurns);
+    const maxCount = maxPlayersForDefinition(next);
+    const clampedCount = Math.min(playerCount, maxCount);
+    setPlayerCount(clampedCount);
+    setPlayers(buildPlayersForDefinition(next, clampedCount));
+  };
+
+  const handleDefinitionChange = (nextId: string) => {
+    const next = definitions.find((d) => d.id === nextId);
+    if (!next) return;
+    applyDefinition(next);
+  };
+
+  const maxCount = maxPlayersForDefinition(definition);
+
   const handlePlayerCountChange = (count: number) => {
-    const clamped = Math.max(1, Math.min(6, count));
+    const clamped = Math.max(1, Math.min(maxCount, count));
     setPlayerCount(clamped);
     setPlayers((prev) => {
       const next = [...prev];
-      while (next.length < clamped) next.push(makePlayer(next.length));
+      const seed = buildPlayersForDefinition(definition, clamped);
+      while (next.length < clamped) next.push(seed[next.length]);
       return next.slice(0, clamped);
     });
   };
@@ -82,6 +153,7 @@ export const GameSetupModal = ({
     onSubmit({
       expectedTurns,
       players: trackPlayers ? players : undefined,
+      definitionId: definition.id,
     });
   };
 
@@ -113,6 +185,30 @@ export const GameSetupModal = ({
         </header>
 
         <div className={styles.scroll}>
+          <section className={styles.section}>
+            <label htmlFor="game-definition" className={styles.label}>
+              <span className={styles.labelIcon}>
+                <Dices size={14} aria-hidden />
+              </span>
+              Game
+            </label>
+            <select
+              id="game-definition"
+              className={styles.input}
+              value={definition.id}
+              onChange={(e) => handleDefinitionChange(e.target.value)}
+            >
+              {definitions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            {definition.description && (
+              <p className={styles.help}>{definition.description}</p>
+            )}
+          </section>
+
           <section className={styles.section}>
             <label htmlFor="expected-turns" className={styles.label}>
               Expected turns
@@ -157,7 +253,7 @@ export const GameSetupModal = ({
                     id="player-count"
                     type="number"
                     min={1}
-                    max={6}
+                    max={maxCount}
                     value={playerCount}
                     onChange={(e) =>
                       handlePlayerCountChange(parseInt(e.target.value) || 1)

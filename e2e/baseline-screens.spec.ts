@@ -36,6 +36,14 @@ test("setup modal baseline (with player tracking enabled)", async ({ page }) => 
   await save(page, "03-setup-players");
 });
 
+test("setup modal baseline (Root definition picked)", async ({ page }) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await page.getByLabel(/track individual players/i).check();
+  await page.getByLabel(/number of players/i).fill("4");
+  await save(page, "03b-setup-root");
+});
+
 test("timer view baseline (no players, mid-session)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
   await page.getByRole("button", { name: /start game/i }).click();

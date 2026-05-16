@@ -49,6 +49,14 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.labelIcon {
+  color: var(--color-text-subtle);
+  display: inline-flex;
 }
 
 .subLabel {
