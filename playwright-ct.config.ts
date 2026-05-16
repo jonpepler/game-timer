@@ -10,6 +10,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     trace: "on-first-retry",
+    colorScheme: "dark",
     ctViteConfig: {
       resolve: {
         alias: {

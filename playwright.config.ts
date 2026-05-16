@@ -14,6 +14,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    colorScheme: "dark",
   },
   projects: [
     {
