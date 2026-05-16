@@ -44,7 +44,7 @@ export function PlayerTimeShare({ stats, players }: PlayerTimeShareProps) {
             title={`${player?.name ?? `Player ${s.playerIndex + 1}`}: ${pct.toFixed(1)}%`}
             style={{
               width: `${pct}%`,
-              background: player?.color ?? "#888",
+              background: player?.color ?? "var(--color-player-fallback)",
               transition: "width 0.4s ease",
             }}
           />

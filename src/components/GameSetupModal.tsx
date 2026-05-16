@@ -31,6 +31,8 @@ const DEFAULT_COLORS = [
 
 const makePlayer = (index: number): Player => ({
   name: `Player ${index + 1}`,
+  // Fallback is a literal hex because Player.color flows into native colour
+  // inputs and SVG strokes that require a concrete value, not a CSS var.
   color: DEFAULT_COLORS[index] ?? "#ffffff",
 });
 

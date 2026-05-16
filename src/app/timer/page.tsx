@@ -104,7 +104,9 @@ export default function Home() {
               background
               styles={{
                 path: {
-                  stroke: paused ? "grey" : "white",
+                  stroke: paused
+                    ? "var(--color-timer-paused)"
+                    : "var(--color-timer-active)",
                   strokeLinecap: "butt",
                   strokeWidth: "2",
                   strokeDasharray: "10, 5",
@@ -114,10 +116,12 @@ export default function Home() {
                 },
                 text: {
                   fontFamily: "monospace",
-                  fill: paused ? "grey" : "white",
+                  fill: paused
+                    ? "var(--color-timer-paused)"
+                    : "var(--color-timer-active)",
                 },
                 background: {
-                  fill: "red",
+                  fill: "var(--color-timer-overtime)",
                   fillOpacity: timerFinished
                     ? stopwatchTotalSeconds / averageTime
                     : 0,
