@@ -80,6 +80,11 @@ export default function Home() {
     [state.turns],
   );
 
+  const activePlayer =
+    config?.players && currentPlayerIndex !== null
+      ? config.players[currentPlayerIndex]
+      : undefined;
+
   return (
     <FullScreen>
       <div
@@ -90,6 +95,20 @@ export default function Home() {
       >
         {modal}
         <main className={styles.main}>
+          {activePlayer && (
+            <div
+              className={styles.activePlayer}
+              style={{ color: activePlayer.color }}
+            >
+              <span
+                className={styles.activePlayerSwatch}
+                style={{ background: activePlayer.color }}
+                aria-hidden
+              />
+              {/* eslint-disable-next-line prettier/prettier */}
+              <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+            </div>
+          )}
           <div style={{ width: size, height: size, position: "relative" }}>
             {config?.players && currentPlayerIndex !== null && (
               <PlayerArcs
@@ -136,7 +155,14 @@ export default function Home() {
           </div>
         </main>
       </div>
-      <PlayerTimeShare stats={playerStats} players={config?.players || []} />
+      {playerStats.length > 0 && (
+        <div className={styles.playerOverlay}>
+          <PlayerTimeShare
+            stats={playerStats}
+            players={config?.players || []}
+          />
+        </div>
+      )}
       <Footer
         {...{
           remainingTurns,

@@ -1,3 +1,5 @@
+import styles from "./PlayerTimeShare.module.css";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface PlayerStats {
@@ -25,31 +27,26 @@ export function PlayerTimeShare({ stats, players }: PlayerTimeShareProps) {
   if (totalTime === 0) return null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        width: "80vw",
-        height: 40,
-        position: "absolute",
-        bottom: 80,
-        marginLeft: "10vw",
-      }}
-    >
-      {stats.map((s) => {
-        const player = players[s.playerIndex];
-        const pct = (s.totalTime / totalTime) * 100;
-        return (
-          <div
-            key={s.playerIndex}
-            title={`${player?.name ?? `Player ${s.playerIndex + 1}`}: ${pct.toFixed(1)}%`}
-            style={{
-              width: `${pct}%`,
-              background: player?.color ?? "var(--color-player-fallback)",
-              transition: "width 0.4s ease",
-            }}
-          />
-        );
-      })}
+    <div className={styles.container} aria-label="Time share by player">
+      <span className={styles.label}>Time share</span>
+      <div className={styles.bar}>
+        {stats.map((s) => {
+          const player = players[s.playerIndex];
+          const pct = (s.totalTime / totalTime) * 100;
+          const name = player?.name ?? `Player ${s.playerIndex + 1}`;
+          return (
+            <div
+              key={s.playerIndex}
+              title={`${name}: ${pct.toFixed(1)}%`}
+              className={styles.segment}
+              style={{
+                width: `${pct}%`,
+                background: player?.color ?? "var(--color-player-fallback)",
+              }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
