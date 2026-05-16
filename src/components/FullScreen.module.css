@@ -1,6 +1,10 @@
 .menuContainer {
-  position:absolute;
+  position: absolute;
   top: 0;
   left: 0;
   margin: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
 }

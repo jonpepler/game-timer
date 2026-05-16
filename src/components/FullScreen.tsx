@@ -4,8 +4,16 @@ import {
 } from "react-full-screen";
 
 import styles from "./FullScreen.module.css";
+import type { ReactNode } from "react";
 
-export const FullScreen = ({ children }: { children: React.ReactNode }) => {
+interface FullScreenProps {
+  children: ReactNode;
+  // Optional extra controls rendered alongside the fullscreen toggle in
+  // the top-left chrome.
+  menuExtras?: ReactNode;
+}
+
+export const FullScreen = ({ children, menuExtras }: FullScreenProps) => {
   const handle = useFullScreenHandle();
 
   return (
@@ -17,6 +25,7 @@ export const FullScreen = ({ children }: { children: React.ReactNode }) => {
         ) : (
           <button onClick={handle.enter}>⛶</button>
         )}
+        {menuExtras}
       </div>
     </InternalFullScreen>
   );

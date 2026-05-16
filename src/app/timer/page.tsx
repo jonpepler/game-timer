@@ -17,6 +17,7 @@ import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
+import { Plus } from "lucide-react";
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -45,6 +46,7 @@ export default function Home() {
     setPlayers,
     setScoreConfig,
     incrementScore,
+    reset,
     scores,
     scoreConfig,
     victor,
@@ -55,11 +57,14 @@ export default function Home() {
     width,
   });
 
+  const players = state.players;
   const [preventClickCapture, setPreventClickCapture] = useState(false);
-  const [config, setConfig] = useState<GameConfig>();
 
   const applyConfig = (incoming: GameConfig) => {
-    setConfig(incoming);
+    // Wipe any prior session so submitting the modal mid-game starts
+    // genuinely fresh — turn log + scores cleared, imperative timer
+    // parked. Then layer the new settings on top.
+    reset();
     setExpectedTurns(incoming.expectedTurns);
     setPlayers(incoming.players);
     const definition = findDefinition(incoming.definitionId);
@@ -70,13 +75,16 @@ export default function Home() {
 
   const { open, isOpen, modal } = useGameSetup(applyConfig);
 
+  // Only auto-open the setup modal on first mount when there's nothing
+  // to resume — a restored session counts as already-configured.
+  const needsSetup = players === undefined && state.turns.length === 0;
   const [firstOpen, setFirstOpen] = useState(true);
   useEffect(() => {
     if (firstOpen) {
       setFirstOpen(false);
-      open();
+      if (needsSetup) open();
     }
-  }, [open, firstOpen]);
+  }, [open, firstOpen, needsSetup]);
   useEffect(() => {
     setPreventClickCapture(isOpen);
   }, [isOpen]);
@@ -95,18 +103,33 @@ export default function Home() {
   );
 
   const activePlayer =
-    config?.players && currentPlayerIndex !== null
-      ? config.players[currentPlayerIndex]
+    players && currentPlayerIndex !== null
+      ? players[currentPlayerIndex]
       : undefined;
 
   const victorPlayer =
-    victor !== null && config?.players ? config.players[victor] : undefined;
+    victor !== null && players ? players[victor] : undefined;
 
   const scoresVisible =
-    scoreConfig !== undefined && (config?.players?.length ?? 0) > 0;
+    scoreConfig !== undefined && (players?.length ?? 0) > 0;
 
   return (
-    <FullScreen>
+    <FullScreen
+      menuExtras={
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            open();
+          }}
+          className={styles.newGameButton}
+          aria-label="Start a new game"
+        >
+          <Plus size={16} aria-hidden />
+          New game
+        </button>
+      }
+    >
       <div
         className={styles.container}
         onClick={() => {
@@ -134,9 +157,9 @@ export default function Home() {
             )
           )}
           <div style={{ width: size, height: size, position: "relative" }}>
-            {config?.players && currentPlayerIndex !== null && (
+            {players && currentPlayerIndex !== null && (
               <PlayerArcs
-                players={config.players}
+                players={players}
                 activeIndex={currentPlayerIndex}
                 containerSize={size}
                 internalSizeOffset={40}
@@ -181,19 +204,16 @@ export default function Home() {
       </div>
       {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
-          {scoresVisible && config?.players && scoreConfig && (
+          {scoresVisible && players && scoreConfig && (
             <ScorePanel
-              players={config.players}
+              players={players}
               scores={scores}
               scoreConfig={scoreConfig}
               onIncrement={incrementScore}
             />
           )}
           {playerStats.length > 0 && (
-            <PlayerTimeShare
-              stats={playerStats}
-              players={config?.players || []}
-            />
+            <PlayerTimeShare stats={playerStats} players={players || []} />
           )}
         </div>
       )}

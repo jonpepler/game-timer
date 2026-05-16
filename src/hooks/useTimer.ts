@@ -1,4 +1,4 @@
-import { useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 import {
   StopwatchResult,
   TimerResult,
@@ -19,6 +19,7 @@ import {
   type TurnRecord,
 } from "@/state/gameSession";
 import type { ScoreConfig } from "@/state/gameDefinition";
+import { loadSession, saveSession } from "@/state/sessionPersistence";
 
 type UseTimerProps = {
   initialTime: number;
@@ -44,8 +45,15 @@ export const useTimer = ({
       expectedTurns: initialExpectedTurns,
       players: undefined,
     },
-    createInitialGameSessionState,
+    (params) => loadSession() ?? createInitialGameSessionState(params),
   );
+
+  // Persist on every reducer change. Reducer state only changes on user
+  // actions (tap, undo, score) — not on the per-second timer ticks — so
+  // write frequency tracks user activity, not the clock.
+  useEffect(() => {
+    saveSession(state);
+  }, [state]);
 
   const stopwatch = useStopwatch({ autoStart: false });
   const timer = useInternalTimer({
@@ -121,6 +129,14 @@ export const useTimer = ({
     stopwatch.start();
   };
 
+  const reset = () => {
+    dispatch({ type: "RESET" });
+    // Park the imperative timer at zero so the next tap can call
+    // startTimer cleanly with the new (post-RESET) average.
+    timer.restart(new Date(), false);
+    stopwatch.reset(undefined, false);
+  };
+
   const setExpectedTurns = (n: number) =>
     dispatch({ type: "SET_EXPECTED_TURNS", expectedTurns: n });
   const setPlayers = (players: Player[] | undefined) =>
@@ -159,6 +175,7 @@ export const useTimer = ({
     setScore,
     incrementScore,
     endGame,
+    reset,
     scores: state.scores,
     scoreConfig: state.scoreConfig,
     victor: state.victor,
