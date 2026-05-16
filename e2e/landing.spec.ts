@@ -15,7 +15,7 @@ test("landing → timer navigation works", async ({ page }) => {
 
 test("setup modal's expectedTurns flows into the footer", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
-  const turnsInput = page.getByLabel(/how many turns/i);
+  const turnsInput = page.getByLabel(/expected turns/i);
   await expect(turnsInput).toBeVisible();
   await turnsInput.fill("42");
   await page.getByRole("button", { name: /start game/i }).click();

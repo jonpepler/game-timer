@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Play, X, Users } from "lucide-react";
+import styles from "./GameSetupModal.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,8 @@ export const GameSetupModal = ({
   onSubmit,
   onClose,
 }: GameSetupModalProps) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   const [expectedTurns, setExpectedTurns] = useState<number>(90);
   const [trackPlayers, setTrackPlayers] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
@@ -51,7 +55,12 @@ export const GameSetupModal = ({
     makePlayer(1),
   ]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) dialog.showModal();
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
 
   const handlePlayerCountChange = (count: number) => {
     const clamped = Math.max(1, Math.min(6, count));
@@ -76,90 +85,134 @@ export const GameSetupModal = ({
     });
   };
 
+  // Close when the user clicks the backdrop (the dialog itself, not its
+  // form contents).
+  const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
+    if (event.target === dialogRef.current) onClose?.();
+  };
+
   return (
-    <dialog open aria-modal="true" aria-labelledby="setup-title">
-      <h2 id="setup-title">Game Setup</h2>
+    <dialog
+      ref={dialogRef}
+      className={styles.modal}
+      aria-labelledby="setup-title"
+      onClick={handleDialogClick}
+      onClose={onClose}
+    >
+      <form
+        className={styles.form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSubmit();
+        }}
+      >
+        <header className={styles.header}>
+          <h2 id="setup-title" className={styles.title}>
+            Game Setup
+          </h2>
+        </header>
 
-      {/* Expected turns */}
-      <fieldset>
-        <legend>Expected Turns</legend>
-        <label htmlFor="expected-turns">
-          How many turns do you expect the game to last?
-        </label>
-        <input
-          id="expected-turns"
-          type="number"
-          min={1}
-          value={expectedTurns}
-          onChange={(e) =>
-            setExpectedTurns(Math.max(1, parseInt(e.target.value) || 1))
-          }
-        />
-      </fieldset>
-
-      {/* Player tracking toggle */}
-      <fieldset>
-        <legend>Players (optional)</legend>
-        <label>
-          <input
-            type="checkbox"
-            checked={trackPlayers}
-            onChange={(e) => setTrackPlayers(e.target.checked)}
-          />
-          Track individual players (Experimental! Can break easily)
-        </label>
-
-        {trackPlayers && (
-          <div>
-            <label htmlFor="player-count">Number of players</label>
+        <div className={styles.scroll}>
+          <section className={styles.section}>
+            <label htmlFor="expected-turns" className={styles.label}>
+              Expected turns
+            </label>
             <input
-              id="player-count"
+              id="expected-turns"
               type="number"
               min={1}
-              max={6}
-              value={playerCount}
+              value={expectedTurns}
               onChange={(e) =>
-                handlePlayerCountChange(parseInt(e.target.value) || 1)
+                setExpectedTurns(Math.max(1, parseInt(e.target.value) || 1))
               }
+              className={styles.input}
             />
+            <p className={styles.help}>
+              Used to predict when the game will finish and to set the first
+              countdown.
+            </p>
+          </section>
 
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {players.map((player, i) => (
-                <li key={i}>
-                  <label htmlFor={`player-name-${i}`}>
-                    Player {i + 1} name
+          <section className={styles.section}>
+            <label className={styles.toggleRow}>
+              <input
+                type="checkbox"
+                checked={trackPlayers}
+                onChange={(e) => setTrackPlayers(e.target.checked)}
+              />
+              <span className={styles.toggleText}>
+                <Users size={18} aria-hidden="true" />
+                Track individual players
+              </span>
+              <span className={styles.badge}>Experimental</span>
+            </label>
+
+            {trackPlayers && (
+              <>
+                <div className={styles.playerCount}>
+                  <label htmlFor="player-count" className={styles.subLabel}>
+                    Number of players
                   </label>
                   <input
-                    id={`player-name-${i}`}
-                    type="text"
-                    value={player.name}
-                    onChange={(e) => updatePlayer(i, "name", e.target.value)}
-                    placeholder={`Player ${i + 1}`}
+                    id="player-count"
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={playerCount}
+                    onChange={(e) =>
+                      handlePlayerCountChange(parseInt(e.target.value) || 1)
+                    }
+                    className={styles.input}
                   />
-                  <label htmlFor={`player-color-${i}`}>Colour</label>
-                  <input
-                    id={`player-color-${i}`}
-                    type="color"
-                    value={player.color}
-                    onChange={(e) => updatePlayer(i, "color", e.target.value)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </fieldset>
+                </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <button onClick={handleSubmit} style={{ width: 250 }}>
-          Start Game
-        </button>
-        {onClose && (
-          <button onClick={onClose} style={{ width: 150 }}>
-            Cancel
+                <ul className={styles.playerList}>
+                  {players.map((player, i) => (
+                    <li key={i} className={styles.playerRow}>
+                      <input
+                        type="color"
+                        value={player.color}
+                        onChange={(e) =>
+                          updatePlayer(i, "color", e.target.value)
+                        }
+                        className={styles.colorSwatch}
+                        aria-label={`Colour for player ${i + 1}`}
+                      />
+                      <input
+                        type="text"
+                        value={player.name}
+                        onChange={(e) =>
+                          updatePlayer(i, "name", e.target.value)
+                        }
+                        placeholder={`Player ${i + 1}`}
+                        aria-label={`Player ${i + 1} name`}
+                        className={styles.input}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        </div>
+
+        <footer className={styles.actions}>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className={styles.secondary}
+            >
+              <X size={18} aria-hidden="true" />
+              Cancel
+            </button>
+          )}
+          <button type="submit" className={styles.primary}>
+            <Play size={18} aria-hidden="true" />
+            Start Game
           </button>
-        )}
-      </div>
+        </footer>
+      </form>
     </dialog>
   );
 };
