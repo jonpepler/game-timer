@@ -85,13 +85,34 @@ describe("gameSessionReducer", () => {
 
     expect(undone.turns).toHaveLength(0);
     expect(undone.currentTurnStartedAt).toBe(1000);
-    expect(undone.averageSeconds).toBe(oneTurn.averageSeconds);
+    // Back to zero turns means the original average is restored — see the
+    // dedicated test below for why we don't freeze the rolling average.
+    expect(undone.averageSeconds).toBe(300);
   });
 
   it("UNDO is a no-op when no turns have been recorded", () => {
     const started = gameSessionReducer(init(), { type: "START", at: 0 });
     const undone = gameSessionReducer(started, { type: "UNDO" });
     expect(undone).toBe(started);
+  });
+
+  it("UNDO back to zero turns restores the initial average, not the last rolling value", () => {
+    const started = gameSessionReducer(init({ initialAverageSeconds: 300 }), {
+      type: "START",
+      at: 0,
+    });
+    // A turn way under the initial average pushes averageSeconds way down.
+    const afterFastTurn = gameSessionReducer(started, {
+      type: "NEXT_TURN",
+      elapsedSeconds: 20,
+      at: 20_000,
+    });
+    expect(afterFastTurn.averageSeconds).toBe(20);
+
+    const undone = gameSessionReducer(afterFastTurn, { type: "UNDO" });
+    expect(undone.turns).toHaveLength(0);
+    // Important: the original 300s baseline is back, not the post-turn 20s.
+    expect(undone.averageSeconds).toBe(300);
   });
 
   it("SET_EXPECTED_TURNS and SET_PLAYERS update config without touching the log", () => {
@@ -117,22 +138,23 @@ describe("gameSessionReducer", () => {
     expect(withPlayers.players).toEqual(players);
   });
 
-  it("RESET clears the log and current turn clock but keeps config + rolling average", () => {
-    const started = gameSessionReducer(init({ expectedTurns: 50 }), {
-      type: "START",
-      at: 0,
-    });
+  it("RESET clears the log and restores the initial average + config", () => {
+    const started = gameSessionReducer(
+      init({ expectedTurns: 50, initialAverageSeconds: 300 }),
+      { type: "START", at: 0 },
+    );
     const withTurns = gameSessionReducer(started, {
       type: "NEXT_TURN",
       elapsedSeconds: 100,
       at: 100000,
     });
-    const reset = gameSessionReducer(withTurns, { type: "RESET" });
+    expect(withTurns.averageSeconds).toBe(100);
 
+    const reset = gameSessionReducer(withTurns, { type: "RESET" });
     expect(reset.turns).toEqual([]);
     expect(reset.started).toBe(false);
     expect(reset.expectedTurns).toBe(50);
-    expect(reset.averageSeconds).toBe(withTurns.averageSeconds);
+    expect(reset.averageSeconds).toBe(300);
   });
 });
 

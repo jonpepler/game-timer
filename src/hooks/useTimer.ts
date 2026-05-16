@@ -84,6 +84,25 @@ export const useTimer = ({
     if (playNext) playNext();
   };
 
+  const undo = () => {
+    if (state.turns.length === 0) return;
+    // Mirror the reducer's UNDO average calculation so the imperative
+    // timer can be restarted synchronously with the correct value.
+    const remaining = state.turns.slice(0, -1);
+    const nextAverage =
+      remaining.length === 0
+        ? state.initialAverageSeconds
+        : Math.floor(
+            remaining.reduce((s, t) => s + t.elapsedSeconds, 0) /
+              remaining.length,
+          );
+    dispatch({ type: "UNDO" });
+    timer.restart(getDateSecondsFromNow(nextAverage));
+    // Clear any in-progress overtime tracking — the new (restored) turn
+    // is starting fresh, not continuing past expiry.
+    stopwatch.reset(undefined, false);
+  };
+
   const getTimeString = (t: TimerResult | StopwatchResult) =>
     `${t.hours ? t.hours + ":" : ""}${t.minutes.toString().padStart(2, "0")}:${t.seconds.toString().padStart(2, "0")}`;
 
@@ -115,6 +134,8 @@ export const useTimer = ({
     pause,
     unpause,
     resetTimer,
+    undo,
+    canUndo: state.turns.length > 0,
     paused,
     timerTotalSeconds: timer.totalSeconds,
     stopwatchTotalSeconds: stopwatch.totalSeconds,

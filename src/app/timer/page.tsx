@@ -28,6 +28,8 @@ export default function Home() {
     pause,
     unpause,
     resetTimer,
+    undo,
+    canUndo,
     paused,
     timerTotalSeconds,
     stopwatchTotalSeconds,
@@ -172,6 +174,8 @@ export default function Home() {
           pause,
           unpause,
           averageTime,
+          undo,
+          canUndo,
         }}
       />
     </FullScreen>

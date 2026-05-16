@@ -42,21 +42,31 @@
   font-variant-numeric: tabular-nums;
 }
 
-.toggle {
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle,
+.secondaryToggle {
   /* Override the global button reset */
-  width: 56px;
-  height: 56px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    transform 0.1s ease, opacity 0.15s ease;
+}
+
+.toggle {
+  width: 56px;
+  height: 56px;
   background: var(--color-surface-muted);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-    transform 0.1s ease;
 }
 
 .toggle:hover {
@@ -71,4 +81,33 @@
 .toggle svg {
   width: 22px;
   height: 22px;
+}
+
+.secondaryToggle {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.secondaryToggle:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.secondaryToggle:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.secondaryToggle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.secondaryToggle svg {
+  width: 18px;
+  height: 18px;
 }

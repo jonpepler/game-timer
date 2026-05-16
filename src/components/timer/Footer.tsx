@@ -2,7 +2,7 @@ import { getDateSecondsFromNow } from "@/utils/getDateSecondsFromNow";
 import { EditableField } from "../EditableField";
 import styles from "./Footer.module.css";
 import { Dispatch, SetStateAction } from "react";
-import { Clock, Hourglass, Pause, Play } from "lucide-react";
+import { Clock, Hourglass, Pause, Play, Undo2 } from "lucide-react";
 
 type FooterProps = {
   remainingTurns: number;
@@ -12,6 +12,8 @@ type FooterProps = {
   pause: () => void;
   unpause: () => void;
   averageTime: number;
+  undo: () => void;
+  canUndo: boolean;
 };
 
 export const Footer = ({
@@ -22,10 +24,20 @@ export const Footer = ({
   pause,
   unpause,
   averageTime,
+  undo,
+  canUndo,
 }: FooterProps) => {
   const predictedFinish = getDateSecondsFromNow(
     remainingTurns * averageTime,
   ).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  // Tap-to-advance lives on a parent div. Buttons in the footer need to
+  // stopPropagation so a click on the button doesn't also count as a turn
+  // advance.
+  const stop = (handler: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handler();
+  };
 
   return (
     <footer className={styles.footer}>
@@ -44,14 +56,25 @@ export const Footer = ({
         )}
       />
 
-      <button
-        type="button"
-        onClick={paused ? unpause : pause}
-        className={`${styles.toggle} ${styles.footerCenter}`}
-        aria-label={paused ? "Resume timer" : "Pause timer"}
-      >
-        {paused ? <Play aria-hidden /> : <Pause aria-hidden />}
-      </button>
+      <div className={`${styles.controls} ${styles.footerCenter}`}>
+        <button
+          type="button"
+          onClick={stop(undo)}
+          disabled={!canUndo}
+          className={styles.secondaryToggle}
+          aria-label="Undo last turn"
+        >
+          <Undo2 aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={stop(paused ? unpause : pause)}
+          className={styles.toggle}
+          aria-label={paused ? "Resume timer" : "Pause timer"}
+        >
+          {paused ? <Play aria-hidden /> : <Pause aria-hidden />}
+        </button>
+      </div>
 
       <span
         suppressHydrationWarning

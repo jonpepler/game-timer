@@ -21,6 +21,10 @@ export interface GameSessionState {
   turns: TurnRecord[];
   // Countdown length used for the next turn, in seconds.
   averageSeconds: number;
+  // The starting countdown length. Used as the fallback when undoing back
+  // to zero turns — without it, undo-to-empty would freeze whatever
+  // average was last computed instead of returning to the original setup.
+  initialAverageSeconds: number;
   expectedTurns: number;
   players?: Player[];
   currentTurnStartedAt: number | null;
@@ -46,6 +50,7 @@ export const createInitialGameSessionState = (
   started: false,
   turns: [],
   averageSeconds: params.initialAverageSeconds,
+  initialAverageSeconds: params.initialAverageSeconds,
   expectedTurns: params.expectedTurns,
   players: params.players,
   currentTurnStartedAt: null,
@@ -120,7 +125,10 @@ export const gameSessionReducer = (
       if (state.turns.length === 0) return state;
       const turns = state.turns.slice(0, -1);
       const popped = state.turns[state.turns.length - 1];
-      const averageSeconds = averageOf(turns, state.averageSeconds);
+      // Fall back to the original average when all turns are gone so the
+      // session looks like it did at start, not "frozen at the last
+      // rolling average."
+      const averageSeconds = averageOf(turns, state.initialAverageSeconds);
       log.debug("turn undone", {
         restoredPlayerIndex: popped.playerIndex,
         averageSeconds,
@@ -138,7 +146,7 @@ export const gameSessionReducer = (
       return { ...state, players: action.players };
     case "RESET":
       return createInitialGameSessionState({
-        initialAverageSeconds: state.averageSeconds,
+        initialAverageSeconds: state.initialAverageSeconds,
         expectedTurns: state.expectedTurns,
         players: state.players,
       });
