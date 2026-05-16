@@ -1,29 +1,50 @@
-import { useMemo, useState } from "react";
+import { useMemo, useReducer } from "react";
 import {
   StopwatchResult,
   TimerResult,
   useStopwatch,
   useTimer as useInternalTimer,
 } from "react-timer-hook";
-import { useImmutableList } from "@/hooks/useImmutableList";
 import { getDateSecondsFromNow } from "@/utils/getDateSecondsFromNow";
 import { useSounds } from "./useSounds";
+import {
+  createInitialGameSessionState,
+  gameSessionReducer,
+  projectAverageAfterTurn,
+  selectCurrentPlayerIndex,
+  selectRemainingTurns,
+  selectTurnElapsedSecondsList,
+  type GameSessionState,
+  type Player,
+  type TurnRecord,
+} from "@/state/gameSession";
 
 type UseTimerProps = {
   initialTime: number;
+  initialExpectedTurns: number;
   height: number;
   width: number;
-  nextTurn: () => void;
 };
+
+export type { Player, TurnRecord, GameSessionState };
 
 export const useTimer = ({
   initialTime,
+  initialExpectedTurns,
   height,
   width,
-  nextTurn,
 }: UseTimerProps) => {
   const { playNext, playOvertime } = useSounds();
-  const [started, setStarted] = useState(false);
+
+  const [state, dispatch] = useReducer(
+    gameSessionReducer,
+    {
+      initialAverageSeconds: initialTime,
+      expectedTurns: initialExpectedTurns,
+      players: undefined,
+    },
+    createInitialGameSessionState,
+  );
 
   const stopwatch = useStopwatch({ autoStart: false });
   const timer = useInternalTimer({
@@ -34,41 +55,33 @@ export const useTimer = ({
       if (playOvertime) playOvertime();
     },
   });
-  const [times, addTime] = useImmutableList<number>();
-  const [averageTime, setAverageTime] = useState(initialTime);
 
-  const timerFinished = timer.totalSeconds === 0 && started;
+  const timerFinished = timer.totalSeconds === 0 && state.started;
   const paused = useMemo(
     () => !timer.isRunning && !stopwatch.isRunning,
     [timer, stopwatch],
   );
 
-  const getNewAverageTime = (newTime: number) =>
-    Math.floor(
-      times.reduce((total, sum) => total + sum, newTime) / (times.length + 1),
-    );
-
   const startTimer = () => {
-    timer.restart(getDateSecondsFromNow(averageTime));
-    setStarted(true);
+    timer.restart(getDateSecondsFromNow(state.averageSeconds));
+    dispatch({ type: "START", at: Date.now() });
   };
 
   const resetTimer = () => {
-    if (!started) {
+    if (!state.started) {
       startTimer();
       return;
     }
-    const timePassed =
-      averageTime -
+    const elapsedSeconds =
+      state.averageSeconds -
       timer.totalSeconds +
       (timerFinished ? stopwatch.totalSeconds : 0);
-    const newAverageTime = getNewAverageTime(timePassed);
-    addTime(timePassed);
-    setAverageTime(newAverageTime);
-    timer.restart(getDateSecondsFromNow(newAverageTime));
-
+    // Compute the next countdown length synchronously — React hasn't
+    // committed the reducer update yet, but timer.restart needs a value now.
+    const nextAverage = projectAverageAfterTurn(state, elapsedSeconds);
+    dispatch({ type: "NEXT_TURN", elapsedSeconds, at: Date.now() });
+    timer.restart(getDateSecondsFromNow(nextAverage));
     if (playNext) playNext();
-    nextTurn();
   };
 
   const getTimeString = (t: TimerResult | StopwatchResult) =>
@@ -88,7 +101,14 @@ export const useTimer = ({
     stopwatch.start();
   };
 
+  const setExpectedTurns = (n: number) =>
+    dispatch({ type: "SET_EXPECTED_TURNS", expectedTurns: n });
+  const setPlayers = (players: Player[] | undefined) =>
+    dispatch({ type: "SET_PLAYERS", players });
+
   return {
+    state,
+    dispatch,
     getTimerString,
     getStopwatchString,
     size,
@@ -98,8 +118,12 @@ export const useTimer = ({
     paused,
     timerTotalSeconds: timer.totalSeconds,
     stopwatchTotalSeconds: stopwatch.totalSeconds,
-    averageTime,
+    averageTime: state.averageSeconds,
     timerFinished,
-    times,
+    times: selectTurnElapsedSecondsList(state),
+    remainingTurns: selectRemainingTurns(state),
+    currentPlayerIndex: selectCurrentPlayerIndex(state),
+    setExpectedTurns,
+    setPlayers,
   };
 };

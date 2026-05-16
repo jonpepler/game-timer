@@ -1,6 +1,6 @@
-interface TurnRecord {
-  time: number;
+interface TurnInput {
   playerIndex: number;
+  elapsedSeconds: number;
 }
 
 interface PlayerStats {
@@ -10,13 +10,13 @@ interface PlayerStats {
   turnCount: number;
 }
 
-export function getPlayerStats(turns: TurnRecord[]): PlayerStats[] {
+export function getPlayerStats(turns: TurnInput[]): PlayerStats[] {
   const totals = new Map<number, { total: number; count: number }>();
 
   for (const turn of turns) {
     const existing = totals.get(turn.playerIndex) ?? { total: 0, count: 0 };
     totals.set(turn.playerIndex, {
-      total: existing.total + turn.time,
+      total: existing.total + turn.elapsedSeconds,
       count: existing.count + 1,
     });
   }

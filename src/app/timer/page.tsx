@@ -7,7 +7,6 @@ import "react-circular-progressbar/dist/styles.css";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { Footer } from "@/components/timer/Footer";
 import { FullScreen } from "@/components/FullScreen";
-import { useTurnCounter } from "@/hooks/useTurnCounter";
 import { useEffect, useMemo, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
@@ -17,12 +16,10 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 
 const initialTime = 5 * 60;
-const expectedTurns = 90;
+const defaultExpectedTurns = 90;
 
 export default function Home() {
   const { height, width } = useWindowSize();
-  const { turns, remainingTurns, nextTurn, setExpectedTurns } =
-    useTurnCounter(expectedTurns);
 
   const {
     getTimerString,
@@ -36,12 +33,29 @@ export default function Home() {
     stopwatchTotalSeconds,
     averageTime,
     timerFinished,
-    times,
-  } = useTimer({ initialTime, height, width, nextTurn });
-  const [preventClickCapture, setPreventClickCapture] = useState(false);
+    state,
+    remainingTurns,
+    currentPlayerIndex,
+    setExpectedTurns,
+    setPlayers,
+  } = useTimer({
+    initialTime,
+    initialExpectedTurns: defaultExpectedTurns,
+    height,
+    width,
+  });
 
+  const [preventClickCapture, setPreventClickCapture] = useState(false);
   const [config, setConfig] = useState<GameConfig>();
-  const { open, isOpen, modal } = useGameSetup(setConfig);
+
+  const applyConfig = (incoming: GameConfig) => {
+    setConfig(incoming);
+    setExpectedTurns(incoming.expectedTurns);
+    setPlayers(incoming.players);
+  };
+
+  const { open, isOpen, modal } = useGameSetup(applyConfig);
+
   const [firstOpen, setFirstOpen] = useState(true);
   useEffect(() => {
     if (firstOpen) {
@@ -52,21 +66,20 @@ export default function Home() {
   useEffect(() => {
     setPreventClickCapture(isOpen);
   }, [isOpen]);
-  const numPlayers = useMemo(() => config?.players?.length, [config]);
-  const currentPlayerIndex = useMemo(
-    () => turns % (numPlayers || 0),
-    [turns, numPlayers],
-  );
-  const playerTimes = useMemo(
+
+  const playerStats = useMemo(
     () =>
-      times.map((time, index) => ({
-        time,
-        playerIndex: index % (numPlayers || 0),
-      })),
-    [times, numPlayers],
+      getPlayerStats(
+        state.turns
+          .filter((t) => t.playerIndex !== null)
+          .map((t) => ({
+            playerIndex: t.playerIndex as number,
+            elapsedSeconds: t.elapsedSeconds,
+          })),
+      ),
+    [state.turns],
   );
-  const playerStats = useMemo(() => getPlayerStats(playerTimes), [playerTimes]);
-  console.log(playerStats);
+
   return (
     <FullScreen>
       <div
@@ -78,9 +91,9 @@ export default function Home() {
         {modal}
         <main className={styles.main}>
           <div style={{ width: size, height: size, position: "relative" }}>
-            {config?.players && (
+            {config?.players && currentPlayerIndex !== null && (
               <PlayerArcs
-                players={config?.players}
+                players={config.players}
                 activeIndex={currentPlayerIndex}
                 containerSize={size}
                 internalSizeOffset={40}

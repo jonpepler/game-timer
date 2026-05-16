@@ -4,9 +4,9 @@ import { getPlayerStats } from "./getPlayerStats";
 describe("getPlayerStats", () => {
   it("aggregates time, count, and average per player", () => {
     const stats = getPlayerStats([
-      { playerIndex: 0, time: 10 },
-      { playerIndex: 1, time: 20 },
-      { playerIndex: 0, time: 30 },
+      { playerIndex: 0, elapsedSeconds: 10 },
+      { playerIndex: 1, elapsedSeconds: 20 },
+      { playerIndex: 0, elapsedSeconds: 30 },
     ]);
 
     expect(stats).toEqual(

@@ -5,7 +5,7 @@ import { Dispatch, SetStateAction } from "react";
 
 type FooterProps = {
   remainingTurns: number;
-  setExpectedTurns: Dispatch<SetStateAction<number>>;
+  setExpectedTurns: (expectedTurns: number) => void;
   setPreventClickCapture: Dispatch<SetStateAction<boolean>>;
   paused: boolean;
   pause: () => void;
