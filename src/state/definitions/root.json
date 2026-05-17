@@ -92,5 +92,68 @@
     "max": 30,
     "increment": 1,
     "victory": { "type": "firstToMax" }
+  },
+  "setupSchema": {
+    "maps": [
+      {
+        "id": "autumn",
+        "name": "Autumn",
+        "expansion": "Base",
+        "description": "The default map. No special rules."
+      },
+      {
+        "id": "winter",
+        "name": "Winter",
+        "expansion": "Base",
+        "description": "A Raging River divides forests, adding a forest-traversal barrier."
+      },
+      {
+        "id": "lake",
+        "name": "Lake",
+        "expansion": "Underworld",
+        "description": "A central lake links coastal clearings; a ferry shuttles between them."
+      },
+      {
+        "id": "mountain",
+        "name": "Mountain",
+        "expansion": "Underworld",
+        "description": "Closed paths must be opened by spending cards; ruling the central Pass scores."
+      },
+      {
+        "id": "marsh",
+        "name": "Marsh",
+        "expansion": "Homeland",
+        "description": "Flood markers seal off clearings; flooded paths enclose forests."
+      },
+      {
+        "id": "gorge",
+        "name": "Gorge",
+        "expansion": "Homeland",
+        "description": "A dam separates forests; a bridge crosses without splitting them."
+      }
+    ],
+    "decks": [
+      {
+        "id": "base",
+        "name": "Base deck",
+        "expansion": "Base"
+      },
+      {
+        "id": "exiles",
+        "name": "Exiles and Partisans",
+        "expansion": "Riverfolk"
+      },
+      {
+        "id": "squires",
+        "name": "Squires and Disciples",
+        "expansion": "Marauders"
+      }
+    ],
+    "landmarks": { "maxAllowed": 2 },
+    "hirelings": { "maxAllowed": 3 },
+    "factionConstraints": {
+      "mutuallyExclusive": [["vagabond", "knaves"]]
+    },
+    "allowDraft": true
   }
 }

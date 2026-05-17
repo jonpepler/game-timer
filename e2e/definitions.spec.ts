@@ -67,3 +67,94 @@ test.describe("game definitions", () => {
     await expect(page.getByLabel(/^Player 2 name$/)).toHaveValue("Player 2");
   });
 });
+
+test.describe("Root advanced setup", () => {
+  test("renders maps + decks + landmarks + hirelings + draft", async ({
+    page,
+  }) => {
+    await page.goto(`${BASE}/timer`);
+    await page.getByLabel(/^Game$/).selectOption("root");
+
+    // Map picker shows every map and defaults to Autumn (the first in
+    // the registry order).
+    const mapSelect = page.getByLabel(/^Map$/);
+    await expect(mapSelect).toBeVisible();
+    await expect(mapSelect).toContainText("Autumn");
+    await expect(mapSelect).toContainText("Winter");
+    await expect(mapSelect).toContainText("Lake");
+    await expect(mapSelect).toContainText("Mountain");
+    await expect(mapSelect).toContainText("Marsh");
+    await expect(mapSelect).toContainText("Gorge");
+
+    // Deck picker shows all three.
+    const deckSelect = page.getByLabel(/^Deck$/);
+    await expect(deckSelect).toContainText("Base deck");
+    await expect(deckSelect).toContainText("Exiles and Partisans");
+    await expect(deckSelect).toContainText("Squires and Disciples");
+
+    // Landmarks + hirelings cap inputs.
+    await expect(page.getByLabel(/^Landmarks$/)).toHaveAttribute("max", "2");
+    await expect(page.getByLabel(/^Hirelings$/)).toHaveAttribute("max", "3");
+
+    // Draft toggle exposed (off by default).
+    await expect(page.getByLabel(/^Draft factions$/)).not.toBeChecked();
+  });
+
+  test("Generic has no Advanced setup section", async ({ page }) => {
+    await page.goto(`${BASE}/timer`);
+    // Generic doesn't declare a setupSchema, so no advanced controls.
+    await expect(page.getByLabel(/^Map$/)).toHaveCount(0);
+    await expect(page.getByLabel(/^Deck$/)).toHaveCount(0);
+  });
+
+  test("faction picker disables already-picked factions", async ({ page }) => {
+    await page.goto(`${BASE}/timer`);
+    await page.getByLabel(/^Game$/).selectOption("root");
+    await page.getByLabel(/track individual players/i).check();
+
+    // Default: Player 1 = Marquise (the picker reflects this).
+    const p1Faction = page.getByLabel(/^Faction for player 1$/);
+    await expect(p1Faction).toHaveValue("marquise");
+    const p2Faction = page.getByLabel(/^Faction for player 2$/);
+    await expect(p2Faction).toHaveValue("eyrie");
+
+    // Marquise should be disabled on row 2's dropdown (already taken).
+    const marquiseOnRow2 = p2Faction.locator(`option[value="marquise"]`);
+    await expect(marquiseOnRow2).toBeDisabled();
+  });
+
+  test("picking a faction updates the player name + colour", async ({
+    page,
+  }) => {
+    await page.goto(`${BASE}/timer`);
+    await page.getByLabel(/^Game$/).selectOption("root");
+    await page.getByLabel(/track individual players/i).check();
+    // Swap Player 2 from Eyrie to Lord of the Hundreds.
+    await page
+      .getByLabel(/^Faction for player 2$/)
+      .selectOption("hundreds");
+    await expect(page.getByLabel(/^Player 2 name$/)).toHaveValue(
+      "Lord of the Hundreds",
+    );
+  });
+
+  test("mutex: Vagabond + Knaves of the Deepwood can't both be picked", async ({
+    page,
+  }) => {
+    await page.goto(`${BASE}/timer`);
+    await page.getByLabel(/^Game$/).selectOption("root");
+    await page.getByLabel(/track individual players/i).check();
+
+    // Pick Vagabond for Player 1.
+    await page
+      .getByLabel(/^Faction for player 1$/)
+      .selectOption("vagabond");
+
+    // Knaves of the Deepwood should now be disabled on Player 2's
+    // dropdown via the mutex pair declared in root.json.
+    const knavesOnRow2 = page
+      .getByLabel(/^Faction for player 2$/)
+      .locator(`option[value="knaves"]`);
+    await expect(knavesOnRow2).toBeDisabled();
+  });
+});

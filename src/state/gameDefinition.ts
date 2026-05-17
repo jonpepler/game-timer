@@ -40,6 +40,38 @@ export interface ScoreConfig {
   victory?: { type: ScoreVictoryType };
 }
 
+export interface MapOption {
+  id: string;
+  name: string;
+  description?: string;
+  expansion?: string;
+}
+
+export interface DeckOption {
+  id: string;
+  name: string;
+  expansion?: string;
+}
+
+export interface SetupSchema {
+  // Maps the players can play on. First entry is treated as the default.
+  maps?: MapOption[];
+  // Card decks the game can be played with. First entry is the default.
+  decks?: DeckOption[];
+  // Optional landmark placements (Root: 0..2).
+  landmarks?: { maxAllowed: number };
+  // Optional hireling cards (Root: 0..3).
+  hirelings?: { maxAllowed: number };
+  // Factions that cannot coexist in the same game (Root: Vagabond vs
+  // Knaves of the Deepwood). Each pair is enforced both ways.
+  factionConstraints?: {
+    mutuallyExclusive?: [string, string][];
+  };
+  // Whether to expose a faction-draft toggle. Doesn't change pick
+  // mechanics, just signals "the rules support drafting".
+  allowDraft?: boolean;
+}
+
 export interface GameDefinition {
   schemaVersion: typeof GAME_DEFINITION_SCHEMA_VERSION;
   id: string;
@@ -53,6 +85,21 @@ export interface GameDefinition {
   // faction count when undefined; defaults to the generic palette size
   // when there are no factions either.
   maxPlayers?: number;
+  // Optional advanced-setup rules (maps, decks, landmarks, hirelings,
+  // faction mutex, draft toggle). When set, the Setup modal renders an
+  // "Advanced setup" section driven by these options.
+  setupSchema?: SetupSchema;
+}
+
+// Per-instance advanced-setup choices captured by the modal and passed
+// through GameConfig. All fields are optional — a definition may
+// declare a setupSchema but the user can leave choices unmade.
+export interface AdvancedSetupChoices {
+  mapId?: string;
+  deckId?: string;
+  landmarkCount?: number;
+  hirelingCount?: number;
+  draft?: boolean;
 }
 
 export interface PlayerSlot {

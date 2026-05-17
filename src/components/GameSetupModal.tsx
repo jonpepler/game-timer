@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Dices, Play, Settings, X, Users } from "lucide-react";
+import { Dices, Play, Settings, Sliders, X, Users } from "lucide-react";
 import styles from "./GameSetupModal.module.css";
 import {
   DEFAULT_DEFINITION_ID,
   findDefinition,
   listDefinitions,
 } from "@/state/definitionRegistry";
-import type { GameDefinition } from "@/state/gameDefinition";
+import type {
+  AdvancedSetupChoices,
+  Faction,
+  GameDefinition,
+  SetupSchema,
+} from "@/state/gameDefinition";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface Player {
   name: string;
   color: string;
+  // Optional foreign key into definition.factions. Set when the player
+  // picked a faction from the dropdown; absent for ad-hoc rows.
+  factionId?: string;
 }
 
 export interface GameConfig {
@@ -22,23 +30,21 @@ export interface GameConfig {
   // Definition the modal was configured against — captured so downstream
   // features (score, victory, faction lookup) can read the rules.
   definitionId: string;
+  // The map/deck/landmarks/hirelings/draft choices the user made when
+  // the picked definition declares a setupSchema. Absent otherwise.
+  advancedSetup?: AdvancedSetupChoices;
 }
 
 interface GameSetupModalProps {
   isOpen: boolean;
   onSubmit: (config: GameConfig) => void;
   onClose?: () => void;
-  // Defaults to the built-in registry; override for tests or future
-  // user-imported definitions.
   definitions?: GameDefinition[];
-  // Pre-selected definition id; defaults to the registry default (Generic).
   initialDefinitionId?: string;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────
 
-// Used when a definition declares no factions of its own. Anonymous
-// "Player N" rows with a serviceable distinct palette.
 const GENERIC_PALETTE = [
   "#E8C547",
   "#E85D47",
@@ -58,6 +64,7 @@ const buildPlayersForDefinition = (
     return definition.factions.slice(0, count).map((f) => ({
       name: f.name,
       color: f.color,
+      factionId: f.id,
     }));
   }
   return Array.from({ length: count }, (_, i) => ({
@@ -67,8 +74,6 @@ const buildPlayersForDefinition = (
 };
 
 const maxPlayersForDefinition = (definition: GameDefinition): number => {
-  // Explicit cap wins over derived counts so Root can offer 13 factions
-  // while still capping the table at 6 humans.
   if (definition.maxPlayers !== undefined) {
     return Math.max(1, definition.maxPlayers);
   }
@@ -76,6 +81,40 @@ const maxPlayersForDefinition = (definition: GameDefinition): number => {
     return definition.factions.length;
   }
   return GENERIC_MAX_PLAYERS;
+};
+
+const defaultAdvancedSetup = (
+  schema: SetupSchema | undefined,
+): AdvancedSetupChoices => {
+  if (!schema) return {};
+  return {
+    mapId: schema.maps?.[0]?.id,
+    deckId: schema.decks?.[0]?.id,
+    landmarkCount: schema.landmarks ? 0 : undefined,
+    hirelingCount: schema.hirelings ? 0 : undefined,
+    draft: schema.allowDraft ? false : undefined,
+  };
+};
+
+// Compute which faction ids the user can't pick for a given row,
+// because another row already picked them OR because they're mutually
+// excluded with something another row already picked.
+const blockedFactionsForRow = (
+  rowIndex: number,
+  players: Player[],
+  mutex: [string, string][] | undefined,
+): Set<string> => {
+  const blocked = new Set<string>();
+  players.forEach((p, i) => {
+    if (i === rowIndex || !p.factionId) return;
+    blocked.add(p.factionId);
+    if (!mutex) return;
+    for (const [a, b] of mutex) {
+      if (p.factionId === a) blocked.add(b);
+      if (p.factionId === b) blocked.add(a);
+    }
+  });
+  return blocked;
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -113,6 +152,9 @@ export const GameSetupModal = ({
   const [players, setPlayers] = useState<Player[]>(
     buildPlayersForDefinition(initialDefinition, 2),
   );
+  const [advancedSetup, setAdvancedSetup] = useState<AdvancedSetupChoices>(
+    defaultAdvancedSetup(initialDefinition.setupSchema),
+  );
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -128,6 +170,7 @@ export const GameSetupModal = ({
     const clampedCount = Math.min(playerCount, maxCount);
     setPlayerCount(clampedCount);
     setPlayers(buildPlayersForDefinition(next, clampedCount));
+    setAdvancedSetup(defaultAdvancedSetup(next.setupSchema));
   };
 
   const handleDefinitionChange = (nextId: string) => {
@@ -137,6 +180,9 @@ export const GameSetupModal = ({
   };
 
   const maxCount = maxPlayersForDefinition(definition);
+  const mutex = definition.setupSchema?.factionConstraints?.mutuallyExclusive;
+  const hasFactions = !!(definition.factions && definition.factions.length > 0);
+  const hasAdvanced = !!definition.setupSchema;
 
   const handlePlayerCountChange = (count: number) => {
     const clamped = Math.max(1, Math.min(maxCount, count));
@@ -155,16 +201,29 @@ export const GameSetupModal = ({
     );
   };
 
+  const pickFaction = (rowIndex: number, factionId: string) => {
+    const f: Faction | undefined = definition.factions?.find(
+      (x) => x.id === factionId,
+    );
+    if (!f) return;
+    setPlayers((prev) =>
+      prev.map((p, i) =>
+        i === rowIndex
+          ? { name: f.name, color: f.color, factionId: f.id }
+          : p,
+      ),
+    );
+  };
+
   const handleSubmit = () => {
     onSubmit({
       expectedTurns,
       players: trackPlayers ? players : undefined,
       definitionId: definition.id,
+      advancedSetup: hasAdvanced ? advancedSetup : undefined,
     });
   };
 
-  // Close when the user clicks the backdrop (the dialog itself, not its
-  // form contents).
   const handleDialogClick = (event: React.MouseEvent<HTMLDialogElement>) => {
     if (event.target === dialogRef.current) onClose?.();
   };
@@ -239,6 +298,14 @@ export const GameSetupModal = ({
             </p>
           </section>
 
+          {hasAdvanced && (
+            <AdvancedSetupSection
+              schema={definition.setupSchema!}
+              value={advancedSetup}
+              onChange={setAdvancedSetup}
+            />
+          )}
+
           <section className={styles.section}>
             <label className={styles.toggleRow}>
               <input
@@ -273,29 +340,55 @@ export const GameSetupModal = ({
                 </div>
 
                 <ul className={styles.playerList}>
-                  {players.map((player, i) => (
-                    <li key={i} className={styles.playerRow}>
-                      <input
-                        type="color"
-                        value={player.color}
-                        onChange={(e) =>
-                          updatePlayer(i, "color", e.target.value)
-                        }
-                        className={styles.colorSwatch}
-                        aria-label={`Colour for player ${i + 1}`}
-                      />
-                      <input
-                        type="text"
-                        value={player.name}
-                        onChange={(e) =>
-                          updatePlayer(i, "name", e.target.value)
-                        }
-                        placeholder={`Player ${i + 1}`}
-                        aria-label={`Player ${i + 1} name`}
-                        className={styles.input}
-                      />
-                    </li>
-                  ))}
+                  {players.map((player, i) => {
+                    const blocked = hasFactions
+                      ? blockedFactionsForRow(i, players, mutex)
+                      : new Set<string>();
+                    return (
+                      <li key={i} className={styles.playerRow}>
+                        <input
+                          type="color"
+                          value={player.color}
+                          onChange={(e) =>
+                            updatePlayer(i, "color", e.target.value)
+                          }
+                          className={styles.colorSwatch}
+                          aria-label={`Colour for player ${i + 1}`}
+                        />
+                        {hasFactions && definition.factions && (
+                          <select
+                            value={player.factionId ?? ""}
+                            onChange={(e) => pickFaction(i, e.target.value)}
+                            className={styles.input}
+                            aria-label={`Faction for player ${i + 1}`}
+                          >
+                            <option value="" disabled>
+                              — pick a faction —
+                            </option>
+                            {definition.factions.map((f) => (
+                              <option
+                                key={f.id}
+                                value={f.id}
+                                disabled={blocked.has(f.id)}
+                              >
+                                {f.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <input
+                          type="text"
+                          value={player.name}
+                          onChange={(e) =>
+                            updatePlayer(i, "name", e.target.value)
+                          }
+                          placeholder={`Player ${i + 1}`}
+                          aria-label={`Player ${i + 1} name`}
+                          className={styles.input}
+                        />
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}
@@ -322,3 +415,142 @@ export const GameSetupModal = ({
     </dialog>
   );
 };
+
+// ── Advanced setup ─────────────────────────────────────────────────────────
+
+interface AdvancedSetupSectionProps {
+  schema: SetupSchema;
+  value: AdvancedSetupChoices;
+  onChange: (next: AdvancedSetupChoices) => void;
+}
+
+function AdvancedSetupSection({
+  schema,
+  value,
+  onChange,
+}: AdvancedSetupSectionProps) {
+  const set = <K extends keyof AdvancedSetupChoices>(
+    key: K,
+    v: AdvancedSetupChoices[K],
+  ) => onChange({ ...value, [key]: v });
+
+  return (
+    <section className={styles.section}>
+      <span className={styles.label}>
+        <span className={styles.labelIcon}>
+          <Sliders size={14} aria-hidden />
+        </span>
+        Advanced setup
+      </span>
+
+      {schema.maps && schema.maps.length > 0 && (
+        <div>
+          <label htmlFor="adv-map" className={styles.subLabel}>
+            Map
+          </label>
+          <select
+            id="adv-map"
+            value={value.mapId ?? ""}
+            onChange={(e) => set("mapId", e.target.value)}
+            className={styles.input}
+          >
+            {schema.maps.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+                {m.expansion ? ` · ${m.expansion}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {schema.decks && schema.decks.length > 0 && (
+        <div>
+          <label htmlFor="adv-deck" className={styles.subLabel}>
+            Deck
+          </label>
+          <select
+            id="adv-deck"
+            value={value.deckId ?? ""}
+            onChange={(e) => set("deckId", e.target.value)}
+            className={styles.input}
+          >
+            {schema.decks.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+                {d.expansion ? ` · ${d.expansion}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {schema.landmarks && (
+        <div className={styles.playerCount}>
+          <label htmlFor="adv-landmarks" className={styles.subLabel}>
+            Landmarks
+          </label>
+          <input
+            id="adv-landmarks"
+            type="number"
+            min={0}
+            max={schema.landmarks.maxAllowed}
+            value={value.landmarkCount ?? 0}
+            onChange={(e) =>
+              set(
+                "landmarkCount",
+                Math.max(
+                  0,
+                  Math.min(
+                    schema.landmarks!.maxAllowed,
+                    parseInt(e.target.value) || 0,
+                  ),
+                ),
+              )
+            }
+            className={styles.input}
+          />
+        </div>
+      )}
+
+      {schema.hirelings && (
+        <div className={styles.playerCount}>
+          <label htmlFor="adv-hirelings" className={styles.subLabel}>
+            Hirelings
+          </label>
+          <input
+            id="adv-hirelings"
+            type="number"
+            min={0}
+            max={schema.hirelings.maxAllowed}
+            value={value.hirelingCount ?? 0}
+            onChange={(e) =>
+              set(
+                "hirelingCount",
+                Math.max(
+                  0,
+                  Math.min(
+                    schema.hirelings!.maxAllowed,
+                    parseInt(e.target.value) || 0,
+                  ),
+                ),
+              )
+            }
+            className={styles.input}
+          />
+        </div>
+      )}
+
+      {schema.allowDraft && (
+        <label className={styles.toggleRow}>
+          <input
+            type="checkbox"
+            checked={value.draft ?? false}
+            onChange={(e) => set("draft", e.target.checked)}
+          />
+          <span className={styles.toggleText}>Draft factions</span>
+        </label>
+      )}
+    </section>
+  );
+}
