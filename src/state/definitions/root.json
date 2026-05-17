@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "id": "root",
+  "name": "Root",
+  "description": "Asymmetric woodland strategy by Leder Games. First faction to 30 wins.",
+  "defaultExpectedTurns": 80,
+  "defaultAverageSeconds": 240,
+  "maxPlayers": 6,
+  "factions": [
+    {
+      "id": "marquise",
+      "name": "Marquise de Cat",
+      "color": "#F39C2A",
+      "description": "Industrial cats building sawmills, workshops, and recruiters across the wood."
+    },
+    {
+      "id": "eyrie",
+      "name": "Eyrie Dynasties",
+      "color": "#1E4A8C",
+      "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act."
+    },
+    {
+      "id": "alliance",
+      "name": "Woodland Alliance",
+      "color": "#3E9E48",
+      "description": "Forest revolutionaries spreading sympathy and igniting open revolt."
+    },
+    {
+      "id": "vagabond",
+      "name": "Vagabond",
+      "color": "#B0B0B0",
+      "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions."
+    },
+    {
+      "id": "lizards",
+      "name": "Lizard Cult",
+      "color": "#E8D547",
+      "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals."
+    },
+    {
+      "id": "riverfolk",
+      "name": "Riverfolk Company",
+      "color": "#3FB8C2",
+      "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river."
+    },
+    {
+      "id": "duchy",
+      "name": "Underground Duchy",
+      "color": "#9E5A29",
+      "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions."
+    },
+    {
+      "id": "corvids",
+      "name": "Corvid Conspiracy",
+      "color": "#2A2A2A",
+      "description": "Crow plotters laying secret tokens that punish meddling rivals."
+    },
+    {
+      "id": "hundreds",
+      "name": "Lord of the Hundreds",
+      "color": "#C13E3E",
+      "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours."
+    },
+    {
+      "id": "keepers",
+      "name": "Keepers in Iron",
+      "color": "#7FA8A2",
+      "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige."
+    },
+    {
+      "id": "lilypad",
+      "name": "Lilypad Diaspora",
+      "color": "#5DBE7C",
+      "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure."
+    },
+    {
+      "id": "twilight",
+      "name": "Twilight Council",
+      "color": "#7B6CA8",
+      "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation."
+    },
+    {
+      "id": "knaves",
+      "name": "Knaves of the Deepwood",
+      "color": "#8C6B3F",
+      "description": "Forest miscreants raiding warriors and ransoming hostages back for victory."
+    }
+  ],
+  "score": {
+    "displayStyle": "linearTrack",
+    "min": 0,
+    "max": 30,
+    "increment": 1,
+    "victory": { "type": "firstToMax" }
+  }
+}

@@ -49,6 +49,10 @@ export interface GameDefinition {
   defaultAverageSeconds: number;
   factions?: Faction[];
   score?: ScoreConfig;
+  // Cap on the player count the setup modal allows. Falls back to the
+  // faction count when undefined; defaults to the generic palette size
+  // when there are no factions either.
+  maxPlayers?: number;
 }
 
 export interface PlayerSlot {

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "generic",
+  "name": "Generic",
+  "description": "A neutral game timer with no factions or score tracking. Suits any board game.",
+  "defaultExpectedTurns": 90,
+  "defaultAverageSeconds": 300
+}

@@ -32,20 +32,20 @@ test.describe("game definitions", () => {
     );
   });
 
-  test("Root caps the player count at the number of factions (8)", async ({
+  test("Root caps the player count at maxPlayers (6) even though it has 13 factions", async ({
     page,
   }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
     await page.getByLabel(/track individual players/i).check();
     const countInput = page.getByLabel(/number of players/i);
-    // The native number input caps to max=8; manually entering a higher
-    // value gets clamped on commit by the handler.
-    await expect(countInput).toHaveAttribute("max", "8");
-    await countInput.fill("8");
-    await expect(countInput).toHaveValue("8");
-    await expect(page.getByLabel(/^Player 8 name$/)).toHaveValue(
-      "Corvid Conspiracy",
+    // Root declares maxPlayers: 6 in the JSON, so the input caps at 6
+    // regardless of the larger faction roster.
+    await expect(countInput).toHaveAttribute("max", "6");
+    await countInput.fill("6");
+    await expect(countInput).toHaveValue("6");
+    await expect(page.getByLabel(/^Player 6 name$/)).toHaveValue(
+      "Riverfolk Company",
     );
   });
 

@@ -42,13 +42,18 @@ describe("definition registry", () => {
     }
   });
 
-  it("Root pressure-tests the schema: factions + score subsystem populated", () => {
+  it("Root pressure-tests the schema: full faction roster + score subsystem populated", () => {
     const root = requireDefinition("root");
-    expect(root.factions?.length).toBeGreaterThanOrEqual(4);
+    // All 13 official factions across base + four expansions (Riverfolk,
+    // Underworld, Marauders, Homeland). Update if Leder publishes more.
+    expect(root.factions?.length).toBe(13);
     // Faction ids must be unique — they're used as foreign keys from
     // PlayerSlot and need to round-trip through JSON.
     const factionIds = root.factions!.map((f) => f.id);
     expect(new Set(factionIds).size).toBe(factionIds.length);
+    // maxPlayers caps the table even though there are 13 factions to
+    // pick from.
+    expect(root.maxPlayers).toBe(6);
     expect(root.score?.max).toBe(30);
     expect(root.score?.victory?.type).toBe("firstToMax");
   });

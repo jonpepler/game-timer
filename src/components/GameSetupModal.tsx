@@ -67,6 +67,11 @@ const buildPlayersForDefinition = (
 };
 
 const maxPlayersForDefinition = (definition: GameDefinition): number => {
+  // Explicit cap wins over derived counts so Root can offer 13 factions
+  // while still capping the table at 6 humans.
+  if (definition.maxPlayers !== undefined) {
+    return Math.max(1, definition.maxPlayers);
+  }
   if (definition.factions && definition.factions.length > 0) {
     return definition.factions.length;
   }
