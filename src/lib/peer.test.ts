@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createHost } from "./peer";
+import { connectToHost, createHost } from "./peer";
 
 // Minimal fake of the peerjs Peer + DataConnection surface — just enough
 // for createHost to drive its event listeners. Tests reach in via the
@@ -28,6 +28,7 @@ class FakeConnection {
 class FakePeer {
   private handlers: Record<string, ((...args: unknown[]) => void)[]> = {};
   destroyed = false;
+  outboundConnections: FakeConnection[] = [];
   static instances: FakePeer[] = [];
 
   constructor() {
@@ -40,6 +41,12 @@ class FakePeer {
 
   emit(event: string, ...args: unknown[]) {
     (this.handlers[event] ?? []).forEach((h) => h(...args));
+  }
+
+  connect(remoteId: string) {
+    const conn = new FakeConnection(remoteId);
+    this.outboundConnections.push(conn);
+    return conn;
   }
 
   destroy() {
@@ -147,6 +154,103 @@ describe("createHost", () => {
       FakePeer.instances[0].emit("error", new Error("transient")),
     ).not.toThrow();
     expect(session.sessionCode).toBe("host-1");
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("connectToHost", () => {
+  it("resolves with a CompanionSession once the outbound connection opens", async () => {
+    FakePeer.instances = [];
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      expect(conn.peer).toBe("host-abc");
+      conn.open = true;
+      conn.emit("open");
+    });
+    const session = await promise;
+    expect(session.hostCode).toBe("host-abc");
+  });
+
+  it("relays inbound messages to onMessage handlers", async () => {
+    FakePeer.instances = [];
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      conn.open = true;
+      conn.emit("open");
+    });
+    const session = await promise;
+
+    const received: unknown[] = [];
+    session.onMessage((data) => received.push(data));
+    const conn = FakePeer.instances[0].outboundConnections[0];
+    conn.emit("data", { type: "STATE", value: 42 });
+    expect(received).toEqual([{ type: "STATE", value: 42 }]);
+  });
+
+  it("send writes to the outbound connection", async () => {
+    FakePeer.instances = [];
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      conn.open = true;
+      conn.emit("open");
+    });
+    const session = await promise;
+    session.send({ ping: 1 });
+    expect(
+      FakePeer.instances[0].outboundConnections[0].sent,
+    ).toEqual([{ ping: 1 }]);
+  });
+
+  it("onClose fires when the host hangs up", async () => {
+    FakePeer.instances = [];
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      conn.open = true;
+      conn.emit("open");
+    });
+    const session = await promise;
+    let closed = false;
+    session.onClose(() => {
+      closed = true;
+    });
+    const conn = FakePeer.instances[0].outboundConnections[0];
+    conn.emit("close");
+    expect(closed).toBe(true);
+  });
+
+  it("rejects when the connection errors before opening", async () => {
+    FakePeer.instances = [];
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      conn.emit("error", new Error("host not found"));
+    });
+    await expect(promise).rejects.toThrow(/host not found/);
     consoleSpy.mockRestore();
   });
 });

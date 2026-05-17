@@ -19,6 +19,11 @@ import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
+import { useSessionHost } from "@/hooks/useSessionHost";
+import {
+  PEER_PROTOCOL_VERSION,
+  type HostToCompanionMessage,
+} from "@/state/peerProtocol";
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -59,6 +64,22 @@ export default function Home() {
   });
 
   const players = state.players;
+  const sessionHost = useSessionHost();
+
+  // Broadcast the latest reducer state to every connected companion
+  // whenever it changes OR a new device joins.
+  const peerCount = sessionHost.connectedPeers.length;
+  useEffect(() => {
+    if (sessionHost.status !== "open") return;
+    const message: HostToCompanionMessage = {
+      type: "STATE",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      state,
+      sentAt: Date.now(),
+    };
+    sessionHost.send(message);
+  }, [state, peerCount, sessionHost.status, sessionHost.send]);
+
   const [preventClickCapture, setPreventClickCapture] = useState(false);
 
   const applyConfig = (incoming: GameConfig) => {
@@ -130,7 +151,14 @@ export default function Home() {
             <Plus size={16} aria-hidden />
             New game
           </button>
-          <ShareSessionMenu />
+          <ShareSessionMenu
+            status={sessionHost.status}
+            sessionCode={sessionHost.sessionCode}
+            connectedPeers={sessionHost.connectedPeers}
+            error={sessionHost.error}
+            open={sessionHost.open}
+            close={sessionHost.close}
+          />
         </>
       }
     >

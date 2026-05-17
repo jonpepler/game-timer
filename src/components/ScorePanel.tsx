@@ -11,7 +11,10 @@ interface ScorePanelProps {
   players: Player[];
   scores: Record<number, number>;
   scoreConfig: ScoreConfig;
-  onIncrement: (playerIndex: number, delta: number) => void;
+  onIncrement?: (playerIndex: number, delta: number) => void;
+  // When true, the +/- buttons disappear — for read-only views (the
+  // companion screen mirrors host state without write access in v1).
+  readOnly?: boolean;
 }
 
 export function ScorePanel({
@@ -19,6 +22,7 @@ export function ScorePanel({
   scores,
   scoreConfig,
   onIncrement,
+  readOnly = false,
 }: ScorePanelProps) {
   if (scoreConfig.displayStyle === "hidden") return null;
   if (players.length === 0) return null;
@@ -50,25 +54,29 @@ export function ScorePanel({
                 aria-hidden
               />
               <span className={styles.name}>{player.name}</span>
-              <button
-                type="button"
-                onClick={stop(() => onIncrement(index, -step))}
-                disabled={atMin}
-                className={styles.scoreButton}
-                aria-label={`Decrease score for ${player.name}`}
-              >
-                <Minus aria-hidden />
-              </button>
+              {!readOnly && onIncrement && (
+                <button
+                  type="button"
+                  onClick={stop(() => onIncrement(index, -step))}
+                  disabled={atMin}
+                  className={styles.scoreButton}
+                  aria-label={`Decrease score for ${player.name}`}
+                >
+                  <Minus aria-hidden />
+                </button>
+              )}
               <span className={styles.score}>{score}</span>
-              <button
-                type="button"
-                onClick={stop(() => onIncrement(index, step))}
-                disabled={atMax}
-                className={styles.scoreButton}
-                aria-label={`Increase score for ${player.name}`}
-              >
-                <Plus aria-hidden />
-              </button>
+              {!readOnly && onIncrement && (
+                <button
+                  type="button"
+                  onClick={stop(() => onIncrement(index, step))}
+                  disabled={atMax}
+                  className={styles.scoreButton}
+                  aria-label={`Increase score for ${player.name}`}
+                >
+                  <Plus aria-hidden />
+                </button>
+              )}
             </div>
           );
         })}

@@ -10,6 +10,9 @@ export interface UseSessionHostReturn {
   error: Error | null;
   open: () => void;
   close: () => void;
+  // Broadcast a message to every connected companion. No-op when the
+  // host isn't open. Stable identity so it can be a useEffect dep.
+  send: (data: unknown) => void;
 }
 
 // Owns at most one HostSession. Opt-in: callers click "Share" to spin
@@ -49,6 +52,10 @@ export function useSessionHost(): UseSessionHostReturn {
     setError(null);
   }, []);
 
+  const send = useCallback((data: unknown) => {
+    sessionRef.current?.send(data);
+  }, []);
+
   // Tear the session down if the host page unmounts (route change, etc.)
   useEffect(() => {
     return () => {
@@ -56,5 +63,5 @@ export function useSessionHost(): UseSessionHostReturn {
     };
   }, []);
 
-  return { status, sessionCode, connectedPeers, error, open, close };
+  return { status, sessionCode, connectedPeers, error, open, close, send };
 }

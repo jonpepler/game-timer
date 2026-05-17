@@ -2,12 +2,25 @@
 
 import { Loader2, Share2, X } from "lucide-react";
 import { useState } from "react";
-import { useSessionHost } from "@/hooks/useSessionHost";
 import styles from "./ShareSessionMenu.module.css";
 
-export function ShareSessionMenu() {
-  const { status, sessionCode, connectedPeers, error, open, close } =
-    useSessionHost();
+interface ShareSessionMenuProps {
+  status: "idle" | "opening" | "open" | "error";
+  sessionCode: string | null;
+  connectedPeers: string[];
+  error: Error | null;
+  open: () => void;
+  close: () => void;
+}
+
+export function ShareSessionMenu({
+  status,
+  sessionCode,
+  connectedPeers,
+  error,
+  open,
+  close,
+}: ShareSessionMenuProps) {
   const [copied, setCopied] = useState(false);
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
