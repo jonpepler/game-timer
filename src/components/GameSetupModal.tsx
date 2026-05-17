@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Dices, Play, Settings, Sliders, X, Users } from "lucide-react";
 import styles from "./GameSetupModal.module.css";
+import { NumberField } from "./NumberField";
 import {
   DEFAULT_DEFINITION_ID,
   findDefinition,
@@ -282,14 +283,11 @@ export const GameSetupModal = ({
             <label htmlFor="expected-turns" className={styles.label}>
               Expected turns
             </label>
-            <input
+            <NumberField
               id="expected-turns"
-              type="number"
               min={1}
               value={expectedTurns}
-              onChange={(e) =>
-                setExpectedTurns(Math.max(1, parseInt(e.target.value) || 1))
-              }
+              onChange={setExpectedTurns}
               className={styles.input}
             />
             <p className={styles.help}>
@@ -326,15 +324,12 @@ export const GameSetupModal = ({
                   <label htmlFor="player-count" className={styles.subLabel}>
                     Number of players
                   </label>
-                  <input
+                  <NumberField
                     id="player-count"
-                    type="number"
                     min={1}
                     max={maxCount}
                     value={playerCount}
-                    onChange={(e) =>
-                      handlePlayerCountChange(parseInt(e.target.value) || 1)
-                    }
+                    onChange={handlePlayerCountChange}
                     className={styles.input}
                   />
                 </div>
@@ -490,24 +485,12 @@ function AdvancedSetupSection({
           <label htmlFor="adv-landmarks" className={styles.subLabel}>
             Landmarks
           </label>
-          <input
+          <NumberField
             id="adv-landmarks"
-            type="number"
             min={0}
             max={schema.landmarks.maxAllowed}
             value={value.landmarkCount ?? 0}
-            onChange={(e) =>
-              set(
-                "landmarkCount",
-                Math.max(
-                  0,
-                  Math.min(
-                    schema.landmarks!.maxAllowed,
-                    parseInt(e.target.value) || 0,
-                  ),
-                ),
-              )
-            }
+            onChange={(n) => set("landmarkCount", n)}
             className={styles.input}
           />
         </div>
@@ -518,24 +501,12 @@ function AdvancedSetupSection({
           <label htmlFor="adv-hirelings" className={styles.subLabel}>
             Hirelings
           </label>
-          <input
+          <NumberField
             id="adv-hirelings"
-            type="number"
             min={0}
             max={schema.hirelings.maxAllowed}
             value={value.hirelingCount ?? 0}
-            onChange={(e) =>
-              set(
-                "hirelingCount",
-                Math.max(
-                  0,
-                  Math.min(
-                    schema.hirelings!.maxAllowed,
-                    parseInt(e.target.value) || 0,
-                  ),
-                ),
-              )
-            }
+            onChange={(n) => set("hirelingCount", n)}
             className={styles.input}
           />
         </div>

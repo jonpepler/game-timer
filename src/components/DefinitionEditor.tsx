@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Save, Trash2, X } from "lucide-react";
 import styles from "./DefinitionEditor.module.css";
+import { NumberField } from "./NumberField";
 import {
   GAME_DEFINITION_SCHEMA_VERSION,
   type Faction,
@@ -172,14 +173,11 @@ export function DefinitionEditor({
           <label htmlFor="def-turns" className={styles.label}>
             Default expected turns
           </label>
-          <input
+          <NumberField
             id="def-turns"
-            type="number"
             min={1}
             value={expectedTurns}
-            onChange={(e) =>
-              setExpectedTurns(Math.max(1, parseInt(e.target.value) || 1))
-            }
+            onChange={setExpectedTurns}
             className={styles.input}
           />
         </div>
@@ -187,14 +185,11 @@ export function DefinitionEditor({
           <label htmlFor="def-average" className={styles.label}>
             Default average seconds per turn
           </label>
-          <input
+          <NumberField
             id="def-average"
-            type="number"
             min={1}
             value={averageSeconds}
-            onChange={(e) =>
-              setAverageSeconds(Math.max(1, parseInt(e.target.value) || 1))
-            }
+            onChange={setAverageSeconds}
             className={styles.input}
           />
         </div>
@@ -256,13 +251,10 @@ export function DefinitionEditor({
                 <label htmlFor="score-min" className={styles.label}>
                   Min
                 </label>
-                <input
+                <NumberField
                   id="score-min"
-                  type="number"
                   value={score.min}
-                  onChange={(e) =>
-                    setScore({ ...score, min: parseInt(e.target.value) || 0 })
-                  }
+                  onChange={(n) => setScore({ ...score, min: n })}
                   className={styles.input}
                 />
               </div>
@@ -270,6 +262,7 @@ export function DefinitionEditor({
                 <label htmlFor="score-max" className={styles.label}>
                   Max (blank = no cap)
                 </label>
+                {/* Max is the one number field that allows "blank" */}
                 <input
                   id="score-max"
                   type="number"
@@ -290,17 +283,11 @@ export function DefinitionEditor({
                 <label htmlFor="score-increment" className={styles.label}>
                   Increment
                 </label>
-                <input
+                <NumberField
                   id="score-increment"
-                  type="number"
                   min={1}
                   value={score.increment}
-                  onChange={(e) =>
-                    setScore({
-                      ...score,
-                      increment: Math.max(1, parseInt(e.target.value) || 1),
-                    })
-                  }
+                  onChange={(n) => setScore({ ...score, increment: n })}
                   className={styles.input}
                 />
               </div>

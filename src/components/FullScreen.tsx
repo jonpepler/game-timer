@@ -2,6 +2,7 @@ import {
   FullScreen as InternalFullScreen,
   useFullScreenHandle,
 } from "react-full-screen";
+import { Maximize, Minimize } from "lucide-react";
 
 import styles from "./FullScreen.module.css";
 import type { ReactNode } from "react";
@@ -21,9 +22,23 @@ export const FullScreen = ({ children, menuExtras }: FullScreenProps) => {
       {children}
       <div className={styles.menuContainer}>
         {handle.active ? (
-          <button onClick={handle.exit}>x</button>
+          <button
+            type="button"
+            onClick={handle.exit}
+            className={styles.toggle}
+            aria-label="Exit fullscreen"
+          >
+            <Minimize size={16} aria-hidden />
+          </button>
         ) : (
-          <button onClick={handle.enter}>⛶</button>
+          <button
+            type="button"
+            onClick={handle.enter}
+            className={styles.toggle}
+            aria-label="Enter fullscreen"
+          >
+            <Maximize size={16} aria-hidden />
+          </button>
         )}
         {menuExtras}
       </div>
