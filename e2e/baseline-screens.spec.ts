@@ -75,11 +75,25 @@ test("timer view baseline (Root with scores in play)", async ({ page }) => {
   await page.getByLabel(/track individual players/i).check();
   await page.getByLabel(/number of players/i).fill("4");
   await page.getByRole("button", { name: /start game/i }).click();
-  // Bump a couple of factions to non-zero so the panel looks alive.
+  // Score-panel markers at identical scores stack on top of each other,
+  // so the screenshot fixture selects via a synthetic click on the
+  // exact element rather than relying on hit-testing.
+  const selectMarker = (name: string) =>
+    page.evaluate((n) => {
+      const btn = document.querySelector(
+        `button[aria-label^="${n} score "]`,
+      ) as HTMLButtonElement | null;
+      btn?.click();
+    }, name);
   const inc = (name: string) =>
-    page.getByRole("button", { name: new RegExp(`Increase score for ${name}`, "i") });
+    page.getByRole("button", {
+      name: new RegExp(`Increase score for ${name}`, "i"),
+    });
+  await selectMarker("Marquise de Cat");
   for (let i = 0; i < 7; i++) await inc("Marquise de Cat").click();
+  await selectMarker("Eyrie Dynasties");
   for (let i = 0; i < 4; i++) await inc("Eyrie Dynasties").click();
+  await selectMarker("Woodland Alliance");
   for (let i = 0; i < 12; i++) await inc("Woodland Alliance").click();
   await save(page, "06-timer-with-scores");
 });

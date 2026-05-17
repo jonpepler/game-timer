@@ -47,27 +47,33 @@ test.describe("session persistence", () => {
 
   test("Root: scores + faction roster survive a refresh", async ({ page }) => {
     await startRoot(page, 2);
+    // The new score panel routes +/- through whichever player marker is
+    // currently selected.
+    const marker = (name: string) =>
+      page.getByRole("button", {
+        name: new RegExp(`^${name} score `, "i"),
+      });
     const inc = (name: string) =>
       page.getByRole("button", {
         name: new RegExp(`Increase score for ${name}`, "i"),
       });
+    // Marquise is auto-selected as the active player.
     for (let i = 0; i < 5; i++) await inc("Marquise de Cat").click();
+    await marker("Eyrie Dynasties").click();
     for (let i = 0; i < 3; i++) await inc("Eyrie Dynasties").click();
-
-    const panel = page.getByLabel(/^Scores$/);
-    await expect(panel).toContainText("5");
-    await expect(panel).toContainText("3");
 
     await page.reload();
 
     await expect(
       page.getByRole("heading", { name: /game setup/i }),
     ).toHaveCount(0);
-    const restored = page.getByLabel(/^Scores$/);
-    await expect(restored).toContainText("Marquise de Cat");
-    await expect(restored).toContainText("Eyrie Dynasties");
-    await expect(restored).toContainText("5");
-    await expect(restored).toContainText("3");
+    // The track marker labels carry the score; verify each persists.
+    await expect(
+      page.getByRole("button", { name: /Marquise de Cat score 5/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Eyrie Dynasties score 3/i }),
+    ).toBeVisible();
   });
 
   test("New game button opens the modal without clearing the session", async ({

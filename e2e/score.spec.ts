@@ -11,16 +11,28 @@ const startRoot = async (page: Page, playerCount = 2) => {
   await page.getByRole("button", { name: /start game/i }).click();
 };
 
+// Marker (selects which player the +/- controls target).
+const marker = (page: Page, playerName: string) =>
+  page.getByRole("button", {
+    name: new RegExp(`^${playerName} score `, "i"),
+  });
 const incButton = (page: Page, playerName: string) =>
-  page.getByRole("button", { name: new RegExp(`Increase score for ${playerName}`, "i") });
+  page.getByRole("button", {
+    name: new RegExp(`Increase score for ${playerName}`, "i"),
+  });
 const decButton = (page: Page, playerName: string) =>
-  page.getByRole("button", { name: new RegExp(`Decrease score for ${playerName}`, "i") });
-const scoreCell = (page: Page, playerName: string) =>
-  page
-    .locator(`text=${playerName}`)
-    .locator("..")
-    .locator("xpath=following-sibling::*[contains(@class, 'score')]")
-    .first();
+  page.getByRole("button", {
+    name: new RegExp(`Decrease score for ${playerName}`, "i"),
+  });
+
+const selectAndPump = async (page: Page, name: string, delta: number) => {
+  await marker(page, name).click();
+  if (delta > 0) {
+    for (let i = 0; i < delta; i++) await incButton(page, name).click();
+  } else {
+    for (let i = 0; i < -delta; i++) await decButton(page, name).click();
+  }
+};
 
 test.describe("score layer", () => {
   test("no score panel when the picked definition has no scoreConfig (Generic)", async ({
@@ -29,7 +41,6 @@ test.describe("score layer", () => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/track individual players/i).check();
     await page.getByRole("button", { name: /start game/i }).click();
-    // Generic has no score subsystem — panel + label should not render.
     await expect(page.getByLabel(/^Scores$/)).toHaveCount(0);
   });
 
@@ -42,33 +53,49 @@ test.describe("score layer", () => {
     await expect(page.getByLabel(/^Scores$/)).toHaveCount(0);
   });
 
-  test("Root + players renders a score row per faction, starting at min", async ({
+  test("Root + players renders a track marker per faction, starting at min", async ({
     page,
   }) => {
     await startRoot(page, 3);
     const panel = page.getByLabel(/^Scores$/);
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText("Marquise de Cat");
-    await expect(panel).toContainText("Eyrie Dynasties");
-    await expect(panel).toContainText("Woodland Alliance");
-    // Three zeros — one per faction.
-    await expect(panel.getByText(/^0$/)).toHaveCount(3);
+    // Each player gets a marker button.
+    await expect(marker(page, "Marquise de Cat")).toBeVisible();
+    await expect(marker(page, "Eyrie Dynasties")).toBeVisible();
+    await expect(marker(page, "Woodland Alliance")).toBeVisible();
+    // Track shows the min/max tick labels.
+    await expect(panel).toContainText("0");
+    await expect(panel).toContainText("30");
   });
 
-  test("+ and - update the score for the targeted player only", async ({
-    page,
-  }) => {
+  test("+ and - update the score for the selected player", async ({ page }) => {
     await startRoot(page, 2);
+    // Marquise is the active player and so the default selection — the
+    // selected-row +/- buttons target Marquise out of the gate.
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
-    // Marquise should be 3; Eyrie still at 0.
-    const panel = page.getByLabel(/^Scores$/);
-    await expect(panel.getByText(/^3$/)).toBeVisible();
-    await expect(panel.getByText(/^0$/)).toBeVisible();
+    // Selected-row score reads 3.
+    await expect(
+      page.getByLabel(/^Scores$/).getByText(/^3$/),
+    ).toBeVisible();
 
     await decButton(page, "Marquise de Cat").click();
-    await expect(panel.getByText(/^2$/)).toBeVisible();
+    await expect(
+      page.getByLabel(/^Scores$/).getByText(/^2$/),
+    ).toBeVisible();
+
+    // Selecting Eyrie's marker re-points the +/- controls to Eyrie.
+    await marker(page, "Eyrie Dynasties").click();
+    await incButton(page, "Eyrie Dynasties").click();
+    await expect(
+      page.getByLabel(/^Scores$/).getByText(/^1$/),
+    ).toBeVisible();
+    // Marquise's recorded score didn't change — verify by re-selecting.
+    await marker(page, "Marquise de Cat").click();
+    await expect(
+      page.getByLabel(/^Scores$/).getByText(/^2$/),
+    ).toBeVisible();
   });
 
   test("- is disabled at min, + is disabled at max (Root: 0..30)", async ({
@@ -76,7 +103,6 @@ test.describe("score layer", () => {
   }) => {
     await startRoot(page, 2);
     await expect(decButton(page, "Marquise de Cat")).toBeDisabled();
-    // Pump Marquise to 30. The reducer clamps at max and disables +.
     for (let i = 0; i < 30; i++) {
       await incButton(page, "Marquise de Cat").click();
     }
@@ -87,13 +113,10 @@ test.describe("score layer", () => {
     page,
   }) => {
     await startRoot(page, 2);
-    // Start the timer.
     await page.locator("main").click();
-    // Take one turn so we have 79 remaining.
     await page.locator("main").click();
     await expect(page.getByText(/79\s*turns left/i)).toBeVisible();
-
-    // Now hit the + button — it should NOT decrement turns-left.
+    // After the turn rotation, Eyrie is the active player → auto-selected.
     await incButton(page, "Eyrie Dynasties").click();
     await expect(page.getByText(/79\s*turns left/i)).toBeVisible();
   });
@@ -102,7 +125,6 @@ test.describe("score layer", () => {
     page,
   }) => {
     await startRoot(page, 2);
-    // No victor yet.
     await expect(page.getByRole("status")).toHaveCount(0);
 
     for (let i = 0; i < 30; i++) {
@@ -113,7 +135,7 @@ test.describe("score layer", () => {
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("Marquise de Cat");
     await expect(banner).toContainText(/wins/i);
-    // Active-player banner should be replaced by the victory banner.
+    // Active-player banner replaced by the victory banner.
     await expect(page.getByText(/.*’s turn/)).toHaveCount(0);
   });
 });

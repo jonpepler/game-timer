@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import styles from "./ScorePanel.module.css";
 import type { ScoreConfig } from "@/state/gameDefinition";
@@ -12,75 +13,167 @@ interface ScorePanelProps {
   scores: Record<number, number>;
   scoreConfig: ScoreConfig;
   onIncrement?: (playerIndex: number, delta: number) => void;
-  // When true, the +/- buttons disappear — for read-only views (the
-  // companion screen mirrors host state without write access in v1).
+  // The player whose turn it currently is — used as the default
+  // selection for the +/- controls so the most common case (score the
+  // player who just acted) is one tap.
+  activePlayerIndex?: number | null;
+  // When true, hide the +/- controls. Companion screen renders this
+  // way until v3 of the peer protocol.
   readOnly?: boolean;
 }
+
+const initial = (name: string) => name.trim().charAt(0).toUpperCase() || "?";
+
+const stopProp = (fn: () => void) => (e: React.MouseEvent) => {
+  e.stopPropagation();
+  fn();
+};
 
 export function ScorePanel({
   players,
   scores,
   scoreConfig,
   onIncrement,
+  activePlayerIndex,
   readOnly = false,
 }: ScorePanelProps) {
+  // Always-on selection so the +/- controls don't appear and disappear.
+  // Initialise to the active turn player if there is one, otherwise the
+  // first player.
+  const initialSelection =
+    activePlayerIndex ?? (players.length > 0 ? 0 : null);
+  const [selected, setSelected] = useState<number | null>(initialSelection);
+
+  // Follow the active player as turns rotate, unless the user has
+  // manually picked a different marker (we treat any pick as sticky
+  // until the active player changes again).
+  useEffect(() => {
+    if (activePlayerIndex !== undefined && activePlayerIndex !== null) {
+      setSelected(activePlayerIndex);
+    }
+  }, [activePlayerIndex]);
+
   if (scoreConfig.displayStyle === "hidden") return null;
   if (players.length === 0) return null;
 
   const min = scoreConfig.min;
   const max = scoreConfig.max;
   const step = scoreConfig.increment;
+  const isTrack = scoreConfig.displayStyle === "linearTrack" && max !== undefined;
 
-  // Stop click propagation so the tap-to-advance handler on the parent
-  // container doesn't also fire when the user hits +/-.
-  const stop = (fn: () => void) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    fn();
-  };
+  const selectedPlayer = selected !== null ? players[selected] : undefined;
+  const selectedScore = selected !== null ? (scores[selected] ?? min) : min;
+  const atMin = selectedScore <= min;
+  const atMax = max !== undefined ? selectedScore >= max : false;
 
   return (
     <div className={styles.container} aria-label="Scores">
       <span className={styles.label}>Scores</span>
-      <div className={styles.rows}>
-        {players.map((player, index) => {
-          const score = scores[index] ?? min;
-          const atMin = score <= min;
-          const atMax = max !== undefined ? score >= max : false;
-          return (
-            <div key={index} className={styles.row}>
-              <span
-                className={styles.swatch}
-                style={{ background: player.color }}
-                aria-hidden
-              />
-              <span className={styles.name}>{player.name}</span>
-              {!readOnly && onIncrement && (
+
+      {isTrack ? (
+        <>
+          <div className={styles.track}>
+            <div className={styles.trackBar} aria-hidden />
+            {players.map((player, index) => {
+              const score = scores[index] ?? min;
+              const range = max! - min;
+              const pct =
+                range === 0 ? 0 : ((score - min) / range) * 100;
+              // When multiple players share the same score, spread them
+              // diagonally so each remains clickable and visible. Order
+              // by player index for stability.
+              const cluster = players.filter(
+                (_, i) => i < index && (scores[i] ?? min) === score,
+              ).length;
+              const top = 4 + cluster * 8;
+              return (
                 <button
+                  key={index}
                   type="button"
-                  onClick={stop(() => onIncrement(index, -step))}
-                  disabled={atMin}
-                  className={styles.scoreButton}
-                  aria-label={`Decrease score for ${player.name}`}
+                  onClick={stopProp(() => setSelected(index))}
+                  className={`${styles.marker} ${
+                    selected === index ? styles.markerSelected : ""
+                  }`}
+                  style={{
+                    left: `${Math.max(0, Math.min(100, pct))}%`,
+                    top: `${top}px`,
+                    background: player.color,
+                  }}
+                  aria-label={`${player.name} score ${score}`}
+                  title={`${player.name}: ${score}`}
                 >
-                  <Minus aria-hidden />
+                  {initial(player.name)}
                 </button>
-              )}
-              <span className={styles.score}>{score}</span>
-              {!readOnly && onIncrement && (
-                <button
-                  type="button"
-                  onClick={stop(() => onIncrement(index, step))}
-                  disabled={atMax}
-                  className={styles.scoreButton}
-                  aria-label={`Increase score for ${player.name}`}
+              );
+            })}
+          </div>
+          <div className={styles.trackTicks} aria-hidden>
+            <span>{min}</span>
+            <span>{max}</span>
+          </div>
+        </>
+      ) : (
+        <div className={styles.leaderboard}>
+          {[...players]
+            .map((p, i) => ({ player: p, index: i, score: scores[i] ?? min }))
+            .sort((a, b) => b.score - a.score)
+            .map(({ player, index, score }) => (
+              <button
+                key={index}
+                type="button"
+                onClick={stopProp(() => setSelected(index))}
+                className={`${styles.chip} ${
+                  selected === index ? styles.chipSelected : ""
+                }`}
+                aria-label={`${player.name} score ${score}`}
+              >
+                <span
+                  className={styles.chipSwatch}
+                  style={{ background: player.color }}
                 >
-                  <Plus aria-hidden />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  {initial(player.name)}
+                </span>
+                {player.name}
+                <span className={styles.chipScore}>{score}</span>
+              </button>
+            ))}
+        </div>
+      )}
+
+      {!readOnly && onIncrement && selectedPlayer && (
+        <div className={styles.selectedRow}>
+          <button
+            type="button"
+            onClick={stopProp(() => onIncrement(selected!, -step))}
+            disabled={atMin}
+            className={styles.scoreButton}
+            aria-label={`Decrease score for ${selectedPlayer.name}`}
+          >
+            <Minus aria-hidden />
+          </button>
+          <span
+            className={styles.selectedName}
+            style={{ color: selectedPlayer.color }}
+          >
+            <span
+              className={styles.selectedSwatch}
+              style={{ background: selectedPlayer.color }}
+              aria-hidden
+            />
+            {selectedPlayer.name}
+          </span>
+          <span className={styles.selectedScore}>{selectedScore}</span>
+          <button
+            type="button"
+            onClick={stopProp(() => onIncrement(selected!, step))}
+            disabled={atMax}
+            className={styles.scoreButton}
+            aria-label={`Increase score for ${selectedPlayer.name}`}
+          >
+            <Plus aria-hidden />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

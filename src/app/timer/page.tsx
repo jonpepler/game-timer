@@ -331,6 +331,7 @@ export default function Home() {
               scores={scores}
               scoreConfig={scoreConfig}
               onIncrement={incrementScore}
+              activePlayerIndex={currentPlayerIndex}
             />
           )}
           {playerStats.length > 0 && (

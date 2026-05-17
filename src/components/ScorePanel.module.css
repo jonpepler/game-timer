@@ -1,7 +1,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   pointer-events: auto;
 }
 
@@ -12,52 +12,112 @@
   color: var(--color-text-subtle);
 }
 
-.rows {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* ── Linear track ─────────────────────────────────────────────────── */
+
+.track {
+  position: relative;
+  /* Tall enough to stack a few markers diagonally when they overlap
+     (game start, identical scores) without anyone hiding underneath. */
+  height: 56px;
+  /* Outer margin clears the screen edge; inner padding leaves room for
+     the marker's translateX(-50%) at the 0% and 100% positions so end
+     markers stay tangent to the bar instead of half-off it. */
+  margin: 4px 24px;
+  padding: 0 12px;
 }
 
-.row {
+.trackBar {
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  left: 0;
+  right: 0;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.trackTicks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.04em;
+  margin: 0 24px;
+}
+
+.marker {
+  /* Override the global button reset */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  position: absolute;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  justify-content: center;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transform: translateX(-50%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.marker:hover {
+  transform: translateX(-50%) scale(1.1);
+  z-index: 3;
+}
+
+.markerSelected {
+  box-shadow: 0 0 0 3px var(--color-text);
+  z-index: 2;
+}
+
+/* ── Selected-player controls (shared by track + leaderboard) ─────── */
+
+.selectedRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 8px;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: 999px;
   font-size: 14px;
 }
 
-.swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.name {
-  color: var(--color-text);
-  font-weight: 500;
-  white-space: nowrap;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.score {
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
+.selectedName {
   font-weight: 600;
-  min-width: 28px;
-  text-align: right;
-  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selectedSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.selectedScore {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 600;
+  min-width: 38px;
+  text-align: center;
+  color: var(--color-text);
 }
 
 .scoreButton {
   /* Override the global button reset */
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -67,8 +127,6 @@
   border: 1px solid var(--color-border);
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
 }
 
 .scoreButton:hover:not(:disabled) {
@@ -83,6 +141,61 @@
 }
 
 .scoreButton svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Compact leaderboard chips (one row, scoreConfig.displayStyle = leaderboard) ─ */
+
+.leaderboard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 4px 12px 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.chip:hover,
+.chipSelected {
+  border-color: var(--color-border-strong);
+}
+
+.chipSelected {
+  background: var(--color-surface-elevated);
+}
+
+.chipSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.chipScore {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: right;
 }
