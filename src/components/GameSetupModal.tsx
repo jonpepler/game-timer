@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Dices, Play, X, Users } from "lucide-react";
+import Link from "next/link";
+import { Dices, Play, Settings, X, Users } from "lucide-react";
 import styles from "./GameSetupModal.module.css";
 import {
   DEFAULT_DEFINITION_ID,
@@ -207,6 +208,10 @@ export const GameSetupModal = ({
             {definition.description && (
               <p className={styles.help}>{definition.description}</p>
             )}
+            <Link href="/games" className={styles.manageLink}>
+              <Settings size={12} aria-hidden />
+              Manage games
+            </Link>
           </section>
 
           <section className={styles.section}>

@@ -1,87 +1,32 @@
-.modal {
-  width: min(560px, 92vw);
-  max-height: 90vh;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-  font-family: inherit;
-}
-
 .form {
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
-  overflow: hidden;
-}
-
-.scroll {
-  overflow-y: auto;
-}
-
-.header {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.02em;
+  gap: 24px;
+  max-width: 640px;
 }
 
 .section {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.section:last-of-type {
-  border-bottom: none;
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .label {
   font-size: 12px;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
   font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.labelIcon {
-  color: var(--color-text-subtle);
-  display: inline-flex;
-}
-
-.subLabel {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-
-.manageLink {
-  align-self: flex-start;
-  font-size: 12px;
-  color: var(--color-text-muted);
-  text-decoration: none;
-  padding: 4px 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.manageLink:hover {
-  color: var(--color-text);
-  text-decoration: underline;
-}
-
-.input {
+.input,
+.select {
   width: 100%;
   background: var(--color-surface);
   color: var(--color-text);
@@ -90,11 +35,6 @@
   padding: 10px 12px;
   font-size: 16px;
   font-family: inherit;
-}
-
-.input:focus-visible {
-  outline: 2px solid var(--color-border-strong);
-  outline-offset: 2px;
 }
 
 .help {
@@ -110,6 +50,7 @@
   gap: 12px;
   cursor: pointer;
   user-select: none;
+  font-size: 15px;
 }
 
 .toggleRow input[type="checkbox"] {
@@ -119,45 +60,26 @@
   cursor: pointer;
 }
 
-.toggleText {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-}
-
-.badge {
-  margin-left: auto;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
+.subPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: 8px;
 }
 
-.playerCount {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.playerCount .input {
-  width: 80px;
-}
-
-.playerList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.factionList {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.playerRow {
+.factionRow {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -181,20 +103,67 @@
   padding: 0;
 }
 
-.colorSwatch::-webkit-color-swatch {
-  border: none;
-  border-radius: 7px;
-}
-
+.colorSwatch::-webkit-color-swatch,
 .colorSwatch::-moz-color-swatch {
   border: none;
   border-radius: 7px;
 }
 
+.iconButton {
+  /* Override the global button reset */
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.iconButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.addRow {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 8px 14px;
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.addRow:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.error {
+  color: var(--color-timer-overtime);
+  font-size: 13px;
+}
+
 .actions {
-  padding: 16px 24px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -202,7 +171,6 @@
 
 .primary,
 .secondary {
-  /* Override the global button reset */
   width: auto;
   height: auto;
   padding: 10px 18px;
