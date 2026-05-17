@@ -22,8 +22,12 @@ import { ShareSessionMenu } from "@/components/ShareSessionMenu";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
+  type CompanionToHostMessage,
   type HostToCompanionMessage,
 } from "@/state/peerProtocol";
+import { createLogger } from "@/lib/logger";
+
+const peerLog = createLogger("host-protocol");
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -64,7 +68,91 @@ export default function Home() {
   });
 
   const players = state.players;
-  const sessionHost = useSessionHost();
+  // peerId → claimed playerIndex. Released when the companion disconnects.
+  const [claimMap, setClaimMap] = useState<Record<string, number>>({});
+
+  const handleCompanionMessage = (peerId: string, data: unknown) => {
+    const msg = data as CompanionToHostMessage;
+    if (!msg || typeof msg !== "object" || !("type" in msg)) {
+      peerLog.warn("dropping malformed message", { peerId });
+      return;
+    }
+    if (msg.protocolVersion !== PEER_PROTOCOL_VERSION) {
+      peerLog.warn("dropping message at unknown protocol version", {
+        peerId,
+        version: msg.protocolVersion,
+      });
+      return;
+    }
+    switch (msg.type) {
+      case "CLAIM": {
+        const playerCount = state.players?.length ?? 0;
+        if (msg.playerIndex < 0 || msg.playerIndex >= playerCount) {
+          peerLog.warn("rejecting CLAIM for out-of-range slot", {
+            peerId,
+            playerIndex: msg.playerIndex,
+          });
+          return;
+        }
+        setClaimMap((prev) => ({ ...prev, [peerId]: msg.playerIndex }));
+        peerLog.info("claim accepted", {
+          peerId,
+          playerIndex: msg.playerIndex,
+        });
+        return;
+      }
+      case "RELEASE": {
+        setClaimMap((prev) => {
+          const next = { ...prev };
+          delete next[peerId];
+          return next;
+        });
+        return;
+      }
+      case "END_TURN": {
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("END_TURN rejected — peer hasn't claimed a slot", {
+            peerId,
+          });
+          return;
+        }
+        if (claimed !== currentPlayerIndex) {
+          peerLog.warn("END_TURN rejected — not this peer's turn", {
+            peerId,
+            claimed,
+            currentPlayerIndex,
+          });
+          return;
+        }
+        resetTimer();
+        return;
+      }
+      case "INCREMENT_SCORE": {
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("INCREMENT_SCORE rejected — no claim", { peerId });
+          return;
+        }
+        incrementScore(claimed, msg.delta);
+        return;
+      }
+    }
+  };
+
+  const handleCompanionDisconnect = (peerId: string) => {
+    setClaimMap((prev) => {
+      if (!(peerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[peerId];
+      return next;
+    });
+  };
+
+  const sessionHost = useSessionHost({
+    onMessage: handleCompanionMessage,
+    onDisconnect: handleCompanionDisconnect,
+  });
 
   // Broadcast the latest reducer state to every connected companion
   // whenever it changes OR a new device joins.
@@ -129,11 +217,9 @@ export default function Home() {
       ? players[currentPlayerIndex]
       : undefined;
 
-  const victorPlayer =
-    victor !== null && players ? players[victor] : undefined;
+  const victorPlayer = victor !== null && players ? players[victor] : undefined;
 
-  const scoresVisible =
-    scoreConfig !== undefined && (players?.length ?? 0) > 0;
+  const scoresVisible = scoreConfig !== undefined && (players?.length ?? 0) > 0;
 
   return (
     <FullScreen
@@ -184,7 +270,10 @@ export default function Home() {
                   aria-hidden
                 />
                 {/* eslint-disable-next-line prettier/prettier */}
-                <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                <span>
+                  {activePlayer.name}
+                  <span className={styles.activePlayerSuffix}>{"’s turn"}</span>
+                </span>
               </div>
             )
           )}

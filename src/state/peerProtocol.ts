@@ -18,4 +18,25 @@ export type HostToCompanionMessage = {
   sentAt: number;
 };
 
-// Phase 3 will add CompanionToHostMessage with action requests.
+// Companion → host. The companion claims a player slot, then issues
+// action requests for that slot. The host validates each request
+// against the claim map before dispatching.
+export type CompanionToHostMessage =
+  | {
+      type: "CLAIM";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      playerIndex: number;
+    }
+  | {
+      type: "RELEASE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
+  | {
+      type: "END_TURN";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
+  | {
+      type: "INCREMENT_SCORE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      delta: number;
+    };

@@ -3,6 +3,14 @@ import { createHost, type HostSession } from "@/lib/peer";
 
 type Status = "idle" | "opening" | "open" | "error";
 
+export interface UseSessionHostOptions {
+  // Fires when a connected companion sends a message. The hook keeps a
+  // ref to the latest handler so callers don't need to memoise.
+  onMessage?: (peerId: string, data: unknown) => void;
+  onConnect?: (peerId: string) => void;
+  onDisconnect?: (peerId: string) => void;
+}
+
 export interface UseSessionHostReturn {
   status: Status;
   sessionCode: string | null;
@@ -17,12 +25,25 @@ export interface UseSessionHostReturn {
 
 // Owns at most one HostSession. Opt-in: callers click "Share" to spin
 // up the peer; the broker is only contacted from then on.
-export function useSessionHost(): UseSessionHostReturn {
+export function useSessionHost(
+  options: UseSessionHostOptions = {},
+): UseSessionHostReturn {
   const [status, setStatus] = useState<Status>("idle");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [connectedPeers, setConnectedPeers] = useState<string[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const sessionRef = useRef<HostSession | null>(null);
+
+  // Keep the latest handlers in refs so dependency-array changes on the
+  // caller side don't trigger re-subscription / re-opens of the peer.
+  const onMessageRef = useRef(options.onMessage);
+  const onConnectRef = useRef(options.onConnect);
+  const onDisconnectRef = useRef(options.onDisconnect);
+  useEffect(() => {
+    onMessageRef.current = options.onMessage;
+    onConnectRef.current = options.onConnect;
+    onDisconnectRef.current = options.onDisconnect;
+  }, [options.onMessage, options.onConnect, options.onDisconnect]);
 
   const open = useCallback(() => {
     if (sessionRef.current || status === "opening") return;
@@ -33,9 +54,17 @@ export function useSessionHost(): UseSessionHostReturn {
         sessionRef.current = session;
         setSessionCode(session.sessionCode);
         setStatus("open");
-        const refreshConns = () => setConnectedPeers(session.connections());
-        session.onConnect(refreshConns);
-        session.onDisconnect(refreshConns);
+        session.onConnect((peerId) => {
+          setConnectedPeers(session.connections());
+          onConnectRef.current?.(peerId);
+        });
+        session.onDisconnect((peerId) => {
+          setConnectedPeers(session.connections());
+          onDisconnectRef.current?.(peerId);
+        });
+        session.onMessage((peerId, data) => {
+          onMessageRef.current?.(peerId, data);
+        });
       })
       .catch((err: Error) => {
         setError(err);
