@@ -141,8 +141,12 @@ export const useTimer = ({
     dispatch({ type: "SET_EXPECTED_TURNS", expectedTurns: n });
   const setPlayers = (players: Player[] | undefined) =>
     dispatch({ type: "SET_PLAYERS", players });
+  const setPlayer = (playerIndex: number, player: Player) =>
+    dispatch({ type: "SET_PLAYER", playerIndex, player });
   const setScoreConfig = (scoreConfig: ScoreConfig | undefined) =>
     dispatch({ type: "SET_SCORE_CONFIG", scoreConfig });
+  const setDefinitionId = (definitionId: string | undefined) =>
+    dispatch({ type: "SET_DEFINITION_ID", definitionId });
   const setScore = (playerIndex: number, value: number) =>
     dispatch({ type: "SET_SCORE", playerIndex, value });
   const incrementScore = (playerIndex: number, delta: number) =>
@@ -171,7 +175,9 @@ export const useTimer = ({
     currentPlayerIndex: selectCurrentPlayerIndex(state),
     setExpectedTurns,
     setPlayers,
+    setPlayer,
     setScoreConfig,
+    setDefinitionId,
     setScore,
     incrementScore,
     endGame,
@@ -179,5 +185,6 @@ export const useTimer = ({
     scores: state.scores,
     scoreConfig: state.scoreConfig,
     victor: state.victor,
+    definitionId: state.definitionId,
   };
 };

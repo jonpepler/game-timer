@@ -6,6 +6,10 @@ const log = createLogger("session");
 export interface Player {
   name: string;
   color: string;
+  // Optional foreign key into the active GameDefinition's factions
+  // list. Set when the player picked a faction (host modal or
+  // companion picker); absent for ad-hoc rows.
+  factionId?: string;
 }
 
 export interface TurnRecord {
@@ -37,6 +41,10 @@ export interface GameSessionState {
   scoreConfig?: ScoreConfig;
   // Player index of the winner once a victory condition fires, else null.
   victor: number | null;
+  // Active game definition id. Lets the page (and companions, via the
+  // STATE broadcast) resolve the full definition for faction lookups,
+  // setup-schema rendering, etc.
+  definitionId?: string;
 }
 
 export type GameSessionAction =
@@ -45,10 +53,12 @@ export type GameSessionAction =
   | { type: "UNDO" }
   | { type: "SET_EXPECTED_TURNS"; expectedTurns: number }
   | { type: "SET_PLAYERS"; players: Player[] | undefined }
+  | { type: "SET_PLAYER"; playerIndex: number; player: Player }
   | { type: "SET_SCORE_CONFIG"; scoreConfig: ScoreConfig | undefined }
   | { type: "SET_SCORE"; playerIndex: number; value: number }
   | { type: "INCREMENT_SCORE"; playerIndex: number; delta: number }
   | { type: "END_GAME"; victor: number | null }
+  | { type: "SET_DEFINITION_ID"; definitionId: string | undefined }
   | { type: "RESET" };
 
 export interface GameSessionInit {
@@ -56,6 +66,7 @@ export interface GameSessionInit {
   expectedTurns: number;
   players?: Player[];
   scoreConfig?: ScoreConfig;
+  definitionId?: string;
 }
 
 export const createInitialGameSessionState = (
@@ -71,6 +82,7 @@ export const createInitialGameSessionState = (
   scores: {},
   scoreConfig: params.scoreConfig,
   victor: null,
+  definitionId: params.definitionId,
 });
 
 const averageOf = (turns: TurnRecord[], fallback: number): number => {
@@ -187,6 +199,17 @@ export const gameSessionReducer = (
       return { ...state, expectedTurns: action.expectedTurns };
     case "SET_PLAYERS":
       return { ...state, players: action.players };
+    case "SET_PLAYER": {
+      if (!state.players) return state;
+      if (action.playerIndex < 0 || action.playerIndex >= state.players.length)
+        return state;
+      const players = state.players.map((p, i) =>
+        i === action.playerIndex ? action.player : p,
+      );
+      return { ...state, players };
+    }
+    case "SET_DEFINITION_ID":
+      return { ...state, definitionId: action.definitionId };
     case "SET_SCORE_CONFIG":
       // Clearing the score subsystem also clears any in-flight scores
       // and victor — a different game's score is meaningless here.
@@ -212,6 +235,7 @@ export const gameSessionReducer = (
         expectedTurns: state.expectedTurns,
         players: state.players,
         scoreConfig: state.scoreConfig,
+        definitionId: state.definitionId,
       });
   }
 };

@@ -54,12 +54,15 @@ export default function Home() {
     currentPlayerIndex,
     setExpectedTurns,
     setPlayers,
+    setPlayer,
     setScoreConfig,
+    setDefinitionId,
     incrementScore,
     reset,
     scores,
     scoreConfig,
     victor,
+    definitionId,
   } = useTimer({
     initialTime,
     initialExpectedTurns: defaultExpectedTurns,
@@ -137,6 +140,58 @@ export default function Home() {
         incrementScore(claimed, msg.delta);
         return;
       }
+      case "SET_FACTION": {
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("SET_FACTION rejected — no claim", { peerId });
+          return;
+        }
+        const def = definitionId ? findDefinition(definitionId) : undefined;
+        const faction = def?.factions?.find((f) => f.id === msg.factionId);
+        if (!faction) {
+          peerLog.warn("SET_FACTION rejected — unknown factionId", {
+            peerId,
+            factionId: msg.factionId,
+          });
+          return;
+        }
+        // Already taken by another slot?
+        const takenBy = state.players?.findIndex(
+          (p, i) => i !== claimed && p.factionId === faction.id,
+        );
+        if (takenBy !== undefined && takenBy !== -1) {
+          peerLog.warn("SET_FACTION rejected — faction taken by another slot", {
+            peerId,
+            factionId: faction.id,
+          });
+          return;
+        }
+        // Mutex with anything another slot already picked?
+        const mutex =
+          def?.setupSchema?.factionConstraints?.mutuallyExclusive ?? [];
+        const blockedByMutex = state.players?.some((p, i) => {
+          if (i === claimed) return false;
+          if (!p.factionId) return false;
+          return mutex.some(
+            ([a, b]) =>
+              (a === p.factionId && b === faction.id) ||
+              (b === p.factionId && a === faction.id),
+          );
+        });
+        if (blockedByMutex) {
+          peerLog.warn("SET_FACTION rejected — mutex with another slot", {
+            peerId,
+            factionId: faction.id,
+          });
+          return;
+        }
+        setPlayer(claimed, {
+          name: faction.name,
+          color: faction.color,
+          factionId: faction.id,
+        });
+        return;
+      }
     }
   };
 
@@ -159,10 +214,12 @@ export default function Home() {
   const peerCount = sessionHost.connectedPeers.length;
   useEffect(() => {
     if (sessionHost.status !== "open") return;
+    const def = definitionId ? findDefinition(definitionId) : undefined;
     const message: HostToCompanionMessage = {
       type: "STATE",
       protocolVersion: PEER_PROTOCOL_VERSION,
       state,
+      definition: def,
       sentAt: Date.now(),
     };
     sessionHost.send(message);
@@ -177,6 +234,7 @@ export default function Home() {
     reset();
     setExpectedTurns(incoming.expectedTurns);
     setPlayers(incoming.players);
+    setDefinitionId(incoming.definitionId);
     const definition = findDefinition(incoming.definitionId);
     // Score is only meaningful when player tracking is on — clear the
     // subsystem otherwise so victories can't fire against an empty roster.

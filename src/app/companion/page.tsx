@@ -32,6 +32,8 @@ function CompanionScreen() {
     useSessionCompanion<HostToCompanionMessage>(code);
 
   const state = lastMessage?.type === "STATE" ? lastMessage.state : null;
+  const definition =
+    lastMessage?.type === "STATE" ? lastMessage.definition : undefined;
 
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
 
@@ -106,6 +108,13 @@ function CompanionScreen() {
       type: "INCREMENT_SCORE",
       protocolVersion: PEER_PROTOCOL_VERSION,
       delta,
+    } satisfies CompanionToHostMessage);
+
+  const pickFaction = (factionId: string) =>
+    send({
+      type: "SET_FACTION",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      factionId,
     } satisfies CompanionToHostMessage);
 
   const stats = useMemo(
@@ -270,6 +279,57 @@ function CompanionScreen() {
               </ul>
             </div>
           )}
+
+          {claimedPlayer &&
+            definition?.factions &&
+            definition.factions.length > 0 && (
+              <div className={styles.factionPicker}>
+                <label
+                  htmlFor="companion-faction"
+                  className={styles.factionPickerLabel}
+                >
+                  Faction
+                </label>
+                <select
+                  id="companion-faction"
+                  value={claimedPlayer.factionId ?? ""}
+                  onChange={(e) => pickFaction(e.target.value)}
+                  className={styles.factionSelect}
+                >
+                  <option value="" disabled>
+                    — pick a faction —
+                  </option>
+                  {definition.factions.map((f) => {
+                    // Disable factions another claimed slot already owns
+                    // and any flagged by the definition's mutex pairs.
+                    const ownedByOther = state.players?.some(
+                      (p, i) => i !== claimedSlot && p.factionId === f.id,
+                    );
+                    const mutex =
+                      definition.setupSchema?.factionConstraints
+                        ?.mutuallyExclusive ?? [];
+                    const mutexBlocked = state.players?.some((p, i) => {
+                      if (i === claimedSlot) return false;
+                      if (!p.factionId) return false;
+                      return mutex.some(
+                        ([a, b]) =>
+                          (a === p.factionId && b === f.id) ||
+                          (b === p.factionId && a === f.id),
+                      );
+                    });
+                    return (
+                      <option
+                        key={f.id}
+                        value={f.id}
+                        disabled={!!ownedByOther || !!mutexBlocked}
+                      >
+                        {f.name}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
 
           {claimedPlayer && !victorPlayer && (
             <button
