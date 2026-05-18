@@ -36,43 +36,12 @@
   gap: 12px;
 }
 
-.primary,
-.secondary {
-  width: auto;
-  height: auto;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-family: inherit;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
 .primary {
-  background: var(--color-text);
-  color: var(--color-surface);
-  border: 1px solid var(--color-text);
-}
-
-.primary:hover {
-  background: var(--color-text-muted);
-  border-color: var(--color-text-muted);
+  composes: primary from "@/styles/buttons.module.css";
 }
 
 .secondary {
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.secondary:hover {
-  background: var(--color-surface-muted);
-  border-color: var(--color-border-strong);
+  composes: secondary from "@/styles/buttons.module.css";
 }
 
 .list {

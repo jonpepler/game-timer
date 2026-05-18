@@ -1,0 +1,68 @@
+/*
+ * Shared button base classes. CSS-Modules-friendly: consumers compose
+ * one of these in via `composes: primary from "@/styles/buttons.module.css";`
+ * inside their local style.
+ *
+ * Each class overrides the global <button> 50x40 reset so consumers
+ * don't have to repeat width: auto / height: auto in every module.
+ */
+
+/* The chunky "Start Game / Save changes / New Game CTA" affordance. */
+.primary {
+  width: auto;
+  height: auto;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  border: 1px solid var(--color-text);
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.primary:hover {
+  background: var(--color-text-muted);
+  border-color: var(--color-text-muted);
+}
+
+.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Outline counterpart to primary — Cancel, secondary CTAs. */
+.secondary {
+  width: auto;
+  height: auto;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.secondary:hover {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-strong);
+}
+
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

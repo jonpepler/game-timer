@@ -1,0 +1,56 @@
+/*
+ * Shared form primitives. Composed in via:
+ *   composes: input from "@/styles/forms.module.css";
+ */
+
+/* The basic dark-themed input + select used across the modal and the
+   definition editor. */
+.input {
+  width: 100%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-border-strong);
+  outline-offset: 2px;
+}
+
+/* Native colour input stripped of its chrome — renders only the swatch. */
+.swatch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background-color: transparent;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.swatch::-webkit-color-swatch,
+.swatch::-moz-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+
+/* The small uppercase eyebrow text used as section labels. */
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}

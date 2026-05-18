@@ -18,23 +18,15 @@
 }
 
 .label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  font-weight: 600;
+  composes: eyebrow from "@/styles/forms.module.css";
 }
 
-.input,
+.input {
+  composes: input from "@/styles/forms.module.css";
+}
+
 .select {
-  width: 100%;
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-size: 16px;
-  font-family: inherit;
+  composes: input from "@/styles/forms.module.css";
 }
 
 .help {
@@ -86,27 +78,7 @@
 }
 
 .colorSwatch {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background-color: transparent;
-  cursor: pointer;
-  padding: 0;
-  overflow: hidden;
-}
-
-.colorSwatch::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.colorSwatch::-webkit-color-swatch,
-.colorSwatch::-moz-color-swatch {
-  border: none;
-  border-radius: 7px;
+  composes: swatch from "@/styles/forms.module.css";
 }
 
 .iconButton {
@@ -169,40 +141,10 @@
   justify-content: flex-end;
 }
 
-.primary,
-.secondary {
-  width: auto;
-  height: auto;
-  padding: 10px 18px;
-  font-size: 15px;
-  font-family: inherit;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
 .primary {
-  background: var(--color-text);
-  color: var(--color-surface);
-  border: 1px solid var(--color-text);
-}
-
-.primary:hover {
-  background: var(--color-text-muted);
-  border-color: var(--color-text-muted);
+  composes: primary from "@/styles/buttons.module.css";
 }
 
 .secondary {
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.secondary:hover {
-  background: var(--color-surface-muted);
-  border-color: var(--color-border-strong);
+  composes: secondary from "@/styles/buttons.module.css";
 }
