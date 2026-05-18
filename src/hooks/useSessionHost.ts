@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createHost, type HostSession } from "@/lib/peer";
+import {
+  fromPeerId,
+  generateSessionCode,
+  toPeerId,
+} from "@/lib/sessionCode";
+
+const COLLISION_RETRY_LIMIT = 6;
 
 type Status = "idle" | "opening" | "open" | "error";
 
@@ -49,10 +56,30 @@ export function useSessionHost(
     if (sessionRef.current || status === "opening") return;
     setStatus("opening");
     setError(null);
-    createHost()
+
+    // Try a friendly human-readable code; on broker collision, generate
+    // a new one and retry up to a small cap before giving up.
+    const tryOpen = (attempt: number): Promise<HostSession> => {
+      const code = generateSessionCode();
+      return createHost({ desiredId: toPeerId(code) }).catch((err: unknown) => {
+        const isCollision =
+          err &&
+          typeof err === "object" &&
+          "type" in err &&
+          (err as { type: string }).type === "unavailable-id";
+        if (isCollision && attempt < COLLISION_RETRY_LIMIT) {
+          return tryOpen(attempt + 1);
+        }
+        throw err;
+      });
+    };
+
+    tryOpen(0)
       .then((session) => {
         sessionRef.current = session;
-        setSessionCode(session.sessionCode);
+        // Strip the project prefix so the UI shows the friendly code
+        // rather than the underlying broker id.
+        setSessionCode(fromPeerId(session.sessionCode));
         setStatus("open");
         session.onConnect((peerId) => {
           setConnectedPeers(session.connections());

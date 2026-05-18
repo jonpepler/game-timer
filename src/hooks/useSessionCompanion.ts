@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { connectToHost, type CompanionSession } from "@/lib/peer";
+import { toPeerId } from "@/lib/sessionCode";
 
 type Status = "connecting" | "connected" | "disconnected" | "error";
 
@@ -28,7 +29,7 @@ export function useSessionCompanion<TMessage>(
     setStatus("connecting");
     setError(null);
 
-    connectToHost(hostCode)
+    connectToHost(toPeerId(hostCode))
       .then((session) => {
         if (cancelled) {
           session.close();

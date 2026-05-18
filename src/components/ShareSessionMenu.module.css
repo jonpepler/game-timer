@@ -1,3 +1,5 @@
+/* ── Idle / opening / error states (chips in the top-left chrome) ─── */
+
 .button {
   /* Override the global button reset */
   width: auto;
@@ -36,53 +38,88 @@
   border-radius: 8px;
 }
 
-.openSession {
+.errorMessage {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+/* ── Open: compact chip + popover panel ───────────────────────────── */
+
+.openWrapper {
+  position: relative;
+}
+
+.openChip {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 6px 6px 12px;
+  gap: 8px;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  font-size: 13px;
-}
-
-.codeLabel {
-  color: var(--color-text-subtle);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.code {
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 13px;
   cursor: pointer;
-  user-select: all;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background-color 0.15s ease;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text);
 }
 
-.code:hover {
+.openChip:hover {
   background: var(--color-surface-elevated);
+  border-color: var(--color-border-strong);
 }
 
-.copied {
-  color: var(--color-text-subtle);
-  font-size: 11px;
+.chipCode {
+  font-family: var(--font-mono);
+  color: var(--color-text);
 }
 
-.divider {
-  width: 1px;
-  height: 18px;
-  background: var(--color-border);
-}
-
-.count {
+.chipCount {
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #4caf50;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(320px, 90vw);
+  padding: 16px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 20;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.popoverTitle {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .closeButton {
@@ -101,7 +138,6 @@
 }
 
 .closeButton:hover {
-  background: var(--color-surface-elevated);
   color: var(--color-text);
   border-color: var(--color-border-strong);
 }
@@ -111,8 +147,111 @@
   height: 14px;
 }
 
-.errorMessage {
+.qrFrame {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  align-self: center;
+  display: inline-flex;
+}
+
+.codeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.codeLabel {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.codeValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--color-text);
+  padding: 8px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  user-select: all;
+}
+
+.urlValue {
+  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--color-text-muted);
+  word-break: break-all;
+  padding: 8px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  user-select: all;
+}
+
+.copyButton {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.copyButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.copyButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.help {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.footerActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.stopButton {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
   font-size: 12px;
-  margin-right: 8px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stopButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
 }

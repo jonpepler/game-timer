@@ -41,6 +41,10 @@ export interface CreateHostOptions {
   // Injection seam: tests pass a fake constructor that captures events.
   PeerCtor?: new (id?: string, opts?: PeerOptions) => Peer;
   peerOptions?: PeerOptions;
+  // Desired peer id. Caller is responsible for collision-recovery (try
+  // a different id and retry createHost) — this layer just surfaces
+  // the broker's "unavailable-id" error.
+  desiredId?: string;
 }
 
 export function createHost(
@@ -48,7 +52,7 @@ export function createHost(
 ): Promise<HostSession> {
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
-    const peer = new Ctor(undefined, options.peerOptions);
+    const peer = new Ctor(options.desiredId, options.peerOptions);
     const conns = new Map<string, DataConnection>();
     const connectHandlers = new Set<(peerId: string) => void>();
     const disconnectHandlers = new Set<(peerId: string) => void>();
