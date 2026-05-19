@@ -1,99 +1,119 @@
 /*
- * GameDefinition / GameInstance schema.
+ * GameDefinition / GameInstance schema, defined with Zod.
  *
- * A GameDefinition describes the rules of a particular tabletop game: its
- * default pacing, the factions a player can claim, an optional score
- * subsystem, etc. Definitions are reusable across many plays.
+ * The Zod schemas ARE the source of truth: the TS types are inferred,
+ * runtime parsing validates JSON before it reaches the rest of the
+ * app, and unsafe `as GameDefinition` casts are gone. Built-in JSON
+ * (Generic, Root) is parsed at registry-load time; user-authored
+ * definitions are parsed before save.
  *
- * A GameInstance is a specific play of a definition: which factions are in
- * play, who claimed which slot, and the append-only action log produced by
- * the game-session reducer.
- *
- * Both shapes are JSON-serialisable with a schemaVersion field from day
- * one — they will be persisted to localStorage, shared as files, and sent
- * over PeerJS, and the schema is going to evolve.
- *
- * CRITICAL: Nothing game-specific (eg. "if game === 'root'") may live in
- * the core code. All game-shaped behaviour comes through this schema.
+ * CRITICAL: Nothing game-specific (eg. "if game === 'root'") may live
+ * in the core code. All game-shaped behaviour comes through this
+ * schema.
  */
 
+import { z } from "zod";
 import type { GameSessionAction } from "./gameSession";
 
 export const GAME_DEFINITION_SCHEMA_VERSION = 1;
 export const GAME_INSTANCE_SCHEMA_VERSION = 1;
 
-export interface Faction {
-  id: string;
-  name: string;
-  color: string;
-  description?: string;
-}
+// ── Faction (legacy name; will move into a generic SetupOption when
+// the SetupStep wizard lands in a follow-up commit). Keeping the
+// existing shape so this commit is purely a Zod-adoption pass.
+const FactionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string(),
+  description: z.string().optional(),
+});
+export type Faction = z.infer<typeof FactionSchema>;
 
-export type ScoreDisplayStyle = "linearTrack" | "leaderboard" | "hidden";
-export type ScoreVictoryType = "firstToMax" | "highestAtTurnLimit";
+// ── Score subsystem ───────────────────────────────────────────────
+const ScoreDisplayStyleSchema = z.enum([
+  "linearTrack",
+  "leaderboard",
+  "hidden",
+]);
+export type ScoreDisplayStyle = z.infer<typeof ScoreDisplayStyleSchema>;
 
-export interface ScoreConfig {
-  displayStyle: ScoreDisplayStyle;
-  min: number;
-  max?: number;
-  increment: number;
-  victory?: { type: ScoreVictoryType };
-}
+const ScoreVictoryTypeSchema = z.enum([
+  "firstToMax",
+  "highestAtTurnLimit",
+]);
+export type ScoreVictoryType = z.infer<typeof ScoreVictoryTypeSchema>;
 
-export interface MapOption {
-  id: string;
-  name: string;
-  description?: string;
-  expansion?: string;
-}
+const ScoreConfigSchema = z.object({
+  displayStyle: ScoreDisplayStyleSchema,
+  min: z.number(),
+  max: z.number().optional(),
+  increment: z.number(),
+  victory: z
+    .object({
+      type: ScoreVictoryTypeSchema,
+    })
+    .optional(),
+});
+export type ScoreConfig = z.infer<typeof ScoreConfigSchema>;
 
-export interface DeckOption {
-  id: string;
-  name: string;
-  expansion?: string;
-}
+// ── Setup schema (current shape; will be replaced by setupSteps in
+// the wizard commit) ──────────────────────────────────────────────
+const MapOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  expansion: z.string().optional(),
+});
+export type MapOption = z.infer<typeof MapOptionSchema>;
 
-export interface SetupSchema {
-  // Maps the players can play on. First entry is treated as the default.
-  maps?: MapOption[];
-  // Card decks the game can be played with. First entry is the default.
-  decks?: DeckOption[];
-  // Optional landmark placements (Root: 0..2).
-  landmarks?: { maxAllowed: number };
-  // Optional hireling cards (Root: 0..3).
-  hirelings?: { maxAllowed: number };
-  // Factions that cannot coexist in the same game (Root: Vagabond vs
-  // Knaves of the Deepwood). Each pair is enforced both ways.
-  factionConstraints?: {
-    mutuallyExclusive?: [string, string][];
-  };
-  // Whether to expose a faction-draft toggle. Doesn't change pick
-  // mechanics, just signals "the rules support drafting".
-  allowDraft?: boolean;
-}
+const DeckOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  expansion: z.string().optional(),
+});
+export type DeckOption = z.infer<typeof DeckOptionSchema>;
 
-export interface GameDefinition {
-  schemaVersion: typeof GAME_DEFINITION_SCHEMA_VERSION;
-  id: string;
-  name: string;
-  description?: string;
-  defaultExpectedTurns: number;
-  defaultAverageSeconds: number;
-  factions?: Faction[];
-  score?: ScoreConfig;
-  // Cap on the player count the setup modal allows. Falls back to the
-  // faction count when undefined; defaults to the generic palette size
-  // when there are no factions either.
-  maxPlayers?: number;
-  // Optional advanced-setup rules (maps, decks, landmarks, hirelings,
-  // faction mutex, draft toggle). When set, the Setup modal renders an
-  // "Advanced setup" section driven by these options.
-  setupSchema?: SetupSchema;
-}
+const SetupSchemaSchema = z.object({
+  maps: z.array(MapOptionSchema).optional(),
+  decks: z.array(DeckOptionSchema).optional(),
+  landmarks: z.object({ maxAllowed: z.number() }).optional(),
+  hirelings: z.object({ maxAllowed: z.number() }).optional(),
+  factionConstraints: z
+    .object({
+      mutuallyExclusive: z.array(z.tuple([z.string(), z.string()])).optional(),
+    })
+    .optional(),
+  allowDraft: z.boolean().optional(),
+});
+export type SetupSchema = z.infer<typeof SetupSchemaSchema>;
 
-// Per-instance advanced-setup choices captured by the modal and passed
-// through GameConfig. All fields are optional — a definition may
-// declare a setupSchema but the user can leave choices unmade.
+// ── GameDefinition ───────────────────────────────────────────────
+export const GameDefinitionSchema = z.object({
+  schemaVersion: z.literal(GAME_DEFINITION_SCHEMA_VERSION),
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  defaultExpectedTurns: z.number(),
+  defaultAverageSeconds: z.number(),
+  factions: z.array(FactionSchema).optional(),
+  score: ScoreConfigSchema.optional(),
+  maxPlayers: z.number().optional(),
+  setupSchema: SetupSchemaSchema.optional(),
+});
+export type GameDefinition = z.infer<typeof GameDefinitionSchema>;
+
+// ── Parsing helpers ───────────────────────────────────────────────
+
+// Parse + validate raw JSON (or a JS object) as a GameDefinition.
+// Throws a ZodError with a path-into-the-document if anything's off.
+// Use this everywhere the codebase previously did `data as GameDefinition`.
+export const parseGameDefinition = (input: unknown): GameDefinition =>
+  GameDefinitionSchema.parse(input);
+
+export const safeParseGameDefinition = (input: unknown) =>
+  GameDefinitionSchema.safeParse(input);
+
+// ── Companion-screen choices that travel through GameConfig ───────
 export interface AdvancedSetupChoices {
   mapId?: string;
   deckId?: string;
@@ -102,23 +122,24 @@ export interface AdvancedSetupChoices {
   draft?: boolean;
 }
 
-export interface PlayerSlot {
-  name: string;
-  factionId?: string;
-  color: string;
-}
+// ── PlayerSlot / GameInstance — used by the future serialised
+// session export. The reducer's runtime Player shape lives in
+// gameSession.ts and intentionally carries less metadata for now.
+const PlayerSlotSchema = z.object({
+  name: z.string(),
+  factionId: z.string().optional(),
+  color: z.string(),
+});
+export type PlayerSlot = z.infer<typeof PlayerSlotSchema>;
 
+// Re-import GameSessionAction without making the cycle structural —
+// it's used only for typing GameInstance.actions, never parsed.
 export interface GameInstance {
   schemaVersion: typeof GAME_INSTANCE_SCHEMA_VERSION;
   definitionId: string;
-  // Embed the definition that was active when the instance was created.
-  // Lets a game replay correctly even if the definition is later edited
-  // or removed from the library.
   definitionSnapshot?: GameDefinition;
   startedAt: number;
   players: PlayerSlot[];
   expectedTurns: number;
-  // Append-only log of reducer actions. The current session state can be
-  // reconstructed by replaying this log against the reducer.
   actions: GameSessionAction[];
 }

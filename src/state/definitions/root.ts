@@ -1,4 +1,4 @@
-import type { GameDefinition } from "../gameDefinition";
+import { parseGameDefinition } from "../gameDefinition";
 import data from "./root.json";
 
 // TODO: confirm faction colours when art for the Marauders and Homeland
@@ -6,4 +6,4 @@ import data from "./root.json";
 // of the Hundreds) and the Homeland three (Lilypad, Twilight, Knaves)
 // are best-guess values. The base + Riverfolk + Underworld eight are
 // cross-checked against community sources.
-export const rootDefinition: GameDefinition = data as GameDefinition;
+export const rootDefinition = parseGameDefinition(data);

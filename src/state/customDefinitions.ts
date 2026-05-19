@@ -1,26 +1,38 @@
 import { clearKey, loadJson, saveJson } from "@/lib/storage";
 import {
-  GAME_DEFINITION_SCHEMA_VERSION,
+  safeParseGameDefinition,
   type GameDefinition,
 } from "./gameDefinition";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("custom-definitions");
 
 const STORAGE_KEY = "definitions";
 const SCHEMA_VERSION = 1;
 
 interface PersistedDefinitions {
   schemaVersion: typeof SCHEMA_VERSION;
-  definitions: GameDefinition[];
+  // Raw JSON; we re-parse on load so a stored definition that no
+  // longer conforms is dropped rather than crashing the app.
+  definitions: unknown[];
 }
 
 const loadAll = (): GameDefinition[] => {
   const persisted = loadJson<PersistedDefinitions>(STORAGE_KEY);
   if (!persisted) return [];
   if (persisted.schemaVersion !== SCHEMA_VERSION) return [];
-  // Drop entries whose own definition-schemaVersion is newer than what
-  // we know how to render.
-  return persisted.definitions.filter(
-    (d) => d.schemaVersion === GAME_DEFINITION_SCHEMA_VERSION,
-  );
+  const out: GameDefinition[] = [];
+  for (const raw of persisted.definitions) {
+    const result = safeParseGameDefinition(raw);
+    if (result.success) {
+      out.push(result.data);
+    } else {
+      log.warn("dropping persisted definition that failed validation", {
+        issues: result.error.issues,
+      });
+    }
+  }
+  return out;
 };
 
 const saveAll = (definitions: GameDefinition[]): void => {
@@ -37,8 +49,19 @@ export const findCustomDefinition = (
 ): GameDefinition | undefined => loadAll().find((d) => d.id === id);
 
 export const saveCustomDefinition = (def: GameDefinition): void => {
+  // Parse-validate again at the save boundary as belt-and-braces. If
+  // the in-memory object is malformed (e.g. dynamic editor state),
+  // throw before persisting.
+  const result = safeParseGameDefinition(def);
+  if (!result.success) {
+    throw new Error(
+      `Refusing to save invalid GameDefinition: ${result.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}`,
+    );
+  }
   const all = loadAll();
-  const next = [...all.filter((d) => d.id !== def.id), def];
+  const next = [...all.filter((d) => d.id !== result.data.id), result.data];
   saveAll(next);
 };
 
