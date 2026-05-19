@@ -93,11 +93,36 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     type: z.literal("toggle"),
     defaultValue: z.boolean().optional(),
   }),
-  // Per-player option pick. host-only is the only mode implemented in
-  // this commit; "turn-based" lights up in a follow-up that broadcasts
-  // SETUP_TURN over PeerJS so each connected device picks in order.
-  // Constraints reference option ids declared on this same step —
-  // making them self-contained, no top-level cross-references needed.
+  // Multi-toggle: a checkbox list. The active set of selected option ids
+  // is the result. Used for the top-of-wizard "Expansions included" step
+  // — downstream steps filter their options by `tag` against the active
+  // set (when their `tag` is a known option id from this step's category).
+  z.object({
+    type: z.literal("multi-toggle"),
+    options: z.array(SetupOptionSchema),
+    defaultSelectedIds: z.array(z.string()).optional(),
+  }),
+  // Deal-random: shuffle the option pool and draw `count` ids. Optional
+  // steps can be skipped entirely (e.g. ADSET A.6 Hirelings — use 0 or 3,
+  // never partial). The wizard exposes a re-shuffle action.
+  z.object({
+    type: z.literal("deal-random"),
+    options: z.array(SetupOptionSchema),
+    count: z.number(),
+    optional: z.boolean().optional(),
+  }),
+  // Seat players: the roster + ordering. The wizard renders an editable,
+  // reorderable list. Companions can rename / claim seats over PeerJS.
+  z.object({
+    type: z.literal("seat-players"),
+    minPlayers: z.number().optional(),
+    maxPlayers: z.number().optional(),
+    defaultPlayerCount: z.number().optional(),
+  }),
+  // Per-player option pick. host-only collects picks in the host modal;
+  // turn-based broadcasts SETUP_TURN over PeerJS so each seated companion
+  // picks from its own screen. Constraints reference option ids declared
+  // on this same step — fully self-contained, no top-level cross-refs.
   z.object({
     type: z.literal("player-pick"),
     options: z.array(SetupOptionSchema),
@@ -183,6 +208,25 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     defaultValue: z.boolean().optional(),
   }),
   z.object({
+    type: z.literal("multi-toggle"),
+    optionCategory: z.string(),
+    optionIds: z.array(z.string()),
+    defaultSelectedIds: z.array(z.string()).optional(),
+  }),
+  z.object({
+    type: z.literal("deal-random"),
+    optionCategory: z.string(),
+    optionIds: z.array(z.string()),
+    count: z.number(),
+    optional: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal("seat-players"),
+    minPlayers: z.number().optional(),
+    maxPlayers: z.number().optional(),
+    defaultPlayerCount: z.number().optional(),
+  }),
+  z.object({
     type: z.literal("player-pick"),
     optionCategory: z.string(),
     optionIds: z.array(z.string()),
@@ -266,7 +310,14 @@ export const loadGameDefinitionWithModules = (
 
   const setupSteps = structure.setupSteps?.map((step) => {
     const kind = step.kind;
-    if (kind.type !== "select-one" && kind.type !== "player-pick") {
+    // Step kinds that carry an `optionCategory` get their option ids
+    // resolved against the modules. The rest pass straight through.
+    if (
+      kind.type !== "select-one" &&
+      kind.type !== "player-pick" &&
+      kind.type !== "multi-toggle" &&
+      kind.type !== "deal-random"
+    ) {
       return step;
     }
     const { optionCategory, optionIds } = kind;
@@ -304,6 +355,14 @@ export type SetupChoice =
   | { kind: "select-one"; optionId: string }
   | { kind: "select-count"; count: number }
   | { kind: "toggle"; value: boolean }
+  | { kind: "multi-toggle"; selectedIds: string[] }
+  // Optional steps record `skipped: true`; otherwise `dealtIds` holds
+  // the randomly-drawn option ids (length === step.kind.count).
+  | { kind: "deal-random"; skipped: true }
+  | { kind: "deal-random"; skipped: false; dealtIds: string[] }
+  // Per-seat name + order. Index in the array is the seat (turn order).
+  // Later turn-based steps (player-pick) read this to drive the picker.
+  | { kind: "seat-players"; seats: Array<{ name: string }> }
   // Per-player option ids, keyed by player index. The host modal
   // collects this from the faction-picker rows; the page projects it
   // onto player.metadata at apply time so renderers can read it
@@ -311,6 +370,36 @@ export type SetupChoice =
   | { kind: "player-pick"; picks: Record<number, string> };
 
 export type SetupContext = Record<string, SetupChoice>;
+
+// ── Wizard helpers ────────────────────────────────────────────────
+
+// Step ids whose downstream options should be filtered by the active
+// expansion set. We treat this generically: if a step kind carries
+// `options`, each option's `tag` (when set) is compared against the
+// `selectedIds` of any earlier multi-toggle step. Options whose tag
+// isn't in *any* multi-toggle's selected set are hidden.
+//
+// Convention: an option's `tag` should equal an option id from an
+// earlier multi-toggle's category (e.g. faction `tag: "riverfolk"`
+// matches the expansions multi-toggle's option id "riverfolk").
+// Untagged options always show.
+export const optionVisibleUnderContext = (
+  option: { tag?: string },
+  context: SetupContext,
+): boolean => {
+  if (!option.tag) return true;
+  for (const choice of Object.values(context)) {
+    if (choice.kind === "multi-toggle") {
+      if (choice.selectedIds.includes(option.tag)) return true;
+    }
+  }
+  // If no multi-toggle has spoken yet, fall through to visible — the
+  // wizard hasn't reached the expansions step yet.
+  const hasMultiToggle = Object.values(context).some(
+    (c) => c.kind === "multi-toggle",
+  );
+  return !hasMultiToggle;
+};
 
 // ── PlayerSlot / GameInstance — used by the future serialised
 // session export. The reducer's runtime Player shape lives in

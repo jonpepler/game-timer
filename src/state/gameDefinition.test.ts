@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   GAME_DEFINITION_SCHEMA_VERSION,
   loadGameDefinitionWithModules,
+  optionVisibleUnderContext,
   parseGameContentModules,
   parseGameDefinition,
   parseGameDefinitionStructure,
   safeParseGameDefinition,
 } from "./gameDefinition";
+import type { SetupContext } from "./gameDefinition";
 
 const minimalValid = {
   schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
@@ -262,5 +264,144 @@ describe("structure + modules split", () => {
     const def = loadGameDefinitionWithModules(minimalStructure, minimalModules);
     expect(() => parseGameDefinition(def)).not.toThrow();
     expect(def).not.toHaveProperty("contentSource");
+  });
+});
+
+describe("ADSET-shaped step kinds", () => {
+  const struct = (kinds: Record<string, unknown>[]) => ({
+    schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
+    id: "x",
+    name: "X",
+    defaultExpectedTurns: 30,
+    defaultAverageSeconds: 200,
+    setupSteps: kinds.map((kind, i) => ({
+      id: `s${i}`,
+      label: `S${i}`,
+      kind,
+    })),
+  });
+
+  it("multi-toggle step parses with optionCategory + optionIds", () => {
+    const s = parseGameDefinitionStructure(
+      struct([
+        {
+          type: "multi-toggle",
+          optionCategory: "expansion",
+          optionIds: ["a", "b", "c"],
+          defaultSelectedIds: ["a"],
+        },
+      ]),
+    );
+    expect(s.setupSteps?.[0].kind.type).toBe("multi-toggle");
+  });
+
+  it("deal-random step parses with count + optional", () => {
+    const s = parseGameDefinitionStructure(
+      struct([
+        {
+          type: "deal-random",
+          optionCategory: "hireling",
+          optionIds: ["x", "y", "z"],
+          count: 3,
+          optional: true,
+        },
+      ]),
+    );
+    expect(s.setupSteps?.[0].kind.type).toBe("deal-random");
+  });
+
+  it("seat-players step parses with player-count bounds", () => {
+    const s = parseGameDefinitionStructure(
+      struct([
+        {
+          type: "seat-players",
+          minPlayers: 2,
+          maxPlayers: 6,
+          defaultPlayerCount: 3,
+        },
+      ]),
+    );
+    expect(s.setupSteps?.[0].kind.type).toBe("seat-players");
+  });
+
+  it("loader resolves multi-toggle + deal-random options against modules", () => {
+    const def = loadGameDefinitionWithModules(
+      {
+        schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
+        id: "g",
+        name: "G",
+        defaultExpectedTurns: 30,
+        defaultAverageSeconds: 200,
+        setupSteps: [
+          {
+            id: "exp",
+            label: "Expansions",
+            kind: {
+              type: "multi-toggle",
+              optionCategory: "expansion",
+              optionIds: ["base", "marauders"],
+              defaultSelectedIds: ["base"],
+            },
+          },
+          {
+            id: "hire",
+            label: "Hirelings",
+            kind: {
+              type: "deal-random",
+              optionCategory: "hireling",
+              optionIds: ["h1", "h2", "h3"],
+              count: 2,
+              optional: true,
+            },
+          },
+        ],
+      },
+      {
+        schemaVersion: 1,
+        categories: {
+          expansion: {
+            base:      { label: "Base" },
+            marauders: { label: "Marauders" },
+          },
+          hireling: {
+            h1: { label: "Hireling One",   tag: "base" },
+            h2: { label: "Hireling Two",   tag: "marauders" },
+            h3: { label: "Hireling Three", tag: "base" },
+          },
+        },
+      },
+    );
+    const exp = def.setupSteps?.[0];
+    const hire = def.setupSteps?.[1];
+    if (exp?.kind.type !== "multi-toggle") throw new Error("not multi-toggle");
+    if (hire?.kind.type !== "deal-random") throw new Error("not deal-random");
+    expect(exp.kind.options.map((o) => o.id)).toEqual(["base", "marauders"]);
+    expect(hire.kind.options).toHaveLength(3);
+    expect(hire.kind.count).toBe(2);
+    expect(hire.kind.optional).toBe(true);
+  });
+});
+
+describe("optionVisibleUnderContext", () => {
+  it("treats an untagged option as always visible", () => {
+    const ctx: SetupContext = {
+      exp: { kind: "multi-toggle", selectedIds: ["base"] },
+    };
+    expect(optionVisibleUnderContext({}, ctx)).toBe(true);
+  });
+
+  it("hides a tagged option when no multi-toggle includes its tag", () => {
+    const ctx: SetupContext = {
+      exp: { kind: "multi-toggle", selectedIds: ["base"] },
+    };
+    expect(optionVisibleUnderContext({ tag: "marauders" }, ctx)).toBe(false);
+    expect(optionVisibleUnderContext({ tag: "base" }, ctx)).toBe(true);
+  });
+
+  it("falls through to visible when the wizard hasn't hit a multi-toggle yet", () => {
+    const ctx: SetupContext = {
+      map: { kind: "select-one", optionId: "autumn" },
+    };
+    expect(optionVisibleUnderContext({ tag: "marauders" }, ctx)).toBe(true);
   });
 });
