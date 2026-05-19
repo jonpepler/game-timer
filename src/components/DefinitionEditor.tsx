@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save, Trash2, X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import styles from "./DefinitionEditor.module.css";
 import { NumberField } from "./NumberField";
 import {
   GAME_DEFINITION_SCHEMA_VERSION,
-  type Faction,
   type GameDefinition,
-  type ScoreConfig,
 } from "@/state/gameDefinition";
 import { generateDefinitionId } from "@/state/customDefinitions";
 
@@ -18,34 +16,10 @@ interface DefinitionEditorProps {
   onCancel: () => void;
 }
 
-const FACTION_PALETTE = [
-  "#E8C547",
-  "#E85D47",
-  "#47B8E8",
-  "#7BE847",
-  "#E847B8",
-  "#E88947",
-  "#9E47E8",
-  "#D9D9D9",
-];
-
-const defaultScore: ScoreConfig = {
-  displayStyle: "linearTrack",
-  min: 0,
-  max: 30,
-  increment: 1,
-  victory: { type: "firstToMax" },
-};
-
-const factionId = (name: string, fallbackIndex: number): string => {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 24);
-  return slug || `faction-${fallbackIndex + 1}`;
-};
-
+// Minimal editor while the SetupStep authoring UI is being built. The
+// previous editor surfaced bespoke faction / score / maps / decks
+// sections that don't match the new schema shape; the rich editor
+// comes back as a setupSteps authoring flow in a follow-up commit.
 export function DefinitionEditor({
   initial,
   onSave,
@@ -59,67 +33,13 @@ export function DefinitionEditor({
   const [averageSeconds, setAverageSeconds] = useState<number>(
     initial?.defaultAverageSeconds ?? 180,
   );
-  const [factions, setFactions] = useState<Faction[]>(
-    initial?.factions
-      ? initial.factions.map((f) => ({ ...f }))
-      : [],
-  );
-  const [scoreEnabled, setScoreEnabled] = useState<boolean>(
-    !!initial?.score,
-  );
-  const [score, setScore] = useState<ScoreConfig>(
-    initial?.score ?? defaultScore,
-  );
   const [error, setError] = useState<string | null>(null);
-
-  const addFaction = () => {
-    const palette = FACTION_PALETTE[factions.length % FACTION_PALETTE.length];
-    const draftName = `Faction ${factions.length + 1}`;
-    setFactions([
-      ...factions,
-      {
-        id: factionId(draftName, factions.length),
-        name: draftName,
-        color: palette,
-      },
-    ]);
-  };
-
-  const updateFaction = (
-    index: number,
-    field: keyof Faction,
-    value: string,
-  ) => {
-    setFactions((prev) =>
-      prev.map((f, i) => {
-        if (i !== index) return f;
-        const next = { ...f, [field]: value };
-        // Re-derive the id when the name changes to keep it readable.
-        // Ids must round-trip through JSON; we drop arbitrary chars.
-        if (field === "name") next.id = factionId(value, i);
-        return next;
-      }),
-    );
-  };
-
-  const removeFaction = (index: number) => {
-    setFactions((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError("Give the game a name before saving.");
-      return;
-    }
-    // Faction ids must be unique within a definition (foreign key from
-    // PlayerSlot.factionId).
-    const ids = factions.map((f) => f.id);
-    if (new Set(ids).size !== ids.length) {
-      setError(
-        "Two factions ended up with the same id — rename them to keep them distinct.",
-      );
       return;
     }
     setError(null);
@@ -131,8 +51,14 @@ export function DefinitionEditor({
       description: description.trim() || undefined,
       defaultExpectedTurns: Math.max(1, Math.round(expectedTurns)),
       defaultAverageSeconds: Math.max(1, Math.round(averageSeconds)),
-      factions: factions.length > 0 ? factions : undefined,
-      score: scoreEnabled ? score : undefined,
+      // Carry forward anything the previous editor had set so we don't
+      // accidentally clobber a richer-than-this-editor-knows-about
+      // definition while we wait for the setupSteps authoring UI.
+      score: initial?.score,
+      maxPlayers: initial?.maxPlayers,
+      setupSteps: initial?.setupSteps,
+      playerVisualFrom: initial?.playerVisualFrom,
+      playerSubheadingFrom: initial?.playerSubheadingFrom,
     };
     onSave(def);
   };
@@ -195,163 +121,17 @@ export function DefinitionEditor({
         </div>
       </div>
 
-      <div className={styles.section}>
-        <span className={styles.label}>Factions (optional)</span>
-        <p className={styles.help}>
-          When set, the player rows in Game Setup pre-fill from this list
-          instead of generic Player N rows.
-        </p>
-        <ul className={styles.factionList}>
-          {factions.map((faction, i) => (
-            <li key={i} className={styles.factionRow}>
-              <input
-                type="color"
-                value={faction.color}
-                onChange={(e) => updateFaction(i, "color", e.target.value)}
-                className={styles.colorSwatch}
-                aria-label={`Colour for faction ${i + 1}`}
-              />
-              <input
-                type="text"
-                value={faction.name}
-                onChange={(e) => updateFaction(i, "name", e.target.value)}
-                className={styles.input}
-                aria-label={`Faction ${i + 1} name`}
-              />
-              <button
-                type="button"
-                onClick={() => removeFaction(i)}
-                className={styles.iconButton}
-                aria-label={`Remove faction ${i + 1}`}
-              >
-                <Trash2 aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" onClick={addFaction} className={styles.addRow}>
-          <Plus size={14} aria-hidden />
-          Add faction
-        </button>
-      </div>
-
-      <div className={styles.section}>
-        <label className={styles.toggleRow}>
-          <input
-            type="checkbox"
-            checked={scoreEnabled}
-            onChange={(e) => setScoreEnabled(e.target.checked)}
-          />
-          Track score
-        </label>
-        {scoreEnabled && (
-          <div className={styles.subPanel}>
-            <div className={styles.row}>
-              <div className={styles.section}>
-                <label htmlFor="score-min" className={styles.label}>
-                  Min
-                </label>
-                <NumberField
-                  id="score-min"
-                  value={score.min}
-                  onChange={(n) => setScore({ ...score, min: n })}
-                  className={styles.input}
-                />
-              </div>
-              <div className={styles.section}>
-                <label htmlFor="score-max" className={styles.label}>
-                  Max (blank = no cap)
-                </label>
-                {/* Max is the one number field that allows "blank" */}
-                <input
-                  id="score-max"
-                  type="number"
-                  value={score.max ?? ""}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim();
-                    setScore({
-                      ...score,
-                      max: raw === "" ? undefined : parseInt(raw) || 0,
-                    });
-                  }}
-                  className={styles.input}
-                />
-              </div>
-            </div>
-            <div className={styles.row}>
-              <div className={styles.section}>
-                <label htmlFor="score-increment" className={styles.label}>
-                  Increment
-                </label>
-                <NumberField
-                  id="score-increment"
-                  min={1}
-                  value={score.increment}
-                  onChange={(n) => setScore({ ...score, increment: n })}
-                  className={styles.input}
-                />
-              </div>
-              <div className={styles.section}>
-                <label htmlFor="score-display" className={styles.label}>
-                  Display style
-                </label>
-                <select
-                  id="score-display"
-                  value={score.displayStyle}
-                  onChange={(e) =>
-                    setScore({
-                      ...score,
-                      displayStyle: e.target
-                        .value as ScoreConfig["displayStyle"],
-                    })
-                  }
-                  className={styles.select}
-                >
-                  <option value="linearTrack">Linear track</option>
-                  <option value="leaderboard">Leaderboard</option>
-                  <option value="hidden">Hidden</option>
-                </select>
-              </div>
-            </div>
-            <div className={styles.section}>
-              <label htmlFor="score-victory" className={styles.label}>
-                Victory rule
-              </label>
-              <select
-                id="score-victory"
-                value={score.victory?.type ?? "none"}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "none") {
-                    setScore({ ...score, victory: undefined });
-                  } else {
-                    setScore({
-                      ...score,
-                      victory: { type: val as "firstToMax" | "highestAtTurnLimit" },
-                    });
-                  }
-                }}
-                className={styles.select}
-              >
-                <option value="none">No automatic victory</option>
-                <option value="firstToMax">First to max wins</option>
-                <option value="highestAtTurnLimit">
-                  Highest at turn limit wins
-                </option>
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
+      <p className={styles.help}>
+        Authoring of setup steps, score rules, and per-player options is
+        being rebuilt against the generic SetupStep schema. Until that
+        ships, the editor only covers the basics; existing custom
+        definitions are preserved verbatim on save.
+      </p>
 
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.actions}>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={styles.secondary}
-        >
+        <button type="button" onClick={onCancel} className={styles.secondary}>
           <X size={16} aria-hidden />
           Cancel
         </button>

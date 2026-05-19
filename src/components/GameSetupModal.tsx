@@ -9,13 +9,47 @@ import {
   listDefinitions,
 } from "@/state/definitionRegistry";
 import type {
-  AdvancedSetupChoices,
-  Faction,
   GameDefinition,
-  SetupSchema,
+  SetupChoice,
+  SetupConstraint,
+  SetupContext,
+  SetupOption,
+  SetupStep,
 } from "@/state/gameDefinition";
 import type { Player, PlayerMetadataValue } from "@/state/gameSession";
 import { fallbackColor } from "@/lib/playerVisual";
+
+// Locate the player-pick step (if any) so the rest of the modal can
+// treat it as the per-player picker's data source. There's at most one
+// such step in this codebase — future games could have many, but the
+// modal only knows about the first.
+const findPlayerPickStep = (
+  definition: GameDefinition,
+):
+  | {
+      step: SetupStep;
+      options: SetupOption[];
+      constraints: SetupConstraint[];
+    }
+  | undefined => {
+  const step = definition.setupSteps?.find(
+    (s) => s.kind.type === "player-pick",
+  );
+  if (!step || step.kind.type !== "player-pick") return undefined;
+  return {
+    step,
+    options: step.kind.options,
+    constraints: step.kind.constraints ?? [],
+  };
+};
+
+const mutexPairsOf = (constraints: SetupConstraint[]): [string, string][] =>
+  constraints
+    .filter(
+      (c): c is Extract<SetupConstraint, { type: "mutually-exclusive" }> =>
+        c.type === "mutually-exclusive",
+    )
+    .map((c) => c.optionIds);
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -35,9 +69,9 @@ export interface GameConfig {
   // Definition the modal was configured against — captured so downstream
   // features (score, victory, faction lookup) can read the rules.
   definitionId: string;
-  // The map/deck/landmarks/hirelings/draft choices the user made when
-  // the picked definition declares a setupSchema. Absent otherwise.
-  advancedSetup?: AdvancedSetupChoices;
+  // Choices the user made for each declared SetupStep, keyed by step
+  // id. Empty when the definition declares no setupSteps.
+  setupContext?: SetupContext;
 }
 
 // Project a modal player row into the runtime Player shape. If the
@@ -49,17 +83,18 @@ const projectRow = (
   definition: GameDefinition,
 ): Player => {
   const visualKey = definition.playerVisualFrom;
-  const faction = row.factionId
-    ? definition.factions?.find((f) => f.id === row.factionId)
+  const pick = findPlayerPickStep(definition);
+  const option = row.factionId
+    ? pick?.options.find((o) => o.id === row.factionId)
     : undefined;
   const metadata: Record<string, PlayerMetadataValue> = {};
-  if (visualKey && faction) {
+  if (visualKey && option) {
     metadata[visualKey] = {
       type: "selected-option",
-      optionId: faction.id,
-      label: faction.name,
+      optionId: option.id,
+      label: option.label,
       color: row.color,
-      description: faction.description,
+      description: option.description,
     };
   }
   return { name: row.name, metadata };
@@ -90,11 +125,12 @@ const buildPlayerRowsForDefinition = (
   definition: GameDefinition,
   count: number,
 ): PlayerRow[] => {
-  if (definition.factions && definition.factions.length > 0) {
-    return definition.factions.slice(0, count).map((f) => ({
-      name: f.name,
-      color: f.color,
-      factionId: f.id,
+  const pick = findPlayerPickStep(definition);
+  if (pick && pick.options.length > 0) {
+    return pick.options.slice(0, count).map((o) => ({
+      name: o.label,
+      color: o.color ?? fallbackColor(0),
+      factionId: o.id,
     }));
   }
   return Array.from({ length: count }, (_, i) => ({
@@ -107,23 +143,40 @@ const maxPlayersForDefinition = (definition: GameDefinition): number => {
   if (definition.maxPlayers !== undefined) {
     return Math.max(1, definition.maxPlayers);
   }
-  if (definition.factions && definition.factions.length > 0) {
-    return definition.factions.length;
-  }
+  const pick = findPlayerPickStep(definition);
+  if (pick && pick.options.length > 0) return pick.options.length;
   return GENERIC_MAX_PLAYERS;
 };
 
-const defaultAdvancedSetup = (
-  schema: SetupSchema | undefined,
-): AdvancedSetupChoices => {
-  if (!schema) return {};
-  return {
-    mapId: schema.maps?.[0]?.id,
-    deckId: schema.decks?.[0]?.id,
-    landmarkCount: schema.landmarks ? 0 : undefined,
-    hirelingCount: schema.hirelings ? 0 : undefined,
-    draft: schema.allowDraft ? false : undefined,
-  };
+// Seed a SetupContext with each step's declared default.
+const defaultSetupContext = (
+  steps: SetupStep[] | undefined,
+): SetupContext => {
+  const ctx: SetupContext = {};
+  if (!steps) return ctx;
+  for (const step of steps) {
+    switch (step.kind.type) {
+      case "select-one": {
+        const id =
+          step.kind.defaultOptionId ?? step.kind.options[0]?.id;
+        if (id) ctx[step.id] = { kind: "select-one", optionId: id };
+        break;
+      }
+      case "select-count":
+        ctx[step.id] = {
+          kind: "select-count",
+          count: step.kind.defaultValue ?? step.kind.min,
+        };
+        break;
+      case "toggle":
+        ctx[step.id] = {
+          kind: "toggle",
+          value: step.kind.defaultValue ?? false,
+        };
+        break;
+    }
+  }
+  return ctx;
 };
 
 // Compute which faction ids the user can't pick for a given row,
@@ -182,8 +235,8 @@ export const GameSetupModal = ({
   const [players, setPlayers] = useState<PlayerRow[]>(
     buildPlayerRowsForDefinition(initialDefinition, 2),
   );
-  const [advancedSetup, setAdvancedSetup] = useState<AdvancedSetupChoices>(
-    defaultAdvancedSetup(initialDefinition.setupSchema),
+  const [setupContext, setSetupContext] = useState<SetupContext>(
+    defaultSetupContext(initialDefinition.setupSteps),
   );
 
   useEffect(() => {
@@ -200,7 +253,7 @@ export const GameSetupModal = ({
     const clampedCount = Math.min(playerCount, maxCount);
     setPlayerCount(clampedCount);
     setPlayers(buildPlayerRowsForDefinition(next, clampedCount));
-    setAdvancedSetup(defaultAdvancedSetup(next.setupSchema));
+    setSetupContext(defaultSetupContext(next.setupSteps));
   };
 
   const handleDefinitionChange = (nextId: string) => {
@@ -210,9 +263,14 @@ export const GameSetupModal = ({
   };
 
   const maxCount = maxPlayersForDefinition(definition);
-  const mutex = definition.setupSchema?.factionConstraints?.mutuallyExclusive;
-  const hasFactions = !!(definition.factions && definition.factions.length > 0);
-  const hasAdvanced = !!definition.setupSchema;
+  const playerPick = findPlayerPickStep(definition);
+  const mutex = playerPick ? mutexPairsOf(playerPick.constraints) : [];
+  const hasFactions = !!playerPick;
+  // Render the SetupStepsSection only when there are non-player-pick
+  // steps to show; player-pick is handled in the player-rows section.
+  const nonPlayerPickSteps =
+    definition.setupSteps?.filter((s) => s.kind.type !== "player-pick") ?? [];
+  const hasAdvanced = nonPlayerPickSteps.length > 0;
 
   const handlePlayerCountChange = (count: number) => {
     const clamped = Math.max(1, Math.min(maxCount, count));
@@ -236,14 +294,16 @@ export const GameSetupModal = ({
   };
 
   const pickFaction = (rowIndex: number, factionId: string) => {
-    const f: Faction | undefined = definition.factions?.find(
-      (x) => x.id === factionId,
-    );
-    if (!f) return;
+    const o = playerPick?.options.find((x) => x.id === factionId);
+    if (!o) return;
     setPlayers((prev) =>
       prev.map((p, i) =>
         i === rowIndex
-          ? { name: f.name, color: f.color, factionId: f.id }
+          ? {
+              name: o.label,
+              color: o.color ?? fallbackColor(i),
+              factionId: o.id,
+            }
           : p,
       ),
     );
@@ -256,7 +316,7 @@ export const GameSetupModal = ({
         ? players.map((row) => projectRow(row, definition))
         : undefined,
       definitionId: definition.id,
-      advancedSetup: hasAdvanced ? advancedSetup : undefined,
+      setupContext: hasAdvanced ? setupContext : undefined,
     });
   };
 
@@ -332,10 +392,10 @@ export const GameSetupModal = ({
           </section>
 
           {hasAdvanced && (
-            <AdvancedSetupSection
-              schema={definition.setupSchema!}
-              value={advancedSetup}
-              onChange={setAdvancedSetup}
+            <SetupStepsSection
+              steps={nonPlayerPickSteps}
+              value={setupContext}
+              onChange={setSetupContext}
             />
           )}
 
@@ -385,23 +445,23 @@ export const GameSetupModal = ({
                           className={styles.colorSwatch}
                           aria-label={`Colour for player ${i + 1}`}
                         />
-                        {hasFactions && definition.factions && (
+                        {hasFactions && playerPick && (
                           <select
                             value={player.factionId ?? ""}
                             onChange={(e) => pickFaction(i, e.target.value)}
                             className={styles.input}
-                            aria-label={`Faction for player ${i + 1}`}
+                            aria-label={`${playerPick.step.label} for player ${i + 1}`}
                           >
                             <option value="" disabled>
-                              — pick a faction —
+                              — pick a {playerPick.step.label.toLowerCase()} —
                             </option>
-                            {definition.factions.map((f) => (
+                            {playerPick.options.map((o) => (
                               <option
-                                key={f.id}
-                                value={f.id}
-                                disabled={blocked.has(f.id)}
+                                key={o.id}
+                                value={o.id}
+                                disabled={blocked.has(o.id)}
                               >
-                                {f.name}
+                                {o.label}
                               </option>
                             ))}
                           </select>
@@ -446,23 +506,17 @@ export const GameSetupModal = ({
   );
 };
 
-// ── Advanced setup ─────────────────────────────────────────────────────────
+// ── Setup steps (generic, schema-driven) ─────────────────────────────
 
-interface AdvancedSetupSectionProps {
-  schema: SetupSchema;
-  value: AdvancedSetupChoices;
-  onChange: (next: AdvancedSetupChoices) => void;
+interface SetupStepsSectionProps {
+  steps: SetupStep[];
+  value: SetupContext;
+  onChange: (next: SetupContext) => void;
 }
 
-function AdvancedSetupSection({
-  schema,
-  value,
-  onChange,
-}: AdvancedSetupSectionProps) {
-  const set = <K extends keyof AdvancedSetupChoices>(
-    key: K,
-    v: AdvancedSetupChoices[K],
-  ) => onChange({ ...value, [key]: v });
+function SetupStepsSection({ steps, value, onChange }: SetupStepsSectionProps) {
+  const setChoice = (stepId: string, choice: SetupChoice) =>
+    onChange({ ...value, [stepId]: choice });
 
   return (
     <section className={styles.section}>
@@ -473,90 +527,162 @@ function AdvancedSetupSection({
         Advanced setup
       </span>
 
-      {schema.maps && schema.maps.length > 0 && (
-        <div>
-          <label htmlFor="adv-map" className={styles.subLabel}>
-            Map
-          </label>
-          <select
-            id="adv-map"
-            value={value.mapId ?? ""}
-            onChange={(e) => set("mapId", e.target.value)}
-            className={styles.input}
-          >
-            {schema.maps.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-                {m.expansion ? ` · ${m.expansion}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {schema.decks && schema.decks.length > 0 && (
-        <div>
-          <label htmlFor="adv-deck" className={styles.subLabel}>
-            Deck
-          </label>
-          <select
-            id="adv-deck"
-            value={value.deckId ?? ""}
-            onChange={(e) => set("deckId", e.target.value)}
-            className={styles.input}
-          >
-            {schema.decks.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-                {d.expansion ? ` · ${d.expansion}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {schema.landmarks && (
-        <div className={styles.playerCount}>
-          <label htmlFor="adv-landmarks" className={styles.subLabel}>
-            Landmarks
-          </label>
-          <NumberField
-            id="adv-landmarks"
-            min={0}
-            max={schema.landmarks.maxAllowed}
-            value={value.landmarkCount ?? 0}
-            onChange={(n) => set("landmarkCount", n)}
-            className={styles.input}
-          />
-        </div>
-      )}
-
-      {schema.hirelings && (
-        <div className={styles.playerCount}>
-          <label htmlFor="adv-hirelings" className={styles.subLabel}>
-            Hirelings
-          </label>
-          <NumberField
-            id="adv-hirelings"
-            min={0}
-            max={schema.hirelings.maxAllowed}
-            value={value.hirelingCount ?? 0}
-            onChange={(n) => set("hirelingCount", n)}
-            className={styles.input}
-          />
-        </div>
-      )}
-
-      {schema.allowDraft && (
-        <label className={styles.toggleRow}>
-          <input
-            type="checkbox"
-            checked={value.draft ?? false}
-            onChange={(e) => set("draft", e.target.checked)}
-          />
-          <span className={styles.toggleText}>Draft factions</span>
-        </label>
-      )}
+      {steps.map((step) => (
+        <SetupStepRenderer
+          key={step.id}
+          step={step}
+          choice={value[step.id]}
+          onChange={(c) => setChoice(step.id, c)}
+        />
+      ))}
     </section>
+  );
+}
+
+interface SetupStepRendererProps {
+  step: SetupStep;
+  choice: SetupChoice | undefined;
+  onChange: (next: SetupChoice) => void;
+}
+
+function SetupStepRenderer({ step, choice, onChange }: SetupStepRendererProps) {
+  const inputId = `step-${step.id}`;
+  switch (step.kind.type) {
+    case "select-one":
+      return (
+        <SelectOneStep
+          step={step}
+          options={step.kind.options}
+          value={
+            choice?.kind === "select-one"
+              ? choice.optionId
+              : (step.kind.defaultOptionId ?? "")
+          }
+          onChange={(optionId) =>
+            onChange({ kind: "select-one", optionId })
+          }
+          inputId={inputId}
+        />
+      );
+    case "select-count":
+      return (
+        <CountStep
+          step={step}
+          min={step.kind.min}
+          max={step.kind.max}
+          value={
+            choice?.kind === "select-count"
+              ? choice.count
+              : (step.kind.defaultValue ?? step.kind.min)
+          }
+          onChange={(count) => onChange({ kind: "select-count", count })}
+          inputId={inputId}
+        />
+      );
+    case "toggle":
+      return (
+        <ToggleStep
+          step={step}
+          value={
+            choice?.kind === "toggle"
+              ? choice.value
+              : (step.kind.defaultValue ?? false)
+          }
+          onChange={(v) => onChange({ kind: "toggle", value: v })}
+          inputId={inputId}
+        />
+      );
+  }
+}
+
+function SelectOneStep({
+  step,
+  options,
+  value,
+  onChange,
+  inputId,
+}: {
+  step: SetupStep;
+  options: SetupOption[];
+  value: string;
+  onChange: (id: string) => void;
+  inputId: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={inputId} className={styles.subLabel}>
+        {step.label}
+      </label>
+      <select
+        id={inputId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={styles.input}
+      >
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+            {o.tag ? ` · ${o.tag}` : ""}
+          </option>
+        ))}
+      </select>
+      {step.description && <p className={styles.help}>{step.description}</p>}
+    </div>
+  );
+}
+
+function CountStep({
+  step,
+  min,
+  max,
+  value,
+  onChange,
+  inputId,
+}: {
+  step: SetupStep;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (n: number) => void;
+  inputId: string;
+}) {
+  return (
+    <div className={styles.playerCount}>
+      <label htmlFor={inputId} className={styles.subLabel}>
+        {step.label}
+      </label>
+      <NumberField
+        id={inputId}
+        min={min}
+        max={max}
+        value={value}
+        onChange={onChange}
+        className={styles.input}
+      />
+    </div>
+  );
+}
+
+function ToggleStep({
+  step,
+  value,
+  onChange,
+  inputId,
+}: {
+  step: SetupStep;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  inputId: string;
+}) {
+  return (
+    <label className={styles.toggleRow} htmlFor={inputId}>
+      <input
+        id={inputId}
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className={styles.toggleText}>{step.label}</span>
+    </label>
   );
 }

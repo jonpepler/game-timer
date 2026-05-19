@@ -8,86 +8,6 @@
   "maxPlayers": 6,
   "playerVisualFrom": "faction",
   "playerSubheadingFrom": "faction",
-  "factions": [
-    {
-      "id": "marquise",
-      "name": "Marquise de Cat",
-      "color": "#F39C2A",
-      "description": "Industrial cats building sawmills, workshops, and recruiters across the wood."
-    },
-    {
-      "id": "eyrie",
-      "name": "Eyrie Dynasties",
-      "color": "#1E4A8C",
-      "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act."
-    },
-    {
-      "id": "alliance",
-      "name": "Woodland Alliance",
-      "color": "#3E9E48",
-      "description": "Forest revolutionaries spreading sympathy and igniting open revolt."
-    },
-    {
-      "id": "vagabond",
-      "name": "Vagabond",
-      "color": "#B0B0B0",
-      "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions."
-    },
-    {
-      "id": "lizards",
-      "name": "Lizard Cult",
-      "color": "#E8D547",
-      "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals."
-    },
-    {
-      "id": "riverfolk",
-      "name": "Riverfolk Company",
-      "color": "#3FB8C2",
-      "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river."
-    },
-    {
-      "id": "duchy",
-      "name": "Underground Duchy",
-      "color": "#9E5A29",
-      "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions."
-    },
-    {
-      "id": "corvids",
-      "name": "Corvid Conspiracy",
-      "color": "#2A2A2A",
-      "description": "Crow plotters laying secret tokens that punish meddling rivals."
-    },
-    {
-      "id": "hundreds",
-      "name": "Lord of the Hundreds",
-      "color": "#C13E3E",
-      "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours."
-    },
-    {
-      "id": "keepers",
-      "name": "Keepers in Iron",
-      "color": "#7FA8A2",
-      "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige."
-    },
-    {
-      "id": "lilypad",
-      "name": "Lilypad Diaspora",
-      "color": "#5DBE7C",
-      "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure."
-    },
-    {
-      "id": "twilight",
-      "name": "Twilight Council",
-      "color": "#7B6CA8",
-      "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation."
-    },
-    {
-      "id": "knaves",
-      "name": "Knaves of the Deepwood",
-      "color": "#8C6B3F",
-      "description": "Forest miscreants raiding warriors and ransoming hostages back for victory."
-    }
-  ],
   "score": {
     "displayStyle": "linearTrack",
     "min": 0,
@@ -95,67 +15,198 @@
     "increment": 1,
     "victory": { "type": "firstToMax" }
   },
-  "setupSchema": {
-    "maps": [
-      {
-        "id": "autumn",
-        "name": "Autumn",
-        "expansion": "Base",
-        "description": "The default map. No special rules."
-      },
-      {
-        "id": "winter",
-        "name": "Winter",
-        "expansion": "Base",
-        "description": "A Raging River divides forests, adding a forest-traversal barrier."
-      },
-      {
-        "id": "lake",
-        "name": "Lake",
-        "expansion": "Underworld",
-        "description": "A central lake links coastal clearings; a ferry shuttles between them."
-      },
-      {
-        "id": "mountain",
-        "name": "Mountain",
-        "expansion": "Underworld",
-        "description": "Closed paths must be opened by spending cards; ruling the central Pass scores."
-      },
-      {
-        "id": "marsh",
-        "name": "Marsh",
-        "expansion": "Homeland",
-        "description": "Flood markers seal off clearings; flooded paths enclose forests."
-      },
-      {
-        "id": "gorge",
-        "name": "Gorge",
-        "expansion": "Homeland",
-        "description": "A dam separates forests; a bridge crosses without splitting them."
+  "setupSteps": [
+    {
+      "id": "map",
+      "label": "Map",
+      "description": "Each map changes how clearings link and a few global rules.",
+      "kind": {
+        "type": "select-one",
+        "allowRandom": true,
+        "defaultOptionId": "autumn",
+        "options": [
+          {
+            "id": "autumn",
+            "label": "Autumn",
+            "tag": "Base",
+            "description": "The default map. No special rules."
+          },
+          {
+            "id": "winter",
+            "label": "Winter",
+            "tag": "Base",
+            "description": "A Raging River divides forests, adding a forest-traversal barrier."
+          },
+          {
+            "id": "lake",
+            "label": "Lake",
+            "tag": "Underworld",
+            "description": "A central lake links coastal clearings; a ferry shuttles between them."
+          },
+          {
+            "id": "mountain",
+            "label": "Mountain",
+            "tag": "Underworld",
+            "description": "Closed paths must be opened by spending cards; ruling the central Pass scores."
+          },
+          {
+            "id": "marsh",
+            "label": "Marsh",
+            "tag": "Homeland",
+            "description": "Flood markers seal off clearings; flooded paths enclose forests."
+          },
+          {
+            "id": "gorge",
+            "label": "Gorge",
+            "tag": "Homeland",
+            "description": "A dam separates forests; a bridge crosses without splitting them."
+          }
+        ]
       }
-    ],
-    "decks": [
-      {
-        "id": "base",
-        "name": "Base deck",
-        "expansion": "Base"
-      },
-      {
-        "id": "exiles",
-        "name": "Exiles and Partisans",
-        "expansion": "Riverfolk"
-      },
-      {
-        "id": "squires",
-        "name": "Squires and Disciples",
-        "expansion": "Marauders"
-      }
-    ],
-    "landmarks": { "maxAllowed": 2 },
-    "hirelings": { "maxAllowed": 3 },
-    "factionConstraints": {
-      "mutuallyExclusive": [["vagabond", "knaves"]]
     },
-    "allowDraft": true
-  }
+    {
+      "id": "deck",
+      "label": "Deck",
+      "description": "Swap the card mix for variety.",
+      "kind": {
+        "type": "select-one",
+        "allowRandom": true,
+        "defaultOptionId": "base",
+        "options": [
+          { "id": "base", "label": "Base deck", "tag": "Base" },
+          { "id": "exiles", "label": "Exiles and Partisans", "tag": "Riverfolk" },
+          { "id": "squires", "label": "Squires and Disciples", "tag": "Marauders" }
+        ]
+      }
+    },
+    {
+      "id": "landmarks",
+      "label": "Landmarks",
+      "description": "Map-side scoring perks. Place 0–2 landmark cards.",
+      "kind": {
+        "type": "select-count",
+        "min": 0,
+        "max": 2,
+        "defaultValue": 0,
+        "allowRandom": true
+      }
+    },
+    {
+      "id": "hirelings",
+      "label": "Hirelings",
+      "description": "Bot-driven allies. Take on up to 3.",
+      "kind": {
+        "type": "select-count",
+        "min": 0,
+        "max": 3,
+        "defaultValue": 0,
+        "allowRandom": true
+      }
+    },
+    {
+      "id": "draft",
+      "label": "Draft factions",
+      "description": "Players choose factions from a shared pool in counterclockwise order.",
+      "kind": {
+        "type": "toggle",
+        "defaultValue": false
+      }
+    },
+    {
+      "id": "faction",
+      "label": "Faction",
+      "description": "Each player claims one faction. The Vagabond and Knaves of the Deepwood cannot both be in the same game.",
+      "kind": {
+        "type": "player-pick",
+        "mode": "host-only",
+        "allowRandom": true,
+        "options": [
+          {
+            "id": "marquise",
+            "label": "Marquise de Cat",
+            "color": "#F39C2A",
+            "description": "Industrial cats building sawmills, workshops, and recruiters across the wood."
+          },
+          {
+            "id": "eyrie",
+            "label": "Eyrie Dynasties",
+            "color": "#1E4A8C",
+            "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act."
+          },
+          {
+            "id": "alliance",
+            "label": "Woodland Alliance",
+            "color": "#3E9E48",
+            "description": "Forest revolutionaries spreading sympathy and igniting open revolt."
+          },
+          {
+            "id": "vagabond",
+            "label": "Vagabond",
+            "color": "#B0B0B0",
+            "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions."
+          },
+          {
+            "id": "lizards",
+            "label": "Lizard Cult",
+            "color": "#E8D547",
+            "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals."
+          },
+          {
+            "id": "riverfolk",
+            "label": "Riverfolk Company",
+            "color": "#3FB8C2",
+            "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river."
+          },
+          {
+            "id": "duchy",
+            "label": "Underground Duchy",
+            "color": "#9E5A29",
+            "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions."
+          },
+          {
+            "id": "corvids",
+            "label": "Corvid Conspiracy",
+            "color": "#2A2A2A",
+            "description": "Crow plotters laying secret tokens that punish meddling rivals."
+          },
+          {
+            "id": "hundreds",
+            "label": "Lord of the Hundreds",
+            "color": "#C13E3E",
+            "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours."
+          },
+          {
+            "id": "keepers",
+            "label": "Keepers in Iron",
+            "color": "#7FA8A2",
+            "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige."
+          },
+          {
+            "id": "lilypad",
+            "label": "Lilypad Diaspora",
+            "color": "#5DBE7C",
+            "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure."
+          },
+          {
+            "id": "twilight",
+            "label": "Twilight Council",
+            "color": "#7B6CA8",
+            "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation."
+          },
+          {
+            "id": "knaves",
+            "label": "Knaves of the Deepwood",
+            "color": "#8C6B3F",
+            "description": "Forest miscreants raiding warriors and ransoming hostages back for victory."
+          }
+        ],
+        "constraints": [
+          {
+            "type": "mutually-exclusive",
+            "optionIds": ["vagabond", "knaves"]
+          }
+        ]
+      }
+    }
+  ]
 }

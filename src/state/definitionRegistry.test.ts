@@ -42,16 +42,28 @@ describe("definition registry", () => {
     }
   });
 
-  it("Root pressure-tests the schema: full faction roster + score subsystem populated", () => {
+  it("Root pressure-tests the schema: full player-pick roster + score subsystem", () => {
     const root = requireDefinition("root");
-    // All 13 official factions across base + four expansions (Riverfolk,
-    // Underworld, Marauders, Homeland). Update if Leder publishes more.
-    expect(root.factions?.length).toBe(13);
-    // Faction ids must be unique — they're used as foreign keys from
-    // PlayerSlot and need to round-trip through JSON.
-    const factionIds = root.factions!.map((f) => f.id);
-    expect(new Set(factionIds).size).toBe(factionIds.length);
-    // maxPlayers caps the table even though there are 13 factions to
+    const pickStep = root.setupSteps?.find(
+      (s) => s.kind.type === "player-pick",
+    );
+    expect(pickStep).toBeDefined();
+    if (pickStep && pickStep.kind.type === "player-pick") {
+      // All 13 official factions across base + four expansions
+      // (Riverfolk, Underworld, Marauders, Homeland). Update if Leder
+      // publishes more.
+      expect(pickStep.kind.options).toHaveLength(13);
+      // Option ids must be unique — they're foreign keys for player
+      // metadata + the mutex constraint references.
+      const ids = pickStep.kind.options.map((o) => o.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      // Mutex pair (Vagabond ↔ Knaves) declared on the step.
+      expect(pickStep.kind.constraints).toContainEqual({
+        type: "mutually-exclusive",
+        optionIds: ["vagabond", "knaves"],
+      });
+    }
+    // maxPlayers caps the table even though there are 13 options to
     // pick from.
     expect(root.maxPlayers).toBe(6);
     expect(root.score?.max).toBe(30);

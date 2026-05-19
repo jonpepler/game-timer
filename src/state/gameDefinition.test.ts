@@ -37,26 +37,46 @@ describe("GameDefinitionSchema", () => {
     }
   });
 
-  it("validates a factions array with shape", () => {
+  it("validates a player-pick step's option array", () => {
     const parsed = parseGameDefinition({
       ...minimalValid,
-      factions: [
-        { id: "a", name: "Alpha", color: "#fff" },
-        { id: "b", name: "Beta", color: "#000", description: "Second." },
+      setupSteps: [
+        {
+          id: "side",
+          label: "Side",
+          kind: {
+            type: "player-pick",
+            mode: "host-only",
+            options: [
+              { id: "a", label: "Alpha", color: "#fff" },
+              { id: "b", label: "Beta", color: "#000", description: "Second." },
+            ],
+          },
+        },
       ],
     });
-    expect(parsed.factions).toHaveLength(2);
+    expect(parsed.setupSteps?.[0].kind.type).toBe("player-pick");
   });
 
-  it("rejects a faction missing colour", () => {
+  it("rejects a player-pick option missing its id", () => {
     const result = safeParseGameDefinition({
       ...minimalValid,
-      factions: [{ id: "a", name: "Alpha" }],
+      setupSteps: [
+        {
+          id: "side",
+          label: "Side",
+          kind: {
+            type: "player-pick",
+            mode: "host-only",
+            options: [{ label: "Alpha" }],
+          },
+        },
+      ],
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path.join("."));
-      expect(paths.some((p) => p.startsWith("factions"))).toBe(true);
+      expect(paths.some((p) => p.includes("setupSteps"))).toBe(true);
     }
   });
 
@@ -72,29 +92,69 @@ describe("GameDefinitionSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("parses Root-shaped setupSchema with mutex tuples", () => {
+  it("parses a Root-shaped setupSteps array (every step kind)", () => {
     const parsed = parseGameDefinition({
       ...minimalValid,
       id: "root",
       name: "Root",
       maxPlayers: 6,
-      factions: [
-        { id: "vagabond", name: "Vagabond", color: "#aaa" },
-        { id: "knaves", name: "Knaves", color: "#bbb" },
-      ],
-      setupSchema: {
-        maps: [{ id: "autumn", name: "Autumn" }],
-        decks: [{ id: "base", name: "Base" }],
-        landmarks: { maxAllowed: 2 },
-        hirelings: { maxAllowed: 3 },
-        factionConstraints: {
-          mutuallyExclusive: [["vagabond", "knaves"]],
+      setupSteps: [
+        {
+          id: "map",
+          label: "Map",
+          kind: {
+            type: "select-one",
+            options: [{ id: "autumn", label: "Autumn" }],
+          },
         },
-        allowDraft: true,
-      },
+        {
+          id: "landmarks",
+          label: "Landmarks",
+          kind: { type: "select-count", min: 0, max: 2 },
+        },
+        {
+          id: "draft",
+          label: "Draft factions",
+          kind: { type: "toggle", defaultValue: false },
+        },
+        {
+          id: "faction",
+          label: "Faction",
+          kind: {
+            type: "player-pick",
+            mode: "host-only",
+            options: [
+              { id: "vagabond", label: "Vagabond", color: "#aaa" },
+              { id: "knaves", label: "Knaves", color: "#bbb" },
+            ],
+            constraints: [
+              { type: "mutually-exclusive", optionIds: ["vagabond", "knaves"] },
+            ],
+          },
+        },
+      ],
     });
-    expect(parsed.setupSchema?.factionConstraints?.mutuallyExclusive).toEqual([
-      ["vagabond", "knaves"],
-    ]);
+    expect(parsed.setupSteps).toHaveLength(4);
+    expect(parsed.setupSteps?.[0].kind.type).toBe("select-one");
+    expect(parsed.setupSteps?.[3].kind.type).toBe("player-pick");
+    if (parsed.setupSteps?.[3].kind.type === "player-pick") {
+      expect(parsed.setupSteps[3].kind.constraints).toEqual([
+        { type: "mutually-exclusive", optionIds: ["vagabond", "knaves"] },
+      ]);
+    }
+  });
+
+  it("rejects an unknown setup-step kind", () => {
+    const result = safeParseGameDefinition({
+      ...minimalValid,
+      setupSteps: [
+        {
+          id: "weird",
+          label: "Weird",
+          kind: { type: "summon-demon" },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
   });
 });

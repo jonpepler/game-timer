@@ -18,16 +18,6 @@ import type { GameSessionAction } from "./gameSession";
 export const GAME_DEFINITION_SCHEMA_VERSION = 1;
 export const GAME_INSTANCE_SCHEMA_VERSION = 1;
 
-// ── Faction (legacy name; will move into a generic SetupOption when
-// the SetupStep wizard lands in a follow-up commit). Keeping the
-// existing shape so this commit is purely a Zod-adoption pass.
-const FactionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  color: z.string(),
-  description: z.string().optional(),
-});
-export type Faction = z.infer<typeof FactionSchema>;
 
 // ── Score subsystem ───────────────────────────────────────────────
 const ScoreDisplayStyleSchema = z.enum([
@@ -56,36 +46,70 @@ const ScoreConfigSchema = z.object({
 });
 export type ScoreConfig = z.infer<typeof ScoreConfigSchema>;
 
-// ── Setup schema (current shape; will be replaced by setupSteps in
-// the wizard commit) ──────────────────────────────────────────────
-const MapOptionSchema = z.object({
+// ── Setup steps ───────────────────────────────────────────────────
+// A generic, ordered set of decisions a game wants the player to make
+// before it begins. The wizard renders one screen per step in the
+// declared order. Every term in this layer is game-agnostic — the
+// game's own vocabulary (Map, Deck, Faction, ...) lives only as
+// strings inside the step's `label` field.
+
+const SetupOptionSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  label: z.string(),
   description: z.string().optional(),
-  expansion: z.string().optional(),
+  color: z.string().optional(),
+  tag: z.string().optional(),
 });
-export type MapOption = z.infer<typeof MapOptionSchema>;
+export type SetupOption = z.infer<typeof SetupOptionSchema>;
 
-const DeckOptionSchema = z.object({
+const SetupConstraintSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("mutually-exclusive"),
+    optionIds: z.tuple([z.string(), z.string()]),
+  }),
+]);
+export type SetupConstraint = z.infer<typeof SetupConstraintSchema>;
+
+const SetupStepKindSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("select-one"),
+    options: z.array(SetupOptionSchema),
+    defaultOptionId: z.string().optional(),
+    allowRandom: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal("select-count"),
+    min: z.number(),
+    max: z.number(),
+    defaultValue: z.number().optional(),
+    allowRandom: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal("toggle"),
+    defaultValue: z.boolean().optional(),
+  }),
+  // Per-player option pick. host-only is the only mode implemented in
+  // this commit; "turn-based" lights up in a follow-up that broadcasts
+  // SETUP_TURN over PeerJS so each connected device picks in order.
+  // Constraints reference option ids declared on this same step —
+  // making them self-contained, no top-level cross-references needed.
+  z.object({
+    type: z.literal("player-pick"),
+    options: z.array(SetupOptionSchema),
+    mode: z.enum(["host-only", "turn-based"]),
+    constraints: z.array(SetupConstraintSchema).optional(),
+    allowRandom: z.boolean().optional(),
+  }),
+]);
+export type SetupStepKind = z.infer<typeof SetupStepKindSchema>;
+
+const SetupStepSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  expansion: z.string().optional(),
+  label: z.string(),
+  description: z.string().optional(),
+  kind: SetupStepKindSchema,
 });
-export type DeckOption = z.infer<typeof DeckOptionSchema>;
-
-const SetupSchemaSchema = z.object({
-  maps: z.array(MapOptionSchema).optional(),
-  decks: z.array(DeckOptionSchema).optional(),
-  landmarks: z.object({ maxAllowed: z.number() }).optional(),
-  hirelings: z.object({ maxAllowed: z.number() }).optional(),
-  factionConstraints: z
-    .object({
-      mutuallyExclusive: z.array(z.tuple([z.string(), z.string()])).optional(),
-    })
-    .optional(),
-  allowDraft: z.boolean().optional(),
-});
-export type SetupSchema = z.infer<typeof SetupSchemaSchema>;
+export type SetupStep = z.infer<typeof SetupStepSchema>;
 
 // ── GameDefinition ───────────────────────────────────────────────
 export const GameDefinitionSchema = z.object({
@@ -95,21 +119,15 @@ export const GameDefinitionSchema = z.object({
   description: z.string().optional(),
   defaultExpectedTurns: z.number(),
   defaultAverageSeconds: z.number(),
-  factions: z.array(FactionSchema).optional(),
   score: ScoreConfigSchema.optional(),
   maxPlayers: z.number().optional(),
-  setupSchema: SetupSchemaSchema.optional(),
+  // Ordered wizard steps the game wants the user to walk through
+  // before play. Each step renders in its own wizard screen.
+  setupSteps: z.array(SetupStepSchema).optional(),
   // Metadata key the renderers should source per-player visuals from.
-  // E.g. Root sets this to "faction"; the modal/wizard attaches a
-  // selected-option metadata entry under that key, and renderers read
-  // `.color` from it. When absent, renderers fall back to a positional
-  // palette.
   playerVisualFrom: z.string().optional(),
-  // Metadata key whose label is rendered as a small subheading
-  // beneath each player's name (e.g. "Marquise de Cat" under "Jon").
-  // When the subheading equals the player's display name, renderers
-  // suppress it to avoid the "Marquise de Cat / Marquise de Cat"
-  // duplicate at default settings.
+  // Metadata key whose label renders as a small subheading beneath
+  // each player's name. Suppressed when it'd duplicate the name.
   playerSubheadingFrom: z.string().optional(),
 });
 export type GameDefinition = z.infer<typeof GameDefinitionSchema>;
@@ -125,14 +143,20 @@ export const parseGameDefinition = (input: unknown): GameDefinition =>
 export const safeParseGameDefinition = (input: unknown) =>
   GameDefinitionSchema.safeParse(input);
 
-// ── Companion-screen choices that travel through GameConfig ───────
-export interface AdvancedSetupChoices {
-  mapId?: string;
-  deckId?: string;
-  landmarkCount?: number;
-  hirelingCount?: number;
-  draft?: boolean;
-}
+// ── Setup wizard outputs ──────────────────────────────────────────
+// What the wizard collects per step. Stored in a record keyed by step
+// id so future steps can read earlier choices generically.
+export type SetupChoice =
+  | { kind: "select-one"; optionId: string }
+  | { kind: "select-count"; count: number }
+  | { kind: "toggle"; value: boolean }
+  // Per-player option ids, keyed by player index. The host modal
+  // collects this from the faction-picker rows; the page projects it
+  // onto player.metadata at apply time so renderers can read it
+  // generically.
+  | { kind: "player-pick"; picks: Record<number, string> };
+
+export type SetupContext = Record<string, SetupChoice>;
 
 // ── PlayerSlot / GameInstance — used by the future serialised
 // session export. The reducer's runtime Player shape lives in

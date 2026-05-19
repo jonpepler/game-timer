@@ -66,9 +66,18 @@ export default function GamesLibrary() {
                 <span className={styles.rowMeta}>
                   {def.defaultExpectedTurns} turns ·{" "}
                   {def.defaultAverageSeconds}s avg
-                  {def.factions
-                    ? ` · ${def.factions.length} factions`
-                    : " · anonymous players"}
+                  {(() => {
+                    const pickStep = def.setupSteps?.find(
+                      (s) => s.kind.type === "player-pick",
+                    );
+                    if (pickStep && pickStep.kind.type === "player-pick") {
+                      return ` · ${pickStep.kind.options.length} ${pickStep.label.toLowerCase()}s`;
+                    }
+                    return " · anonymous players";
+                  })()}
+                  {def.setupSteps && def.setupSteps.length > 0
+                    ? ` · ${def.setupSteps.length} setup steps`
+                    : ""}
                   {def.score ? " · scored" : ""}
                 </span>
               </div>

@@ -148,19 +148,35 @@ export default function Home() {
           return;
         }
         const def = definitionId ? findDefinition(definitionId) : undefined;
-        const faction = def?.factions?.find((f) => f.id === msg.factionId);
-        if (!faction) {
-          peerLog.warn("SET_FACTION rejected — unknown factionId", {
+        // Resolve the player-pick step that owns the option list.
+        const pickStep = def?.setupSteps?.find(
+          (s) => s.kind.type === "player-pick",
+        );
+        if (!pickStep || pickStep.kind.type !== "player-pick") {
+          peerLog.warn("SET_FACTION rejected — no player-pick step", {
             peerId,
-            factionId: msg.factionId,
           });
           return;
         }
-        // Already taken by another slot? Read the picked option via
-        // the active definition's playerVisualFrom key.
+        const option = pickStep.kind.options.find(
+          (o) => o.id === msg.factionId,
+        );
+        if (!option) {
+          peerLog.warn("SET_FACTION rejected — unknown optionId", {
+            peerId,
+            optionId: msg.factionId,
+          });
+          return;
+        }
         const visualKey = def?.playerVisualFrom;
+        if (!visualKey) {
+          peerLog.warn(
+            "SET_FACTION rejected — definition declares no playerVisualFrom",
+            { peerId },
+          );
+          return;
+        }
         const optionOf = (p: { metadata: Record<string, unknown> }) => {
-          if (!visualKey) return undefined;
           const m = p.metadata[visualKey];
           if (
             m &&
@@ -172,53 +188,44 @@ export default function Home() {
           return undefined;
         };
         const takenBy = state.players?.findIndex(
-          (p, i) => i !== claimed && optionOf(p)?.optionId === faction.id,
+          (p, i) => i !== claimed && optionOf(p)?.optionId === option.id,
         );
         if (takenBy !== undefined && takenBy !== -1) {
           peerLog.warn("SET_FACTION rejected — option taken by another slot", {
             peerId,
-            factionId: faction.id,
+            optionId: option.id,
           });
           return;
         }
-        // Mutex with anything another slot already picked?
-        const mutex =
-          def?.setupSchema?.factionConstraints?.mutuallyExclusive ?? [];
+        // Mutex constraints live on the player-pick step itself.
+        const mutex = (pickStep.kind.constraints ?? [])
+          .filter((c) => c.type === "mutually-exclusive")
+          .map((c) => c.optionIds);
         const blockedByMutex = state.players?.some((p, i) => {
           if (i === claimed) return false;
           const oid = optionOf(p)?.optionId;
           if (!oid) return false;
           return mutex.some(
             ([a, b]) =>
-              (a === oid && b === faction.id) ||
-              (b === oid && a === faction.id),
+              (a === oid && b === option.id) || (b === oid && a === option.id),
           );
         });
         if (blockedByMutex) {
           peerLog.warn("SET_FACTION rejected — mutex with another slot", {
             peerId,
-            factionId: faction.id,
+            optionId: option.id,
           });
           return;
         }
-        if (!visualKey) {
-          peerLog.warn(
-            "SET_FACTION rejected — definition declares no playerVisualFrom",
-            {
-              peerId,
-            },
-          );
-          return;
-        }
         setPlayer(claimed, {
-          name: faction.name,
+          name: option.label,
           metadata: {
             [visualKey]: {
               type: "selected-option",
-              optionId: faction.id,
-              label: faction.name,
-              color: faction.color,
-              description: faction.description,
+              optionId: option.id,
+              label: option.label,
+              color: option.color,
+              description: option.description,
             },
           },
         });
@@ -384,7 +391,12 @@ export default function Home() {
                 />
                 <span className={styles.activePlayerText}>
                   {/* eslint-disable-next-line prettier/prettier */}
-                  <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                  <span>
+                    {activePlayer.name}
+                    <span className={styles.activePlayerSuffix}>
+                      {"’s turn"}
+                    </span>
+                  </span>
                   {activeSubheading && (
                     <span className={styles.activePlayerSubheading}>
                       {activeSubheading}

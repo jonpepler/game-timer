@@ -20,15 +20,46 @@ import {
   type Player,
 } from "@/state/gameSession";
 import { playerColor, playerSubheading } from "@/lib/playerVisual";
+import type {
+  GameDefinition,
+  SetupConstraint,
+  SetupOption,
+  SetupStep,
+} from "@/state/gameDefinition";
 
 // Read the chosen-option id from a player's metadata via the
 // active definition's playerVisualFrom key. Returns undefined when
 // either the key isn't declared or the metadata isn't set yet.
-const optionIdFor = (player: Player, visualKey: string | undefined): string | undefined => {
+const optionIdFor = (
+  player: Player,
+  visualKey: string | undefined,
+): string | undefined => {
   if (!visualKey) return undefined;
   const m = player.metadata[visualKey];
   if (m?.type === "selected-option") return m.optionId;
   return undefined;
+};
+
+// Locate the player-pick SetupStep in the active definition. Companion
+// reads its options to populate its own faction-style picker.
+const findPlayerPickStep = (
+  definition: GameDefinition | undefined,
+):
+  | {
+      step: SetupStep;
+      options: SetupOption[];
+      constraints: SetupConstraint[];
+    }
+  | undefined => {
+  const step = definition?.setupSteps?.find(
+    (s) => s.kind.type === "player-pick",
+  );
+  if (!step || step.kind.type !== "player-pick") return undefined;
+  return {
+    step,
+    options: step.kind.options,
+    constraints: step.kind.constraints ?? [],
+  };
 };
 
 // Persist the claimed slot per host so a refresh on the phone doesn't
@@ -79,10 +110,7 @@ function CompanionScreen() {
     setClaimedSlot(playerIndex);
     if (code) {
       try {
-        window.localStorage.setItem(
-          claimStorageKey(code),
-          String(playerIndex),
-        );
+        window.localStorage.setItem(claimStorageKey(code), String(playerIndex));
       } catch {
         // Persistence is best-effort.
       }
@@ -146,6 +174,7 @@ function CompanionScreen() {
 
   const visualKey = definition?.playerVisualFrom;
   const subheadingKey = definition?.playerSubheadingFrom;
+  const pickStep = findPlayerPickStep(definition);
   const activePlayerIndex = state ? selectCurrentPlayerIndex(state) : null;
   const playerViews =
     state?.players?.map((p, i) => ({
@@ -179,7 +208,9 @@ function CompanionScreen() {
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
   const myScore =
-    claimedSlot !== null && state ? (state.scores[claimedSlot] ?? state.scoreConfig?.min ?? 0) : 0;
+    claimedSlot !== null && state
+      ? (state.scores[claimedSlot] ?? state.scoreConfig?.min ?? 0)
+      : 0;
   const scoreMin = state?.scoreConfig?.min ?? 0;
   const scoreMax = state?.scoreConfig?.max;
   const scoreStep = state?.scoreConfig?.increment ?? 1;
@@ -272,7 +303,12 @@ function CompanionScreen() {
                 />
                 <span className={styles.activePlayerText}>
                   {/* eslint-disable-next-line prettier/prettier */}
-                  <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                  <span>
+                    {activePlayer.name}
+                    <span className={styles.activePlayerSuffix}>
+                      {"’s turn"}
+                    </span>
+                  </span>
                   {activeSubheading && (
                     <span className={styles.activePlayerSubheading}>
                       {activeSubheading}
@@ -312,58 +348,53 @@ function CompanionScreen() {
             </div>
           )}
 
-          {claimedPlayer &&
-            definition?.factions &&
-            definition.factions.length > 0 && (
-              <div className={styles.factionPicker}>
-                <label
-                  htmlFor="companion-faction"
-                  className={styles.factionPickerLabel}
-                >
-                  Faction
-                </label>
-                <select
-                  id="companion-faction"
-                  value={claimedOptionId ?? ""}
-                  onChange={(e) => pickFaction(e.target.value)}
-                  className={styles.factionSelect}
-                >
-                  <option value="" disabled>
-                    — pick a faction —
-                  </option>
-                  {definition.factions.map((f) => {
-                    // Disable options another claimed slot already owns
-                    // and any flagged by the definition's mutex pairs.
-                    const ownedByOther = state.players?.some(
-                      (p, i) =>
-                        i !== claimedSlot && optionIdFor(p, visualKey) === f.id,
+          {claimedPlayer && pickStep && pickStep.options.length > 0 && (
+            <div className={styles.factionPicker}>
+              <label
+                htmlFor="companion-faction"
+                className={styles.factionPickerLabel}
+              >
+                {pickStep.step.label}
+              </label>
+              <select
+                id="companion-faction"
+                value={claimedOptionId ?? ""}
+                onChange={(e) => pickFaction(e.target.value)}
+                className={styles.factionSelect}
+              >
+                <option value="" disabled>
+                  — pick a {pickStep.step.label.toLowerCase()} —
+                </option>
+                {pickStep.options.map((o) => {
+                  const ownedByOther = state.players?.some(
+                    (p, i) =>
+                      i !== claimedSlot && optionIdFor(p, visualKey) === o.id,
+                  );
+                  const mutex = pickStep.constraints
+                    .filter((c) => c.type === "mutually-exclusive")
+                    .map((c) => c.optionIds);
+                  const mutexBlocked = state.players?.some((p, i) => {
+                    if (i === claimedSlot) return false;
+                    const oid = optionIdFor(p, visualKey);
+                    if (!oid) return false;
+                    return mutex.some(
+                      ([a, b]) =>
+                        (a === oid && b === o.id) || (b === oid && a === o.id),
                     );
-                    const mutex =
-                      definition.setupSchema?.factionConstraints
-                        ?.mutuallyExclusive ?? [];
-                    const mutexBlocked = state.players?.some((p, i) => {
-                      if (i === claimedSlot) return false;
-                      const oid = optionIdFor(p, visualKey);
-                      if (!oid) return false;
-                      return mutex.some(
-                        ([a, b]) =>
-                          (a === oid && b === f.id) ||
-                          (b === oid && a === f.id),
-                      );
-                    });
-                    return (
-                      <option
-                        key={f.id}
-                        value={f.id}
-                        disabled={!!ownedByOther || !!mutexBlocked}
-                      >
-                        {f.name}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
+                  });
+                  return (
+                    <option
+                      key={o.id}
+                      value={o.id}
+                      disabled={!!ownedByOther || !!mutexBlocked}
+                    >
+                      {o.label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
 
           {claimedPlayer && !victorPlayer && (
             <button
