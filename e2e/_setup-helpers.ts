@@ -97,11 +97,12 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
     // Screen 9: draft — default off.
     await next(page);
     // Screen 10 (LAST): faction picker. The footer button reads
-    // "Start Game" here, not "Next" — clicking faction cards fills
-    // the seats; Start Game submits.
+    // "Start Game" here, not "Next". Picking goes counterclockwise
+    // starting from the LAST seat (ADSET A.8.3), so to land
+    // factions[i] on seat i the helper clicks in reverse.
     if (options.factions) {
-      for (const id of options.factions) {
-        await page.getByTestId(`faction-card-${id}`).click();
+      for (let i = options.factions.length - 1; i >= 0; i--) {
+        await page.getByTestId(`faction-card-${options.factions[i]}`).click();
       }
     }
   } else {

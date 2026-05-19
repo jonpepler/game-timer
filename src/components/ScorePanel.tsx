@@ -80,12 +80,22 @@ export function ScorePanel({
               const pct =
                 range === 0 ? 0 : ((score - min) / range) * 100;
               // When multiple players share the same score, spread them
-              // diagonally so each remains clickable and visible. Order
-              // by player index for stability.
-              const cluster = players.filter(
-                (_, i) => i < index && (scores[i] ?? min) === score,
-              ).length;
-              const top = 4 + cluster * 8;
+              // diagonally so each remains clickable and visible. Cluster
+              // centres on the bar's vertical midline: each marker shifts
+              // up or down from the centre, alternating, so 4 markers at
+              // the same score fan symmetrically rather than spilling
+              // all to one side. Selected marker stays on top via z-index.
+              const sameScoreSiblings = players
+                .map((_, i) => i)
+                .filter((i) => (scores[i] ?? min) === score);
+              const clusterIndex = sameScoreSiblings.indexOf(index);
+              const clusterSize = sameScoreSiblings.length;
+              const offset = 16;
+              const trackCentreY = 56; // matches CSS .track height/2 - marker/2
+              const top =
+                trackCentreY +
+                (clusterIndex - (clusterSize - 1) / 2) * offset -
+                12; /* half-marker so `top` aligns the marker centre */
               return (
                 <button
                   key={index}

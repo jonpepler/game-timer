@@ -16,9 +16,12 @@
 
 .track {
   position: relative;
-  /* Tall enough to stack a few markers diagonally when they overlap
-     (game start, identical scores) without anyone hiding underneath. */
-  height: 56px;
+  /* Stacks markers diagonally when they share a score. The cluster
+     offset (16px in JS) needs the marker (24px) to peek above the one
+     below — so the height has to accommodate (markerHeight + N*offset)
+     for N clustered markers. Sized for Root's max of 6 players at the
+     same score: 24 + 5*16 = 104. */
+  height: 112px;
   /* Outer margin clears the screen edge; inner padding leaves room for
      the marker's translateX(-50%) at the 0% and 100% positions so end
      markers stay tangent to the bar instead of half-off it. */
@@ -28,8 +31,10 @@
 
 .trackBar {
   position: absolute;
-  top: 26px;
-  bottom: 26px;
+  /* Bar sits at the vertical centre of the track. The cluster pushes
+     half above / half below the bar so the centre marker visually aligns. */
+  top: 54px;
+  bottom: 54px;
   left: 0;
   right: 0;
   background: var(--color-surface-muted);
@@ -73,7 +78,7 @@
 
 .markerSelected {
   box-shadow: 0 0 0 3px var(--color-text);
-  z-index: 2;
+  z-index: 4;
 }
 
 /* ── Selected-player controls (shared by track + leaderboard) ─────── */

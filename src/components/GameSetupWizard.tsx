@@ -1315,10 +1315,20 @@ function PlayerPickScreen({
       .filter((x): x is SetupOption => !!x);
   }, [draftEnabled, dealtIds, pool]);
 
-  const [activeSeat, setActiveSeat] = useState(0);
-  // When seats change, clamp activeSeat to range.
+  // Per ADSET A.8.3: picking goes counterclockwise starting from the
+  // LAST seated player. So the picker starts at the last seat and
+  // counts down; the last to pick (seat 0) is implicitly the first to
+  // play, matching the timer's existing turn order.
+  const [activeSeat, setActiveSeat] = useState(() =>
+    Math.max(0, seats.length - 1),
+  );
+  // When seats change (count grows/shrinks), pin activeSeat to the
+  // first still-unfilled seat going backwards from the end. Avoids
+  // landing on an out-of-range index.
   useEffect(() => {
-    if (activeSeat >= seats.length) setActiveSeat(0);
+    if (activeSeat >= seats.length) {
+      setActiveSeat(Math.max(0, seats.length - 1));
+    }
   }, [seats.length, activeSeat]);
 
   const [adsetOpen, setAdsetOpen] = useState<string | null>(null);
@@ -1349,10 +1359,21 @@ function PlayerPickScreen({
     }));
   };
 
-  // Whenever the current seat gets filled, jump to the next unfilled.
+  // After a seat is filled, jump to the next unfilled seat counting
+  // BACKWARDS (counterclockwise per ADSET A.8.3). If none unfilled
+  // remain going down, fall back to the first unfilled going up so
+  // the wizard can recover when the user re-edits an earlier pick.
   useEffect(() => {
     if (picks[activeSeat] == null) return;
-    const next = seats.findIndex((_, i) => picks[i] == null);
+    let nextDown = -1;
+    for (let i = activeSeat - 1; i >= 0; i--) {
+      if (picks[i] == null) {
+        nextDown = i;
+        break;
+      }
+    }
+    const next =
+      nextDown !== -1 ? nextDown : seats.findIndex((_, i) => picks[i] == null);
     if (next !== -1 && next !== activeSeat) setActiveSeat(next);
   }, [picks, activeSeat, seats]);
 
