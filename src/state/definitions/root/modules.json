@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 3,
+  "definitionId": "root",
+  "categories": {
+    "map": {
+      "autumn": {
+        "label": "Autumn",
+        "tag": "Base",
+        "description": "The default map. No special rules.",
+        "assets": {
+          "image": { "source": "decimator85-assets", "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF", "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk", "bytes": 7387394, "format": "png" }
+        }
+      },
+      "winter": {
+        "label": "Winter",
+        "tag": "Base",
+        "description": "A Raging River divides forests, adding a forest-traversal barrier.",
+        "assets": {
+          "image": { "source": "decimator85-assets", "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc", "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk", "bytes": 2080428, "format": "jpg" }
+        }
+      },
+      "lake": {
+        "label": "Lake",
+        "tag": "Underworld",
+        "description": "A central lake links coastal clearings; a ferry shuttles between them."
+      },
+      "mountain": {
+        "label": "Mountain",
+        "tag": "Underworld",
+        "description": "Closed paths must be opened by spending cards; ruling the central Pass scores.",
+        "assets": {
+          "image": { "source": "decimator85-assets", "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A", "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk", "bytes": 5893253, "format": "png" }
+        }
+      },
+      "marsh": {
+        "label": "Marsh",
+        "tag": "Homeland",
+        "description": "Flood markers seal off clearings; flooded paths enclose forests."
+      },
+      "gorge": {
+        "label": "Gorge",
+        "tag": "Homeland",
+        "description": "A dam separates forests; a bridge crosses without splitting them."
+      }
+    },
+    "deck": {
+      "base": {
+        "label": "Base deck",
+        "tag": "Base",
+        "assets": {
+          "cardSheet": { "source": "decimator85-assets", "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z", "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk", "bytes": 5867658, "format": "png", "note": "Composite sheet of base-deck cards." }
+        }
+      },
+      "exiles": {
+        "label": "Exiles and Partisans",
+        "tag": "Riverfolk"
+      },
+      "squires": {
+        "label": "Squires and Disciples",
+        "tag": "Marauders"
+      }
+    },
+    "faction": {
+      "marquise": {
+        "label": "Marquise de Cat",
+        "color": "#F37021",
+        "description": "Industrial cats building sawmills, workshops, and recruiters across the wood.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/marquise.svg" },
+          "headIcon": [
+            { "source": "batmaster-faction-heads", "fileId": "1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4", "originalName": "faction-marquise.png", "viewUrl": "https://drive.google.com/file/d/1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4/view?usp=drivesdk", "bytes": 46115, "format": "png" }
+          ],
+          "meeple":   { "source": "decimator85-assets", "fileId": "1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI", "viewUrl": "https://drive.google.com/file/d/1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI/view?usp=drivesdk", "bytes": 29870, "format": "png" },
+          "vpMarker": { "source": "decimator85-assets", "fileId": "1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW", "viewUrl": "https://drive.google.com/file/d/1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW/view?usp=drivesdk", "bytes": 55278, "format": "png" },
+          "adsetCard":{ "source": "decimator85-assets", "fileId": "1VjkYg4VX04udPBKTAabFYyYoxytdrx-y", "viewUrl": "https://drive.google.com/file/d/1VjkYg4VX04udPBKTAabFYyYoxytdrx-y/view?usp=drivesdk", "bytes": 557653, "format": "png" }
+        }
+      },
+      "eyrie": {
+        "label": "Eyrie Dynasties",
+        "color": "#2862A1",
+        "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/eyrie.svg" },
+          "headIcon": [
+            { "source": "batmaster-faction-heads", "fileId": "1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu", "originalName": "faction-eyrie.png", "viewUrl": "https://drive.google.com/file/d/1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu/view?usp=drivesdk", "bytes": 42561, "format": "png" }
+          ],
+          "meeple":         { "source": "decimator85-assets", "fileId": "1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0", "viewUrl": "https://drive.google.com/file/d/1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0/view?usp=drivesdk", "bytes": 24469, "format": "png" },
+          "hirelingMeeple": { "source": "decimator85-assets", "fileId": "1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn", "viewUrl": "https://drive.google.com/file/d/1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn/view?usp=drivesdk", "bytes": 7582,  "format": "png", "note": "Hireling-card variant." },
+          "vpMarker":       { "source": "decimator85-assets", "fileId": "1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB", "viewUrl": "https://drive.google.com/file/d/1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB/view?usp=drivesdk", "bytes": 173530,"format": "png" }
+        }
+      },
+      "alliance": {
+        "label": "Woodland Alliance",
+        "color": "#4D8C3D",
+        "description": "Forest revolutionaries spreading sympathy and igniting open revolt.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/alliance.svg" },
+          "headIcon": [
+            { "source": "batmaster-faction-heads", "fileId": "19raDWflW80AnLjyZPVxwUjMFA2C9_u9C", "originalName": "faction-woodland.png", "viewUrl": "https://drive.google.com/file/d/19raDWflW80AnLjyZPVxwUjMFA2C9_u9C/view?usp=drivesdk", "bytes": 65943, "format": "png" }
+          ]
+        }
+      },
+      "vagabond": {
+        "label": "Vagabond",
+        "color": "#EBEBEB",
+        "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vagrant.svg", "note": "EwenDC names the Vagabond meeple 'vagrant'." },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs", "originalName": "faction-vagabond.png", "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk", "bytes": 59851, "format": "png" }
+          ],
+          "vpMarkers": [
+            { "source": "decimator85-assets", "fileId": "1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp", "originalName": "VP Marker 1.png", "viewUrl": "https://drive.google.com/file/d/1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp/view?usp=drivesdk", "bytes": 195181, "format": "png" },
+            { "source": "decimator85-assets", "fileId": "1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF", "originalName": "VP Marker 2.png", "viewUrl": "https://drive.google.com/file/d/1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF/view?usp=drivesdk", "bytes": 156031, "format": "png" }
+          ],
+          "characterClassMeeplesSvg": {
+            "source": "ewendc-automated-setup",
+            "paths": [
+              "src/images/meeples/adventurer.svg",
+              "src/images/meeples/arbiter.svg",
+              "src/images/meeples/harrier.svg",
+              "src/images/meeples/ranger.svg",
+              "src/images/meeples/ronin.svg",
+              "src/images/meeples/scoundrel.svg",
+              "src/images/meeples/thief.svg",
+              "src/images/meeples/tinker.svg"
+            ],
+            "note": "Vagabond character classes (cards). Useful if we ever model character selection."
+          }
+        }
+      },
+      "lizards": {
+        "label": "Lizard Cult",
+        "color": "#FCD629",
+        "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/cult.svg", "note": "EwenDC names this 'cult'." },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk", "bytes": 63921, "format": "png" },
+            { "source": "batmaster-faction-heads", "fileId": "18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8/view?usp=drivesdk", "bytes": 63921, "format": "png", "note": "Duplicate of the MrMirz file (same byte count)." }
+          ]
+        }
+      },
+      "riverfolk": {
+        "label": "Riverfolk Company",
+        "color": "#50B8B4",
+        "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/riverfolk.svg" },
+          "headIcon": [
+            { "source": "batmaster-faction-heads", "fileId": "1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0", "originalName": "faction-riverfolk.png", "viewUrl": "https://drive.google.com/file/d/1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0/view?usp=drivesdk", "bytes": 72723, "format": "png" }
+          ],
+          "adsetCard": { "source": "decimator85-assets", "fileId": "1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8", "viewUrl": "https://drive.google.com/file/d/1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8/view?usp=drivesdk", "bytes": 482440, "format": "png" }
+        }
+      },
+      "duchy": {
+        "label": "Underground Duchy",
+        "color": "#E39C76",
+        "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/duchy.svg" },
+          "headIcon": [
+            { "source": "batmaster-faction-heads", "fileId": "1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6", "originalName": "faction-duchy.png", "viewUrl": "https://drive.google.com/file/d/1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6/view?usp=drivesdk", "bytes": 55418, "format": "png" }
+          ]
+        }
+      },
+      "corvids": {
+        "label": "Corvid Conspiracy",
+        "color": "#6E448F",
+        "description": "Crow plotters laying secret tokens that punish meddling rivals.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/corvid.svg" },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk", "bytes": 60630, "format": "png" },
+            { "source": "batmaster-faction-heads", "fileId": "1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS/view?usp=drivesdk", "bytes": 60630, "format": "png" }
+          ]
+        }
+      },
+      "hundreds": {
+        "label": "Lord of the Hundreds",
+        "color": "#C8232A",
+        "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/warlord.svg", "note": "EwenDC names this 'warlord'." },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk", "bytes": 16174, "format": "png" },
+            { "source": "batmaster-faction-heads", "fileId": "19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r/view?usp=drivesdk", "bytes": 16174, "format": "png" }
+          ],
+          "meeple":           { "source": "decimator85-assets", "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f", "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk", "bytes": 41653,  "format": "png" },
+          "adsetCard":        { "source": "decimator85-assets", "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC", "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk", "bytes": 518861, "format": "png" },
+          "boardBack":        { "source": "decimator85-assets", "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq", "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk", "bytes": 3593348,"format": "jpg" },
+          "vpMarker":         { "source": "decimator85-assets", "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd", "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk", "bytes": 256187, "format": "png" },
+          "reputationMarker": { "source": "decimator85-assets", "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ", "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk", "bytes": 59981,  "format": "png" },
+          "citadelToken":     { "source": "decimator85-assets", "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi", "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk", "bytes": 24429,  "format": "png" }
+        }
+      },
+      "keepers": {
+        "label": "Keepers in Iron",
+        "color": "#969696",
+        "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/keepers.svg" },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk", "bytes": 25131, "format": "png" },
+            { "source": "batmaster-faction-heads", "fileId": "1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW/view?usp=drivesdk", "bytes": 25131, "format": "png" }
+          ]
+        }
+      },
+      "lilypad": {
+        "label": "Lilypad Diaspora",
+        "color": "#385723",
+        "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/diaspora.svg", "note": "EwenDC names this 'diaspora'." },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR", "originalName": "Frogs_ Lilypad Diaspora.png", "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk", "bytes": 18336, "format": "png" }
+          ]
+        }
+      },
+      "twilight": {
+        "label": "Twilight Council",
+        "color": "#4A2E1B",
+        "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/council.svg", "note": "EwenDC names this 'council'." },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE", "originalName": "Bats_ Twilight Council.png", "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk", "bytes": 22986, "format": "png" }
+          ]
+        }
+      },
+      "knaves": {
+        "label": "Knaves of the Deepwood",
+        "color": "#595959",
+        "description": "Forest miscreants raiding warriors and ransoming hostages back for victory.",
+        "assets": {
+          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/knaves.svg" },
+          "headIcon": [
+            { "source": "mrmirz-head-icons", "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-", "originalName": "Skunks_ Knaves of the Deepwood.png", "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk", "bytes": 20375, "format": "png" }
+          ],
+          "background": { "source": "mrmirz-faction-backgrounds", "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy", "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk", "bytes": 11167301, "format": "png" }
+        }
+      }
+    }
+  },
+  "referenceCatalog": {
+    "status": "reference-only",
+    "fetchedAt": "2026-05-19",
+    "intent": "External asset references gathered from therootdatabase.com Workshop and the EwenDC repo. Drive viewUrls require auth; the static-export app cannot fetch them. Anything that needs to render in-app must be mirrored locally (e.g. /public/factions/<id>.png or .svg) with attribution to Leder Games and EwenDC (CC-BY-NC-SA 4.0).",
+    "sources": [
+      { "id": "user-palette",                 "label": "Canonical faction hex palette (user-supplied, 2026-05-19)" },
+      { "id": "ewendc-automated-setup",       "label": "EwenDC/root-automated-setup", "url": "https://github.com/EwenDC/root-automated-setup", "rawBase": "https://raw.githubusercontent.com/EwenDC/root-automated-setup/main/", "license": "CC-BY-NC-SA 4.0", "attribution": "Meeple SVGs by EwenDC; reuse requires attribution + share-alike + non-commercial." },
+      { "id": "rdb-workshop",                 "label": "Root Database Workshop", "url": "https://www.therootdatabase.com/workshop/" },
+      { "id": "mrmirz-head-icons",            "label": "Faction Head Icons (MrMirz, Oct 2025)", "viewUrl": "https://drive.google.com/drive/folders/1-pVdQBwnjM7D4HcZtnsAuZ0HgudpoRCA?usp=share_link" },
+      { "id": "batmaster-faction-heads",      "label": "Faction Head Icons (batmaster1337, Jan 2023) — fills base-game gaps", "viewUrl": "https://drive.google.com/drive/folders/1fKgErFKzZtg2ONebon98_srT-lWeRVQ5" },
+      { "id": "decimator85-assets",           "label": "Root Assets up to Marauders (Decimator85, 2022, pinned 2026)", "viewUrl": "https://drive.google.com/drive/folders/1M2tB_F63TUOTKVqZ2o3631SSYOJXQ1Lq" },
+      { "id": "mrmirz-faction-backgrounds",   "label": "Faction Backgrounds (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/10yopeLwvzPTC32XyOBWEUPeruTmzZVph?usp=share_link" },
+      { "id": "mrmirz-vp-laurels",            "label": "VP Laurels (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/1LCDc4NWYkHcYe82RxAjlnoy2GEEedOVF" },
+      { "id": "mrmirz-hireling-icons",        "label": "Hireling Icons (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link" }
+    ],
+    "colourPalette": {
+      "source": "user-palette",
+      "appliedToDefinitionAt": "2026-05-19",
+      "uiContrastWarnings": [
+        "vagabond #EBEBEB is near-white — clashes with the dark theme's light text token; player chip needs an outline.",
+        "twilight #4A2E1B / lilypad #385723 / knaves #595959 are dark — low contrast against the dark surface tokens. Best rendered via the meeple silhouette on top of the faction-coloured fill."
+      ]
+    },
+    "vpLaurel": {
+      "source": "mrmirz-vp-laurels",
+      "candidates": [
+        { "fileId": "1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3", "originalName": "vp laurels.png", "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk", "bytes": 11804, "format": "png", "note": "Primary laurel — wraps the leading-player head icon." },
+        { "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb", "originalName": "VP_Frills.png", "viewUrl": "https://drive.google.com/file/d/176qhUSZWP0zNE4JRAPG4G43HxuV29iQb/view?usp=drivesdk", "bytes": 10758, "format": "png", "note": "Laurel + frills variant." },
+        { "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF", "originalName": "VPTrace-goblioc.png", "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk", "bytes": 32666, "format": "png", "note": "Traced/Lioc variant." },
+        { "fileId": "1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR", "originalName": "+VP.png", "viewUrl": "https://drive.google.com/file/d/1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR/view?usp=drivesdk", "bytes": 14393, "format": "png", "note": "+VP delta icon." },
+        { "fileId": "1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L", "originalName": "+VP_2.png", "viewUrl": "https://drive.google.com/file/d/1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L/view?usp=drivesdk", "bytes": 9469, "format": "png", "note": "+VP delta icon, variant 2." }
+      ]
+    },
+    "hirelingMeeplesSvg": {
+      "source": "ewendc-automated-setup",
+      "byHirelingKey": {
+        "advocates":    "src/images/meeples/advocates.svg",
+        "band":         "src/images/meeples/band.svg",
+        "bandits":      "src/images/meeples/bandits.svg",
+        "cheat":        "src/images/meeples/cheat.svg",
+        "exile":        "src/images/meeples/exile.svg",
+        "expedition":   "src/images/meeples/expedition.svg",
+        "farmers":      "src/images/meeples/farmers.svg",
+        "flameBearers": "src/images/meeples/flameBearers.svg",
+        "flotilla":     "src/images/meeples/flotilla.svg",
+        "gladiator":    "src/images/meeples/gladiator.svg",
+        "jailor":       "src/images/meeples/jailor.svg",
+        "patrol":       "src/images/meeples/patrol.svg",
+        "prophets":     "src/images/meeples/prophets.svg",
+        "protector":    "src/images/meeples/protector.svg",
+        "roamers":      "src/images/meeples/roamers.svg",
+        "spies":        "src/images/meeples/spies.svg",
+        "uprising":     "src/images/meeples/uprising.svg",
+        "vaultKeepers": "src/images/meeples/vaultKeepers.svg",
+        "dynasty":      "src/images/meeples/dynasty.svg"
+      },
+      "note": "EwenDC's full meeples folder. Map these to our hireling step option ids when the hirelings step gets a category."
+    },
+    "hirelingIcons": {
+      "clockwork-otters":  { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw", "originalName": "Clockwork Otters Logo.png",  "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk", "bytes": 26395, "format": "png", "note": "Hireling-card variant of Riverfolk." } },
+      "clockwork-lizards": { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp", "originalName": "Clockwork Lizards Logo.png", "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk", "bytes": 23230, "format": "png", "note": "Hireling-card variant of Lizard Cult." } },
+      "birdsong":          { "headIcon": { "source": "mrmirz-hireling-icons","fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB", "originalName": "Hireling_Birdsong.png",      "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk", "bytes": 2653,  "format": "png", "note": "Generic Birdsong-phase hireling marker." } }
+    },
+    "mapElements": {
+      "ruins":      { "icon": { "source": "decimator85-assets", "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC", "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk", "bytes": 16200, "format": "png" } },
+      "closedPath": { "icon": { "source": "decimator85-assets", "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9", "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk", "bytes": 42554, "format": "png" } }
+    },
+    "gaps": {
+      "maps": ["lake", "marsh", "gorge"],
+      "decks": ["exiles", "squires"],
+      "adsetCards": ["eyrie", "alliance", "vagabond", "lizards", "duchy", "corvids", "keepers", "lilypad", "twilight", "knaves"],
+      "notes": [
+        "All 13 factions have meeple SVGs (EwenDC) + PNG head icons.",
+        "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85. Per user intent the in-app ADSET banner is 'meeple + setup text', not the card scan.",
+        "Map / deck assets remain partial; not blocking until the wizard renders them."
+      ]
+    }
+  }
+}

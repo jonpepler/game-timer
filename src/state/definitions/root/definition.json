@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "root",
+  "name": "Root",
+  "description": "Asymmetric woodland strategy by Leder Games. First faction to 30 wins.",
+  "contentSource": "./modules.json",
+  "defaultExpectedTurns": 40,
+  "defaultAverageSeconds": 240,
+  "maxPlayers": 6,
+  "playerVisualFrom": "faction",
+  "playerSubheadingFrom": "faction",
+  "score": {
+    "displayStyle": "linearTrack",
+    "min": 0,
+    "max": 30,
+    "increment": 1,
+    "victory": { "type": "firstToMax" }
+  },
+  "setupSteps": [
+    {
+      "id": "map",
+      "label": "Map",
+      "description": "Each map changes how clearings link and a few global rules.",
+      "kind": {
+        "type": "select-one",
+        "optionCategory": "map",
+        "allowRandom": true,
+        "defaultOptionId": "autumn",
+        "optionIds": ["autumn", "winter", "lake", "mountain", "marsh", "gorge"]
+      }
+    },
+    {
+      "id": "deck",
+      "label": "Deck",
+      "description": "Swap the card mix for variety.",
+      "kind": {
+        "type": "select-one",
+        "optionCategory": "deck",
+        "allowRandom": true,
+        "defaultOptionId": "base",
+        "optionIds": ["base", "exiles", "squires"]
+      }
+    },
+    {
+      "id": "landmarks",
+      "label": "Landmarks",
+      "description": "Map-side scoring perks. Place 0–2 landmark cards.",
+      "kind": {
+        "type": "select-count",
+        "min": 0,
+        "max": 2,
+        "defaultValue": 0,
+        "allowRandom": true
+      }
+    },
+    {
+      "id": "hirelings",
+      "label": "Hirelings",
+      "description": "Bot-driven allies. Take on up to 3.",
+      "kind": {
+        "type": "select-count",
+        "min": 0,
+        "max": 3,
+        "defaultValue": 0,
+        "allowRandom": true
+      }
+    },
+    {
+      "id": "draft",
+      "label": "Draft factions",
+      "description": "Players choose factions from a shared pool in counterclockwise order.",
+      "kind": {
+        "type": "toggle",
+        "defaultValue": false
+      }
+    },
+    {
+      "id": "faction",
+      "label": "Faction",
+      "description": "Each player claims one faction. The Vagabond and Knaves of the Deepwood cannot both be in the same game.",
+      "kind": {
+        "type": "player-pick",
+        "mode": "host-only",
+        "optionCategory": "faction",
+        "allowRandom": true,
+        "optionIds": [
+          "marquise",
+          "eyrie",
+          "alliance",
+          "vagabond",
+          "lizards",
+          "riverfolk",
+          "duchy",
+          "corvids",
+          "hundreds",
+          "keepers",
+          "lilypad",
+          "twilight",
+          "knaves"
+        ],
+        "constraints": [
+          {
+            "type": "mutually-exclusive",
+            "optionIds": ["vagabond", "knaves"]
+          }
+        ]
+      }
+    }
+  ]
+}

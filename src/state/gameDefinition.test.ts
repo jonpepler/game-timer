@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   GAME_DEFINITION_SCHEMA_VERSION,
+  loadGameDefinitionWithModules,
+  parseGameContentModules,
   parseGameDefinition,
+  parseGameDefinitionStructure,
   safeParseGameDefinition,
 } from "./gameDefinition";
 
@@ -156,5 +159,108 @@ describe("GameDefinitionSchema", () => {
       ],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("structure + modules split", () => {
+  const minimalStructure = {
+    schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
+    id: "ex",
+    name: "Example",
+    defaultExpectedTurns: 30,
+    defaultAverageSeconds: 200,
+    contentSource: "./modules.json",
+    setupSteps: [
+      {
+        id: "pick-side",
+        label: "Side",
+        kind: {
+          type: "player-pick",
+          mode: "host-only",
+          optionCategory: "faction",
+          optionIds: ["a", "b"],
+        },
+      },
+    ],
+  };
+
+  const minimalModules = {
+    schemaVersion: 1,
+    categories: {
+      faction: {
+        a: { label: "Alpha", color: "#111", assets: { meeple: "alpha.svg" } },
+        b: { label: "Beta", color: "#222" },
+      },
+    },
+  };
+
+  it("structure schema accepts a step with optionIds + optionCategory", () => {
+    const s = parseGameDefinitionStructure(minimalStructure);
+    expect(s.setupSteps?.[0].kind.type).toBe("player-pick");
+  });
+
+  it("modules schema accepts an arbitrary category map", () => {
+    const m = parseGameContentModules(minimalModules);
+    expect(m.categories.faction.a.label).toBe("Alpha");
+  });
+
+  it("loader joins structure ids + category content into full SetupOptions", () => {
+    const def = loadGameDefinitionWithModules(minimalStructure, minimalModules);
+    const step = def.setupSteps?.[0];
+    if (step?.kind.type !== "player-pick") throw new Error("wrong kind");
+    expect(step.kind.options.map((o) => o.id)).toEqual(["a", "b"]);
+    expect(step.kind.options[0].label).toBe("Alpha");
+    expect(step.kind.options[0].color).toBe("#111");
+    // Passthrough: extra fields from the modules survive on the merged option.
+    expect(
+      (step.kind.options[0] as unknown as { assets: { meeple: string } }).assets
+        .meeple,
+    ).toBe("alpha.svg");
+  });
+
+  it("loader throws on an option id with no entry in its category", () => {
+    expect(() =>
+      loadGameDefinitionWithModules(
+        {
+          ...minimalStructure,
+          setupSteps: [
+            {
+              ...minimalStructure.setupSteps[0],
+              kind: {
+                ...minimalStructure.setupSteps[0].kind,
+                optionIds: ["a", "ghost"],
+              },
+            },
+          ],
+        },
+        minimalModules,
+      ),
+    ).toThrow(/unknown option id "ghost"/);
+  });
+
+  it("loader throws on a step referencing an undeclared category", () => {
+    expect(() =>
+      loadGameDefinitionWithModules(
+        {
+          ...minimalStructure,
+          setupSteps: [
+            {
+              ...minimalStructure.setupSteps[0],
+              kind: {
+                ...minimalStructure.setupSteps[0].kind,
+                optionCategory: "imaginary",
+              },
+            },
+          ],
+        },
+        minimalModules,
+      ),
+    ).toThrow(/unknown content category "imaginary"/);
+  });
+
+  it("merged shape passes the existing GameDefinition validator", () => {
+    const def = loadGameDefinitionWithModules(minimalStructure, minimalModules);
+    expect(() => parseGameDefinition(def)).not.toThrow();
+    expect(def).not.toHaveProperty("contentSource");
   });
 });
