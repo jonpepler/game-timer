@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { GameSetupModal } from "@/components/GameSetupModal";
-import type { GameConfig } from "@/components/GameSetupModal";
+import { GameSetupWizard } from "@/components/GameSetupWizard";
+import type { GameConfig } from "@/components/GameSetupWizard";
 
 type UseGameSetupReturn = {
   open: () => void;
@@ -22,7 +22,7 @@ export const useGameSetup = (
   };
 
   const modal = (
-    <GameSetupModal
+    <GameSetupWizard
       isOpen={isOpen}
       onSubmit={handleSubmit}
       onClose={() => setIsOpen(false)}

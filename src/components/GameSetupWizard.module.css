@@ -1,0 +1,558 @@
+.modal {
+  width: min(640px, 96vw);
+  max-height: 92vh;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow: hidden;
+}
+
+.header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.crumbs {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  letter-spacing: 0.02em;
+}
+
+.progress {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.progressTick {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+  min-width: 18px;
+}
+
+.progressTickActive {
+  background: var(--color-accent);
+}
+
+.progressTickDone {
+  background: var(--color-accent-soft, var(--color-accent));
+  opacity: 0.55;
+}
+
+.body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.screenTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.screenSubtitle {
+  font-size: 13px;
+  color: var(--color-text-dim);
+  margin: -8px 0 4px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-elevated, transparent);
+}
+
+.actionsLeft, .actionsRight {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.primary {
+  composes: primary from "@/styles/buttons.module.css";
+}
+.secondary {
+  composes: secondary from "@/styles/buttons.module.css";
+}
+.ghost {
+  composes: secondary from "@/styles/buttons.module.css";
+  border-style: dashed;
+}
+
+.input {
+  composes: input from "@/styles/forms.module.css";
+}
+
+.label {
+  composes: eyebrow from "@/styles/forms.module.css";
+}
+
+.help {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--color-danger, #d96565);
+  margin: 0;
+}
+
+/* ── Expansions screen ───────────────────────────────────── */
+.toggleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.toggleRow:hover {
+  border-color: var(--color-accent);
+}
+
+.toggleRowChecked {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.toggleRowLabel {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* ── Select-one chip grid ─────────────────────────────────── */
+.chipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.chip {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+}
+
+.chipActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.chipLabel {
+  font-weight: 600;
+}
+
+.chipModule {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.chipDesc {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  line-height: 1.4;
+}
+
+/* ── Seating screen ───────────────────────────────────────── */
+.seatList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seatRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.seatIndex {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.seatName {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  font: inherit;
+  padding: 4px 0;
+}
+
+.seatName:focus {
+  outline: none;
+  border-bottom: 1px solid var(--color-accent);
+}
+
+.seatNudge {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.seatNudge:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.seatNudge:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.seatRemove {
+  composes: seatNudge;
+  margin-left: 4px;
+}
+
+.seatAdd {
+  composes: secondary from "@/styles/buttons.module.css";
+  align-self: flex-start;
+}
+
+/* ── Deal-random screen ───────────────────────────────────── */
+.deck {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dealtList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.dealtCard {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+}
+
+.dealtLabel {
+  font-weight: 600;
+}
+
+.dealtModule {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.skipNotice {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ── Faction picker ───────────────────────────────────────── */
+.factionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.factionCard {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.factionCard:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.factionCardActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.factionCard:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.factionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.factionSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+
+.factionLabel {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.factionAdsetToggle {
+  background: transparent;
+  border: none;
+  color: var(--color-text-dim);
+  font: inherit;
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  align-self: flex-start;
+  text-decoration: underline dotted;
+}
+
+.factionAdsetList {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factionAdsetList li {
+  display: flex;
+  gap: 6px;
+}
+
+.factionAdsetIndex {
+  font-weight: 600;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.activePickerHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.pickerSeatIndex {
+  composes: seatIndex;
+}
+
+.pickerSeatName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pickerSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.pickerSummaryRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.pickerSummaryActive {
+  font-weight: 600;
+}
+
+.pickerSummaryPending {
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+
+/* ── Track-players (Generic fallback) ─────────────────────── */
+.trackBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trackRoster {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trackRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.trackColor {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  background: transparent;
+}
+
+/* ── ADSET confirmation screen ───────────────────────────── */
+.confirmList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmCard {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirmHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.confirmName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.confirmFaction {
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.confirmSteps {
+  list-style: decimal;
+  padding-left: 22px;
+  margin: 0;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-text-dim);
+}
+
+.confirmSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+.summaryRow {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.summaryKey {
+  color: var(--color-text-dim);
+  min-width: 110px;
+}

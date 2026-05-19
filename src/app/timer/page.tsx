@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
-import { GameConfig } from "@/components/GameSetupModal";
+import { GameConfig } from "@/components/GameSetupWizard";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
