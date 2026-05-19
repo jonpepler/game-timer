@@ -159,6 +159,9 @@
     },
     "riverfolk": {
       "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/riverfolk.svg" },
+      "headIcon": [
+        { "source": "batmaster-faction-heads", "fileId": "1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0", "originalName": "faction-riverfolk.png", "viewUrl": "https://drive.google.com/file/d/1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0/view?usp=drivesdk", "bytes": 72723, "format": "png" }
+      ],
       "adsetCard": { "source": "decimator85-assets", "fileId": "1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8", "viewUrl": "https://drive.google.com/file/d/1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8/view?usp=drivesdk", "bytes": 482440, "format": "png" }
     },
     "duchy": {
@@ -268,8 +271,8 @@
   },
   "gaps": {
     "meeplesSvg": [],
-    "headIconsPng": ["riverfolk"],
-    "headIconsNote": "All 13 factions are covered by EwenDC's meeple SVGs. Of the PNG head icons, riverfolk is the only one still missing.",
+    "headIconsPng": [],
+    "headIconsNote": "All 13 factions are covered by both EwenDC's meeple SVGs and PNG head icons (riverfolk added 2026-05-19 from batmaster1337's folder).",
     "maps": ["lake", "marsh", "gorge"],
     "decks": ["exiles", "squires"],
     "adsetCards": ["eyrie", "alliance", "vagabond", "lizards", "duchy", "corvids", "keepers", "lilypad", "twilight", "knaves"],
