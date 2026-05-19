@@ -21,6 +21,7 @@ import {
   ArrowUp,
   ArrowDown,
   Dices,
+  Minus,
   Play,
   Plus,
   RefreshCw,
@@ -889,6 +890,8 @@ function CountScreen({
   value: number;
   onChange: (n: number) => void;
 }) {
+  const atMin = value <= min;
+  const atMax = value >= max;
   return (
     <>
       <h3 className={styles.screenTitle} id="screen-title">
@@ -897,14 +900,38 @@ function CountScreen({
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      <NumberField
-        id={`count-${step.id}`}
-        min={min}
-        max={max}
-        value={value}
-        onChange={onChange}
-        className={styles.input}
-      />
+      <div className={styles.stepper}>
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={atMin}
+          className={styles.stepperBtn}
+          aria-label={`Decrease ${step.label.toLowerCase()}`}
+        >
+          <Minus size={16} aria-hidden />
+        </button>
+        <span
+          className={styles.stepperValue}
+          aria-live="polite"
+          aria-label={`${step.label}: ${value}`}
+        >
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          disabled={atMax}
+          className={styles.stepperBtn}
+          aria-label={`Increase ${step.label.toLowerCase()}`}
+        >
+          <Plus size={16} aria-hidden />
+        </button>
+      </div>
+      <span className={styles.help}>
+        {min === max
+          ? `Fixed at ${min}.`
+          : `Range ${min}–${max}.`}
+      </span>
     </>
   );
 }
@@ -1306,15 +1333,6 @@ function PlayerPickScreen({
     setActiveSeat(0);
   };
 
-  // What's actually rendered: dealt subset (if draft) or full pool.
-  const visible = useMemo(() => {
-    if (!draftEnabled) return pool;
-    if (!dealtIds) return [];
-    return dealtIds
-      .map((id) => pool.find((o) => o.id === id))
-      .filter((x): x is SetupOption => !!x);
-  }, [draftEnabled, dealtIds, pool]);
-
   // Per ADSET A.8.3: picking goes counterclockwise starting from the
   // LAST seated player. So the picker starts at the last seat and
   // counts down; the last to pick (seat 0) is implicitly the first to
@@ -1332,6 +1350,31 @@ function PlayerPickScreen({
   }, [seats.length, activeSeat]);
 
   const [adsetOpen, setAdsetOpen] = useState<string | null>(null);
+
+  // When a card is picked in draft mode it animates out before being
+  // removed from the dealt hand. `leavingIds` tracks the cards mid-
+  // animation so the renderer keeps them mounted with the leave class
+  // until the timer expires.
+  const [leavingIds, setLeavingIds] = useState<string[]>([]);
+  const LEAVE_MS = 420;
+
+  // What's actually rendered:
+  //  - non-draft: the full legal pool, even already-picked cards (so
+  //    picks render disabled instead of vanishing)
+  //  - draft: dealt cards minus those already picked, PLUS any cards
+  //    currently mid-leave-animation (so they animate out of the row
+  //    rather than blinking away)
+  const visible = useMemo(() => {
+    if (!draftEnabled) return pool;
+    if (!dealtIds) return [];
+    const pickedIds = new Set(Object.values(picks));
+    const stillInHand = dealtIds.filter(
+      (id) => !pickedIds.has(id) || leavingIds.includes(id),
+    );
+    return stillInHand
+      .map((id) => pool.find((o) => o.id === id))
+      .filter((x): x is SetupOption => !!x);
+  }, [draftEnabled, dealtIds, pool, picks, leavingIds]);
 
   if (seats.length === 0) {
     return (
@@ -1357,6 +1400,12 @@ function PlayerPickScreen({
       ...curr,
       picks: { ...curr.picks, [seatIdx]: optionId },
     }));
+    if (draftEnabled) {
+      setLeavingIds((curr) => [...curr, optionId]);
+      window.setTimeout(() => {
+        setLeavingIds((curr) => curr.filter((id) => id !== optionId));
+      }, LEAVE_MS);
+    }
   };
 
   // After a seat is filled, jump to the next unfilled seat counting
@@ -1412,11 +1461,16 @@ function PlayerPickScreen({
         </div>
       )}
 
-      <div className={styles.factionGrid}>
+      <div
+        className={
+          draftEnabled ? styles.factionDraftRow : styles.factionGrid
+        }
+      >
         {visible.map((o) => {
           const blocked = blockedForActive.has(o.id);
           const active = picks[activeSeat] === o.id;
           const open = adsetOpen === o.id;
+          const leaving = leavingIds.includes(o.id);
           const adsetSteps = (
             o as unknown as { adsetSteps?: string[] }
           ).adsetSteps;
@@ -1424,7 +1478,7 @@ function PlayerPickScreen({
           // "Show setup" button. role="button" + tabIndex keeps it
           // keyboard- and AT-accessible.
           const onActivate = () => {
-            if (blocked) return;
+            if (blocked || leaving) return;
             pick(o.id);
           };
           return (
@@ -1432,12 +1486,14 @@ function PlayerPickScreen({
               key={o.id}
               role="button"
               aria-pressed={active}
-              aria-disabled={blocked}
+              aria-disabled={blocked || leaving}
               data-testid={`faction-card-${o.id}`}
-              tabIndex={blocked ? -1 : 0}
+              tabIndex={blocked || leaving ? -1 : 0}
               className={`${styles.factionCard} ${
                 active ? styles.factionCardActive : ""
-              } ${blocked ? styles.factionCardDisabled : ""}`}
+              } ${blocked ? styles.factionCardDisabled : ""} ${
+                leaving ? styles.factionCardLeaving : ""
+              }`}
               onClick={onActivate}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
