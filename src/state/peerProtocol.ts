@@ -9,20 +9,48 @@ import type { GameSessionState } from "./gameSession";
 
 export const PEER_PROTOCOL_VERSION = 1;
 
-export type HostToCompanionMessage = {
-  type: "STATE";
-  protocolVersion: typeof PEER_PROTOCOL_VERSION;
-  state: GameSessionState;
-  // The full GameDefinition snapshot, so companions can render faction
-  // pickers / score configs without having to ship the registry over
-  // the wire. Optional for Generic-style games that don't pick a
-  // definition.
-  definition?: GameDefinition;
-  // Wall-clock at the host when the snapshot was sent — lets companions
-  // compute "elapsed since current turn started" without trusting their
-  // local clock to be in sync with the host's.
-  sentAt: number;
-};
+export type HostToCompanionMessage =
+  | {
+      type: "STATE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      state: GameSessionState;
+      // The full GameDefinition snapshot, so companions can render
+      // faction pickers / score configs without having to ship the
+      // registry over the wire. Optional for Generic-style games that
+      // don't pick a definition.
+      definition?: GameDefinition;
+      // Wall-clock at the host when the snapshot was sent — lets
+      // companions compute "elapsed since current turn started"
+      // without trusting their local clock to be in sync with the
+      // host's.
+      sentAt: number;
+    }
+  // Pre-game wizard signal: the host's faction-picker (or any
+  // turn-based player-pick step) is currently asking the seated
+  // companion at `seatIndex` to choose from `optionIds`. Companions
+  // that have claimed that seat render the picker; the rest see a
+  // "waiting for player X" overlay.
+  | {
+      type: "SETUP_TURN";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      stepId: string;
+      seatIndex: number;
+      optionIds: string[];
+      // Faction ids the seated player can't pick — already claimed by
+      // others, mutex-blocked, or hireling-matched. Companion greys
+      // these out.
+      excludedOptionIds: string[];
+      // The definition snapshot — same shape as STATE.definition so
+      // the companion can render meeple chips, descriptions, ADSET.
+      definition?: GameDefinition;
+    }
+  // Turn-based player-pick wrapped up (all seats filled, or wizard
+  // moved past the picker). Companions clear the picker overlay.
+  | {
+      type: "SETUP_DONE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      stepId: string;
+    };
 
 // Companion → host. The companion claims a player slot, then issues
 // action requests for that slot. The host validates each request
@@ -46,8 +74,24 @@ export type CompanionToHostMessage =
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       delta: number;
     }
+  // Mid-game change to the option attached to the claiming companion
+  // (e.g. swap faction on the fly). `stepId` names the player-pick
+  // step on the active definition; the host looks the option up
+  // there and projects it onto player.metadata.
   | {
-      type: "SET_FACTION";
+      type: "SET_PLAYER_OPTION";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
-      factionId: string;
+      stepId: string;
+      optionId: string;
+    }
+  // Companion's response to a SETUP_TURN: the seat picks `optionId`
+  // for the named step during the wizard. Host validates against the
+  // claim map + current setupContext + the step's constraints before
+  // committing.
+  | {
+      type: "SETUP_PICK";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      stepId: string;
+      seatIndex: number;
+      optionId: string;
     };

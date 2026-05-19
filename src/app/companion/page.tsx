@@ -150,12 +150,18 @@ function CompanionScreen() {
       delta,
     } satisfies CompanionToHostMessage);
 
-  const pickFaction = (factionId: string) =>
+  // Mid-game option swap (e.g. faction change). Looks up the
+  // player-pick step on the definition snapshot to fill in stepId.
+  const pickOption = (optionId: string) => {
+    const pick = definition ? findPlayerPickStep(definition) : undefined;
+    if (!pick) return;
     send({
-      type: "SET_FACTION",
+      type: "SET_PLAYER_OPTION",
       protocolVersion: PEER_PROTOCOL_VERSION,
-      factionId,
+      stepId: pick.step.id,
+      optionId,
     } satisfies CompanionToHostMessage);
+  };
 
   const stats = useMemo(
     () =>
@@ -359,7 +365,7 @@ function CompanionScreen() {
               <select
                 id="companion-faction"
                 value={claimedOptionId ?? ""}
-                onChange={(e) => pickFaction(e.target.value)}
+                onChange={(e) => pickOption(e.target.value)}
                 className={styles.factionSelect}
               >
                 <option value="" disabled>

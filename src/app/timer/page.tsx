@@ -141,10 +141,10 @@ export default function Home() {
         incrementScore(claimed, msg.delta);
         return;
       }
-      case "SET_FACTION": {
+      case "SET_PLAYER_OPTION": {
         const claimed = claimMap[peerId];
         if (claimed === undefined) {
-          peerLog.warn("SET_FACTION rejected — no claim", { peerId });
+          peerLog.warn("SET_PLAYER_OPTION rejected — no claim", { peerId });
           return;
         }
         const def = definitionId ? findDefinition(definitionId) : undefined;
@@ -153,25 +153,23 @@ export default function Home() {
           (s) => s.kind.type === "player-pick",
         );
         if (!pickStep || pickStep.kind.type !== "player-pick") {
-          peerLog.warn("SET_FACTION rejected — no player-pick step", {
+          peerLog.warn("SET_PLAYER_OPTION rejected — no player-pick step", {
             peerId,
           });
           return;
         }
-        const option = pickStep.kind.options.find(
-          (o) => o.id === msg.factionId,
-        );
+        const option = pickStep.kind.options.find((o) => o.id === msg.optionId);
         if (!option) {
-          peerLog.warn("SET_FACTION rejected — unknown optionId", {
+          peerLog.warn("SET_PLAYER_OPTION rejected — unknown optionId", {
             peerId,
-            optionId: msg.factionId,
+            optionId: msg.optionId,
           });
           return;
         }
         const visualKey = def?.playerVisualFrom;
         if (!visualKey) {
           peerLog.warn(
-            "SET_FACTION rejected — definition declares no playerVisualFrom",
+            "SET_PLAYER_OPTION rejected — definition declares no playerVisualFrom",
             { peerId },
           );
           return;
@@ -191,10 +189,13 @@ export default function Home() {
           (p, i) => i !== claimed && optionOf(p)?.optionId === option.id,
         );
         if (takenBy !== undefined && takenBy !== -1) {
-          peerLog.warn("SET_FACTION rejected — option taken by another slot", {
-            peerId,
-            optionId: option.id,
-          });
+          peerLog.warn(
+            "SET_PLAYER_OPTION rejected — option taken by another slot",
+            {
+              peerId,
+              optionId: option.id,
+            },
+          );
           return;
         }
         // Mutex constraints live on the player-pick step itself.
@@ -211,7 +212,7 @@ export default function Home() {
           );
         });
         if (blockedByMutex) {
-          peerLog.warn("SET_FACTION rejected — mutex with another slot", {
+          peerLog.warn("SET_PLAYER_OPTION rejected — mutex with another slot", {
             peerId,
             optionId: option.id,
           });

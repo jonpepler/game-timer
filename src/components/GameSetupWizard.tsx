@@ -217,11 +217,11 @@ const labelForCharacter = (
 };
 
 const dealCharactersFor = (
-  factionIds: string[],
+  optionIds: string[],
   options: SetupOption[],
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
-  for (const id of factionIds) {
+  for (const id of optionIds) {
     const draw = CHARACTER_DRAWS[id];
     if (!draw) continue;
     const option = options.find((o) => o.id === id);

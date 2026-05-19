@@ -430,7 +430,7 @@ export const optionVisibleUnderContext = (
 // gameSession.ts and intentionally carries less metadata for now.
 const PlayerSlotSchema = z.object({
   name: z.string(),
-  factionId: z.string().optional(),
+  optionId: z.string().optional(),
   color: z.string(),
 });
 export type PlayerSlot = z.infer<typeof PlayerSlotSchema>;
