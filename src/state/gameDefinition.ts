@@ -99,6 +99,18 @@ export const GameDefinitionSchema = z.object({
   score: ScoreConfigSchema.optional(),
   maxPlayers: z.number().optional(),
   setupSchema: SetupSchemaSchema.optional(),
+  // Metadata key the renderers should source per-player visuals from.
+  // E.g. Root sets this to "faction"; the modal/wizard attaches a
+  // selected-option metadata entry under that key, and renderers read
+  // `.color` from it. When absent, renderers fall back to a positional
+  // palette.
+  playerVisualFrom: z.string().optional(),
+  // Metadata key whose label is rendered as a small subheading
+  // beneath each player's name (e.g. "Marquise de Cat" under "Jon").
+  // When the subheading equals the player's display name, renderers
+  // suppress it to avoid the "Marquise de Cat / Marquise de Cat"
+  // duplicate at default settings.
+  playerSubheadingFrom: z.string().optional(),
 });
 export type GameDefinition = z.infer<typeof GameDefinitionSchema>;
 

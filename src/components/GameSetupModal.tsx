@@ -14,14 +14,18 @@ import type {
   GameDefinition,
   SetupSchema,
 } from "@/state/gameDefinition";
+import type { Player, PlayerMetadataValue } from "@/state/gameSession";
+import { fallbackColor } from "@/lib/playerVisual";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface Player {
+// Editing-time state for one player row in the modal. The runtime
+// Player (gameSession) drops `color` + `factionId` in favour of a
+// metadata bag; the modal still tracks them as ergonomic UI state
+// and projects to the runtime shape on submit.
+interface PlayerRow {
   name: string;
   color: string;
-  // Optional foreign key into definition.factions. Set when the player
-  // picked a faction from the dropdown; absent for ad-hoc rows.
   factionId?: string;
 }
 
@@ -35,6 +39,31 @@ export interface GameConfig {
   // the picked definition declares a setupSchema. Absent otherwise.
   advancedSetup?: AdvancedSetupChoices;
 }
+
+// Project a modal player row into the runtime Player shape. If the
+// active definition declares a playerVisualFrom key, the picked
+// faction is attached under that key as a selected-option metadata
+// entry so renderers can find the colour + label generically.
+const projectRow = (
+  row: PlayerRow,
+  definition: GameDefinition,
+): Player => {
+  const visualKey = definition.playerVisualFrom;
+  const faction = row.factionId
+    ? definition.factions?.find((f) => f.id === row.factionId)
+    : undefined;
+  const metadata: Record<string, PlayerMetadataValue> = {};
+  if (visualKey && faction) {
+    metadata[visualKey] = {
+      type: "selected-option",
+      optionId: faction.id,
+      label: faction.name,
+      color: row.color,
+      description: faction.description,
+    };
+  }
+  return { name: row.name, metadata };
+};
 
 interface GameSetupModalProps {
   isOpen: boolean;
@@ -57,10 +86,10 @@ const GENERIC_PALETTE = [
 
 const GENERIC_MAX_PLAYERS = GENERIC_PALETTE.length;
 
-const buildPlayersForDefinition = (
+const buildPlayerRowsForDefinition = (
   definition: GameDefinition,
   count: number,
-): Player[] => {
+): PlayerRow[] => {
   if (definition.factions && definition.factions.length > 0) {
     return definition.factions.slice(0, count).map((f) => ({
       name: f.name,
@@ -70,7 +99,7 @@ const buildPlayersForDefinition = (
   }
   return Array.from({ length: count }, (_, i) => ({
     name: `Player ${i + 1}`,
-    color: GENERIC_PALETTE[i] ?? "#ffffff",
+    color: GENERIC_PALETTE[i] ?? fallbackColor(i),
   }));
 };
 
@@ -102,11 +131,11 @@ const defaultAdvancedSetup = (
 // excluded with something another row already picked.
 const blockedFactionsForRow = (
   rowIndex: number,
-  players: Player[],
+  rows: PlayerRow[],
   mutex: [string, string][] | undefined,
 ): Set<string> => {
   const blocked = new Set<string>();
-  players.forEach((p, i) => {
+  rows.forEach((p, i) => {
     if (i === rowIndex || !p.factionId) return;
     blocked.add(p.factionId);
     if (!mutex) return;
@@ -150,8 +179,8 @@ export const GameSetupModal = ({
   );
   const [trackPlayers, setTrackPlayers] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
-  const [players, setPlayers] = useState<Player[]>(
-    buildPlayersForDefinition(initialDefinition, 2),
+  const [players, setPlayers] = useState<PlayerRow[]>(
+    buildPlayerRowsForDefinition(initialDefinition, 2),
   );
   const [advancedSetup, setAdvancedSetup] = useState<AdvancedSetupChoices>(
     defaultAdvancedSetup(initialDefinition.setupSchema),
@@ -170,7 +199,7 @@ export const GameSetupModal = ({
     const maxCount = maxPlayersForDefinition(next);
     const clampedCount = Math.min(playerCount, maxCount);
     setPlayerCount(clampedCount);
-    setPlayers(buildPlayersForDefinition(next, clampedCount));
+    setPlayers(buildPlayerRowsForDefinition(next, clampedCount));
     setAdvancedSetup(defaultAdvancedSetup(next.setupSchema));
   };
 
@@ -190,13 +219,17 @@ export const GameSetupModal = ({
     setPlayerCount(clamped);
     setPlayers((prev) => {
       const next = [...prev];
-      const seed = buildPlayersForDefinition(definition, clamped);
+      const seed = buildPlayerRowsForDefinition(definition, clamped);
       while (next.length < clamped) next.push(seed[next.length]);
       return next.slice(0, clamped);
     });
   };
 
-  const updatePlayer = (index: number, field: keyof Player, value: string) => {
+  const updatePlayer = (
+    index: number,
+    field: keyof PlayerRow,
+    value: string,
+  ) => {
     setPlayers((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)),
     );
@@ -219,7 +252,9 @@ export const GameSetupModal = ({
   const handleSubmit = () => {
     onSubmit({
       expectedTurns,
-      players: trackPlayers ? players : undefined,
+      players: trackPlayers
+        ? players.map((row) => projectRow(row, definition))
+        : undefined,
       definitionId: definition.id,
       advancedSetup: hasAdvanced ? advancedSetup : undefined,
     });

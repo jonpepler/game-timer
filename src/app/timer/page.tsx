@@ -19,6 +19,7 @@ import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
+import { playerColor, playerSubheading } from "@/lib/playerVisual";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
@@ -155,12 +156,26 @@ export default function Home() {
           });
           return;
         }
-        // Already taken by another slot?
+        // Already taken by another slot? Read the picked option via
+        // the active definition's playerVisualFrom key.
+        const visualKey = def?.playerVisualFrom;
+        const optionOf = (p: { metadata: Record<string, unknown> }) => {
+          if (!visualKey) return undefined;
+          const m = p.metadata[visualKey];
+          if (
+            m &&
+            typeof m === "object" &&
+            (m as { type?: unknown }).type === "selected-option"
+          ) {
+            return m as { optionId: string };
+          }
+          return undefined;
+        };
         const takenBy = state.players?.findIndex(
-          (p, i) => i !== claimed && p.factionId === faction.id,
+          (p, i) => i !== claimed && optionOf(p)?.optionId === faction.id,
         );
         if (takenBy !== undefined && takenBy !== -1) {
-          peerLog.warn("SET_FACTION rejected — faction taken by another slot", {
+          peerLog.warn("SET_FACTION rejected — option taken by another slot", {
             peerId,
             factionId: faction.id,
           });
@@ -171,11 +186,12 @@ export default function Home() {
           def?.setupSchema?.factionConstraints?.mutuallyExclusive ?? [];
         const blockedByMutex = state.players?.some((p, i) => {
           if (i === claimed) return false;
-          if (!p.factionId) return false;
+          const oid = optionOf(p)?.optionId;
+          if (!oid) return false;
           return mutex.some(
             ([a, b]) =>
-              (a === p.factionId && b === faction.id) ||
-              (b === p.factionId && a === faction.id),
+              (a === oid && b === faction.id) ||
+              (b === oid && a === faction.id),
           );
         });
         if (blockedByMutex) {
@@ -185,10 +201,26 @@ export default function Home() {
           });
           return;
         }
+        if (!visualKey) {
+          peerLog.warn(
+            "SET_FACTION rejected — definition declares no playerVisualFrom",
+            {
+              peerId,
+            },
+          );
+          return;
+        }
         setPlayer(claimed, {
           name: faction.name,
-          color: faction.color,
-          factionId: faction.id,
+          metadata: {
+            [visualKey]: {
+              type: "selected-option",
+              optionId: faction.id,
+              label: faction.name,
+              color: faction.color,
+              description: faction.description,
+            },
+          },
         });
         return;
       }
@@ -270,12 +302,35 @@ export default function Home() {
     [state.turns],
   );
 
-  const activePlayer =
+  const activeDef = definitionId ? findDefinition(definitionId) : undefined;
+  const visualKey = activeDef?.playerVisualFrom;
+  const subheadingKey = activeDef?.playerSubheadingFrom;
+
+  // Subheading text for the active player ("Marquise de Cat" under
+  // "Jon"). Suppressed when it'd duplicate the player's display name.
+  const activeSubheading =
     players && currentPlayerIndex !== null
-      ? players[currentPlayerIndex]
+      ? playerSubheading(players[currentPlayerIndex], subheadingKey)
       : undefined;
 
-  const victorPlayer = victor !== null && players ? players[victor] : undefined;
+  // Project players to a renderable view with resolved colour, since
+  // the runtime Player carries metadata not a top-level colour.
+  const playerViews = useMemo(
+    () =>
+      players?.map((p, i) => ({
+        name: p.name,
+        color: playerColor(p, i, visualKey),
+      })),
+    [players, visualKey],
+  );
+
+  const activePlayer =
+    playerViews && currentPlayerIndex !== null
+      ? playerViews[currentPlayerIndex]
+      : undefined;
+
+  const victorPlayer =
+    victor !== null && playerViews ? playerViews[victor] : undefined;
 
   const scoresVisible = scoreConfig !== undefined && (players?.length ?? 0) > 0;
 
@@ -327,18 +382,22 @@ export default function Home() {
                   style={{ background: activePlayer.color }}
                   aria-hidden
                 />
-                {/* eslint-disable-next-line prettier/prettier */}
-                <span>
-                  {activePlayer.name}
-                  <span className={styles.activePlayerSuffix}>{"’s turn"}</span>
+                <span className={styles.activePlayerText}>
+                  {/* eslint-disable-next-line prettier/prettier */}
+                  <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                  {activeSubheading && (
+                    <span className={styles.activePlayerSubheading}>
+                      {activeSubheading}
+                    </span>
+                  )}
                 </span>
               </div>
             )
           )}
           <div style={{ width: size, height: size, position: "relative" }}>
-            {players && currentPlayerIndex !== null && (
+            {playerViews && currentPlayerIndex !== null && (
               <PlayerArcs
-                players={players}
+                players={playerViews}
                 activeIndex={currentPlayerIndex}
                 containerSize={size}
                 internalSizeOffset={40}
@@ -383,9 +442,9 @@ export default function Home() {
       </div>
       {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
-          {scoresVisible && players && scoreConfig && (
+          {scoresVisible && playerViews && scoreConfig && (
             <ScorePanel
-              players={players}
+              players={playerViews}
               scores={scores}
               scoreConfig={scoreConfig}
               onIncrement={incrementScore}
@@ -393,7 +452,7 @@ export default function Home() {
             />
           )}
           {playerStats.length > 0 && (
-            <PlayerTimeShare stats={playerStats} players={players || []} />
+            <PlayerTimeShare stats={playerStats} players={playerViews || []} />
           )}
         </div>
       )}

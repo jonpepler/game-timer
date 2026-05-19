@@ -2,7 +2,10 @@ import type { GameSessionState } from "./gameSession";
 import { clearKey, loadJson, saveJson } from "@/lib/storage";
 
 const SESSION_KEY = "session";
-const SESSION_SCHEMA_VERSION = 1;
+// Bumped from 1 → 2 when Player.{color,factionId} were replaced by
+// Player.metadata. Old persisted sessions are silently discarded
+// (the loader drops anything that doesn't match the current shape).
+const SESSION_SCHEMA_VERSION = 2;
 
 interface PersistedSession {
   schemaVersion: typeof SESSION_SCHEMA_VERSION;

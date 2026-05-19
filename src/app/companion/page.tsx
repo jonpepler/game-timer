@@ -17,7 +17,19 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
   selectCurrentPlayerIndex,
   selectRemainingTurns,
+  type Player,
 } from "@/state/gameSession";
+import { playerColor, playerSubheading } from "@/lib/playerVisual";
+
+// Read the chosen-option id from a player's metadata via the
+// active definition's playerVisualFrom key. Returns undefined when
+// either the key isn't declared or the metadata isn't set yet.
+const optionIdFor = (player: Player, visualKey: string | undefined): string | undefined => {
+  if (!visualKey) return undefined;
+  const m = player.metadata[visualKey];
+  if (m?.type === "selected-option") return m.optionId;
+  return undefined;
+};
 
 // Persist the claimed slot per host so a refresh on the phone doesn't
 // kick the player out of their seat.
@@ -132,14 +144,23 @@ function CompanionScreen() {
     [state],
   );
 
+  const visualKey = definition?.playerVisualFrom;
+  const subheadingKey = definition?.playerSubheadingFrom;
   const activePlayerIndex = state ? selectCurrentPlayerIndex(state) : null;
-  const activePlayer =
+  const playerViews =
+    state?.players?.map((p, i) => ({
+      name: p.name,
+      color: playerColor(p, i, visualKey),
+    })) ?? [];
+  const activeSubheading =
     state?.players && activePlayerIndex !== null
-      ? state.players[activePlayerIndex]
+      ? playerSubheading(state.players[activePlayerIndex], subheadingKey)
       : undefined;
+  const activePlayer =
+    activePlayerIndex !== null ? playerViews[activePlayerIndex] : undefined;
   const victorPlayer =
-    state?.victor !== undefined && state?.victor !== null && state.players
-      ? state.players[state.victor]
+    state?.victor !== undefined && state?.victor !== null
+      ? playerViews[state.victor]
       : undefined;
   const remaining = state ? selectRemainingTurns(state) : 0;
   const scoresVisible = !!(
@@ -148,8 +169,12 @@ function CompanionScreen() {
     state.players.length > 0
   );
   const claimedPlayer =
+    claimedSlot !== null && playerViews.length > 0
+      ? playerViews[claimedSlot]
+      : undefined;
+  const claimedOptionId =
     claimedSlot !== null && state?.players
-      ? state.players[claimedSlot]
+      ? optionIdFor(state.players[claimedSlot], visualKey)
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
@@ -245,8 +270,15 @@ function CompanionScreen() {
                   style={{ background: activePlayer.color }}
                   aria-hidden
                 />
-                {/* eslint-disable-next-line prettier/prettier */}
-                <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                <span className={styles.activePlayerText}>
+                  {/* eslint-disable-next-line prettier/prettier */}
+                  <span>{activePlayer.name}<span className={styles.activePlayerSuffix}>{"’s turn"}</span></span>
+                  {activeSubheading && (
+                    <span className={styles.activePlayerSubheading}>
+                      {activeSubheading}
+                    </span>
+                  )}
+                </span>
               </div>
             )
           )}
@@ -256,11 +288,11 @@ function CompanionScreen() {
             <span className={styles.bigStatLabel}>turns remaining</span>
           </div>
 
-          {state.players && state.players.length > 0 && claimedSlot === null && (
+          {playerViews.length > 0 && claimedSlot === null && (
             <div className={styles.claimPanel}>
               <span className={styles.claimTitle}>Claim a player</span>
               <ul className={styles.claimList}>
-                {state.players.map((p, i) => (
+                {playerViews.map((p, i) => (
                   <li key={i}>
                     <button
                       type="button"
@@ -292,7 +324,7 @@ function CompanionScreen() {
                 </label>
                 <select
                   id="companion-faction"
-                  value={claimedPlayer.factionId ?? ""}
+                  value={claimedOptionId ?? ""}
                   onChange={(e) => pickFaction(e.target.value)}
                   className={styles.factionSelect}
                 >
@@ -300,21 +332,23 @@ function CompanionScreen() {
                     — pick a faction —
                   </option>
                   {definition.factions.map((f) => {
-                    // Disable factions another claimed slot already owns
+                    // Disable options another claimed slot already owns
                     // and any flagged by the definition's mutex pairs.
                     const ownedByOther = state.players?.some(
-                      (p, i) => i !== claimedSlot && p.factionId === f.id,
+                      (p, i) =>
+                        i !== claimedSlot && optionIdFor(p, visualKey) === f.id,
                     );
                     const mutex =
                       definition.setupSchema?.factionConstraints
                         ?.mutuallyExclusive ?? [];
                     const mutexBlocked = state.players?.some((p, i) => {
                       if (i === claimedSlot) return false;
-                      if (!p.factionId) return false;
+                      const oid = optionIdFor(p, visualKey);
+                      if (!oid) return false;
                       return mutex.some(
                         ([a, b]) =>
-                          (a === p.factionId && b === f.id) ||
-                          (b === p.factionId && a === f.id),
+                          (a === oid && b === f.id) ||
+                          (b === oid && a === f.id),
                       );
                     });
                     return (
@@ -370,16 +404,16 @@ function CompanionScreen() {
           )}
 
           <div className={styles.bottomStack}>
-            {scoresVisible && state.players && state.scoreConfig && (
+            {scoresVisible && playerViews.length > 0 && state.scoreConfig && (
               <ScorePanel
-                players={state.players}
+                players={playerViews}
                 scores={state.scores}
                 scoreConfig={state.scoreConfig}
                 readOnly
               />
             )}
             {stats.length > 0 && (
-              <PlayerTimeShare stats={stats} players={state.players || []} />
+              <PlayerTimeShare stats={stats} players={playerViews} />
             )}
           </div>
         </>

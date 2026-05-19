@@ -6,6 +6,8 @@
   "defaultExpectedTurns": 80,
   "defaultAverageSeconds": 240,
   "maxPlayers": 6,
+  "playerVisualFrom": "faction",
+  "playerSubheadingFrom": "faction",
   "factions": [
     {
       "id": "marquise",

@@ -3,13 +3,30 @@ import type { ScoreConfig } from "./gameDefinition";
 
 const log = createLogger("session");
 
+// Open-ended metadata bag a setup step can attach to a player. The
+// app code never reads specific keys directly — renderers consult
+// definition.playerVisualFrom (a string declared in the JSON) to find
+// where to source the player's colour / label. Future steps can stash
+// any data they need under their step id.
+export type PlayerMetadataValue =
+  | {
+      type: "selected-option";
+      optionId: string;
+      label: string;
+      color?: string;
+      description?: string;
+    }
+  | { type: "scalar"; value: string | number | boolean };
+
 export interface Player {
+  // The player's chosen display name. Defaults to "Player N", may be
+  // overridden by a setup step (e.g. a side-pick step sets it to the
+  // picked option's label) or edited at any time by the user.
   name: string;
-  color: string;
-  // Optional foreign key into the active GameDefinition's factions
-  // list. Set when the player picked a faction (host modal or
-  // companion picker); absent for ad-hoc rows.
-  factionId?: string;
+  // Generic metadata bag keyed by setup-step id. Renderers don't read
+  // specific keys directly — they look up the key declared by the
+  // active GameDefinition.playerVisualFrom and similar config fields.
+  metadata: Record<string, PlayerMetadataValue>;
 }
 
 export interface TurnRecord {
