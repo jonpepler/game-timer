@@ -534,12 +534,18 @@ function collectPlayers(
         : undefined;
       const metadata: Record<string, PlayerMetadataValue> = {};
       if (visualKey && option) {
+        const meeple = (
+          option as unknown as {
+            assets?: { meepleSvg?: { appPath?: string } };
+          }
+        ).assets?.meepleSvg?.appPath;
         metadata[visualKey] = {
           type: "selected-option",
           optionId: option.id,
           label: option.label,
           color: option.color ?? fallbackColor(i),
           description: option.description,
+          ...(meeple ? { iconSrc: meeple } : {}),
         };
       }
       return { name: seat.name, metadata };

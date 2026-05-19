@@ -15,6 +15,11 @@ export type PlayerMetadataValue =
       label: string;
       color?: string;
       description?: string;
+      // Optional path to a per-option icon (e.g. faction meeple SVG)
+      // relative to the deployment's basePath. Renderers project this
+      // onto an <img src>. Carried in the metadata bag so the runtime
+      // Player keeps all the visual data the option supplied.
+      iconSrc?: string;
     }
   | { type: "scalar"; value: string | number | boolean };
 

@@ -52,6 +52,21 @@ export const playerOptionLabel = (
   return undefined;
 };
 
+// Icon path for this player (e.g. the faction meeple SVG), if the
+// active definition declared one and the picked option carries an
+// iconSrc. Returns a path relative to the deployment basePath — the
+// renderer prepends it (or uses a relative-URL render).
+export const playerIcon = (
+  player: Player | undefined,
+  visualKey: string | undefined,
+): string | undefined => {
+  if (player && visualKey) {
+    const meta = player.metadata[visualKey];
+    if (meta?.type === "selected-option" && meta.iconSrc) return meta.iconSrc;
+  }
+  return undefined;
+};
+
 // Subheading shown beneath the player's display name (e.g. "Marquise
 // de Cat" under "Jon"). Returns undefined when the active definition
 // declares no subheading source OR the metadata's label happens to

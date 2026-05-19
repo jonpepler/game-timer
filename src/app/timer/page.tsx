@@ -19,7 +19,7 @@ import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
-import { playerColor, playerSubheading } from "@/lib/playerVisual";
+import { playerColor, playerIcon, playerSubheading } from "@/lib/playerVisual";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
@@ -320,13 +320,14 @@ export default function Home() {
       ? playerSubheading(players[currentPlayerIndex], subheadingKey)
       : undefined;
 
-  // Project players to a renderable view with resolved colour, since
-  // the runtime Player carries metadata not a top-level colour.
+  // Project players to a renderable view with resolved colour + icon,
+  // since the runtime Player carries metadata not a top-level colour.
   const playerViews = useMemo(
     () =>
       players?.map((p, i) => ({
         name: p.name,
         color: playerColor(p, i, visualKey),
+        iconSrc: playerIcon(p, visualKey),
       })),
     [players, visualKey],
   );
@@ -384,11 +385,30 @@ export default function Home() {
                 className={styles.activePlayer}
                 style={{ color: activePlayer.color }}
               >
-                <span
-                  className={styles.activePlayerSwatch}
-                  style={{ background: activePlayer.color }}
-                  aria-hidden
-                />
+                {activePlayer.iconSrc ? (
+                  <span
+                    className={styles.activePlayerMeeple}
+                    style={{ background: activePlayer.color }}
+                    aria-hidden
+                  >
+                    {/* The SVG is a black silhouette. Relative src
+                        resolves under the basePath via the current URL
+                        (matches the useSounds.ts convention). Tinting
+                        happens via CSS mask-image on the wrapper. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activePlayer.iconSrc}
+                      alt=""
+                      className={styles.activePlayerMeepleImg}
+                    />
+                  </span>
+                ) : (
+                  <span
+                    className={styles.activePlayerSwatch}
+                    style={{ background: activePlayer.color }}
+                    aria-hidden
+                  />
+                )}
                 <span className={styles.activePlayerText}>
                   {/* eslint-disable-next-line prettier/prettier */}
                   <span>

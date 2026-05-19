@@ -3,11 +3,21 @@
   "definitionId": "root",
   "categories": {
     "expansion": {
-      "base":       { "label": "Base game" },
-      "riverfolk":  { "label": "Riverfolk Expansion" },
-      "underworld": { "label": "Underworld Expansion" },
-      "marauders":  { "label": "Marauder Expansion" },
-      "homeland":   { "label": "Homeland Expansion" }
+      "base": {
+        "label": "Base game"
+      },
+      "riverfolk": {
+        "label": "Riverfolk Expansion"
+      },
+      "underworld": {
+        "label": "Underworld Expansion"
+      },
+      "marauders": {
+        "label": "Marauder Expansion"
+      },
+      "homeland": {
+        "label": "Homeland Expansion"
+      }
     },
     "map": {
       "autumn": {
@@ -15,7 +25,13 @@
         "module": "base",
         "description": "The default map. No special rules.",
         "assets": {
-          "image": { "source": "decimator85-assets", "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF", "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk", "bytes": 7387394, "format": "png" }
+          "image": {
+            "source": "decimator85-assets",
+            "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF",
+            "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk",
+            "bytes": 7387394,
+            "format": "png"
+          }
         }
       },
       "winter": {
@@ -23,7 +39,13 @@
         "module": "base",
         "description": "A Raging River divides forests, adding a forest-traversal barrier.",
         "assets": {
-          "image": { "source": "decimator85-assets", "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc", "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk", "bytes": 2080428, "format": "jpg" }
+          "image": {
+            "source": "decimator85-assets",
+            "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc",
+            "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk",
+            "bytes": 2080428,
+            "format": "jpg"
+          }
         }
       },
       "lake": {
@@ -36,7 +58,13 @@
         "module": "underworld",
         "description": "Closed paths must be opened by spending cards; ruling the central Pass scores.",
         "assets": {
-          "image": { "source": "decimator85-assets", "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A", "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk", "bytes": 5893253, "format": "png" }
+          "image": {
+            "source": "decimator85-assets",
+            "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A",
+            "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk",
+            "bytes": 5893253,
+            "format": "png"
+          }
         }
       },
       "marsh": {
@@ -55,29 +83,242 @@
         "label": "Base deck",
         "module": "base",
         "assets": {
-          "cardSheet": { "source": "decimator85-assets", "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z", "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk", "bytes": 5867658, "format": "png", "note": "Composite sheet of base-deck cards." }
+          "cardSheet": {
+            "source": "decimator85-assets",
+            "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z",
+            "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk",
+            "bytes": 5867658,
+            "format": "png",
+            "note": "Composite sheet of base-deck cards."
+          }
         }
       },
-      "exiles":  { "label": "Exiles and Partisans",  "module": "riverfolk" },
-      "squires": { "label": "Squires and Disciples", "module": "marauders" }
+      "exiles": {
+        "label": "Exiles and Partisans",
+        "module": "riverfolk"
+      },
+      "squires": {
+        "label": "Squires and Disciples",
+        "module": "marauders"
+      }
     },
     "hireling": {
-      "patrol":       { "label": "Forest Patrol",      "demotedLabel": "Feline Physicians", "module": "marauders",  "excludeOptionIds": ["marquise"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/patrol.svg" } } },
-      "dynasty":      { "label": "Last Dynasty",       "demotedLabel": "Bluebird Nobles",   "module": "marauders",  "excludeOptionIds": ["eyrie"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/dynasty.svg" } } },
-      "uprising":     { "label": "Spring Uprising",    "demotedLabel": "Rabbit Scouts",     "module": "marauders",  "excludeOptionIds": ["alliance"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/uprising.svg" } } },
-      "exile":        { "label": "The Exile",          "demotedLabel": "The Brigand",       "module": "marauders",  "excludeOptionIds": ["vagabond", "knaves"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/exile.svg" } } },
-      "prophets":     { "label": "Prophets of the Sun","demotedLabel": null,                "module": "riverfolk",  "excludeOptionIds": ["lizards"],  "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/prophets.svg" } } },
-      "flotilla":     { "label": "Riverfolk Flotilla", "demotedLabel": null,                "module": "riverfolk",  "excludeOptionIds": ["riverfolk"], "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flotilla.svg" } } },
-      "bandits":      { "label": "Bandit Crew",        "demotedLabel": null,                "module": "riverfolk",                                    "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/bandits.svg" } } },
-      "expedition":   { "label": "Sunward Expedition", "demotedLabel": "Mole Artisans",     "module": "underworld", "excludeOptionIds": ["duchy"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/expedition.svg" } } },
-      "spies":        { "label": "Corvid Spies",       "demotedLabel": "Raven Sentinels",   "module": "underworld", "excludeOptionIds": ["corvids"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/spies.svg" } } },
-      "protector":    { "label": "Furious Protector",  "demotedLabel": "Stoic Protector",   "module": "underworld",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/protector.svg" } } },
-      "flameBearers": { "label": "Flame Bearers",      "demotedLabel": "Rat Smugglers",     "module": "marauders",  "excludeOptionIds": ["hundreds"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flameBearers.svg" } } },
-      "vaultKeepers": { "label": "Vault Keepers",      "demotedLabel": "Badger Bodyguards", "module": "marauders",  "excludeOptionIds": ["keepers"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vaultKeepers.svg" } } },
-      "band":         { "label": "Street Band",        "demotedLabel": "Popular Band",      "module": "marauders",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/band.svg" } } },
-      "advocates":    { "label": "Sunny Advocates",    "demotedLabel": "Bat Messengers",    "module": "homeland",   "excludeOptionIds": ["twilight"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/advocates.svg" } } },
-      "roamers":      { "label": "River Roamers",      "demotedLabel": "Frog Tinkers",      "module": "homeland",   "excludeOptionIds": ["lilypad"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/roamers.svg" } } },
-      "farmers":      { "label": "Prosperous Farmers", "demotedLabel": "Struggling Farmers","module": "homeland",                                     "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/farmers.svg" } } }
+      "patrol": {
+        "label": "Forest Patrol",
+        "demotedLabel": "Feline Physicians",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "marquise"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/patrol.svg"
+          }
+        }
+      },
+      "dynasty": {
+        "label": "Last Dynasty",
+        "demotedLabel": "Bluebird Nobles",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "eyrie"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/dynasty.svg"
+          }
+        }
+      },
+      "uprising": {
+        "label": "Spring Uprising",
+        "demotedLabel": "Rabbit Scouts",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "alliance"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/uprising.svg"
+          }
+        }
+      },
+      "exile": {
+        "label": "The Exile",
+        "demotedLabel": "The Brigand",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "vagabond",
+          "knaves"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/exile.svg"
+          }
+        }
+      },
+      "prophets": {
+        "label": "Prophets of the Sun",
+        "demotedLabel": null,
+        "module": "riverfolk",
+        "excludeOptionIds": [
+          "lizards"
+        ],
+        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/prophets.svg"
+          }
+        }
+      },
+      "flotilla": {
+        "label": "Riverfolk Flotilla",
+        "demotedLabel": null,
+        "module": "riverfolk",
+        "excludeOptionIds": [
+          "riverfolk"
+        ],
+        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/flotilla.svg"
+          }
+        }
+      },
+      "bandits": {
+        "label": "Bandit Crew",
+        "demotedLabel": null,
+        "module": "riverfolk",
+        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/bandits.svg"
+          }
+        }
+      },
+      "expedition": {
+        "label": "Sunward Expedition",
+        "demotedLabel": "Mole Artisans",
+        "module": "underworld",
+        "excludeOptionIds": [
+          "duchy"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/expedition.svg"
+          }
+        }
+      },
+      "spies": {
+        "label": "Corvid Spies",
+        "demotedLabel": "Raven Sentinels",
+        "module": "underworld",
+        "excludeOptionIds": [
+          "corvids"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/spies.svg"
+          }
+        }
+      },
+      "protector": {
+        "label": "Furious Protector",
+        "demotedLabel": "Stoic Protector",
+        "module": "underworld",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/protector.svg"
+          }
+        }
+      },
+      "flameBearers": {
+        "label": "Flame Bearers",
+        "demotedLabel": "Rat Smugglers",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "hundreds"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/flameBearers.svg"
+          }
+        }
+      },
+      "vaultKeepers": {
+        "label": "Vault Keepers",
+        "demotedLabel": "Badger Bodyguards",
+        "module": "marauders",
+        "excludeOptionIds": [
+          "keepers"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/vaultKeepers.svg"
+          }
+        }
+      },
+      "band": {
+        "label": "Street Band",
+        "demotedLabel": "Popular Band",
+        "module": "marauders",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/band.svg"
+          }
+        }
+      },
+      "advocates": {
+        "label": "Sunny Advocates",
+        "demotedLabel": "Bat Messengers",
+        "module": "homeland",
+        "excludeOptionIds": [
+          "twilight"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/advocates.svg"
+          }
+        }
+      },
+      "roamers": {
+        "label": "River Roamers",
+        "demotedLabel": "Frog Tinkers",
+        "module": "homeland",
+        "excludeOptionIds": [
+          "lilypad"
+        ],
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/roamers.svg"
+          }
+        }
+      },
+      "farmers": {
+        "label": "Prosperous Farmers",
+        "demotedLabel": "Struggling Farmers",
+        "module": "homeland",
+        "assets": {
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/farmers.svg"
+          }
+        }
+      }
     },
     "faction": {
       "marquise": {
@@ -93,13 +334,42 @@
           "Place 1 warrior in every clearing except the corner diagonally opposite your Keep."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/marquise.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/marquise.svg",
+            "appPath": "factions/root/meeples/marquise.svg"
+          },
           "headIcon": [
-            { "source": "batmaster-faction-heads", "fileId": "1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4", "originalName": "faction-marquise.png", "viewUrl": "https://drive.google.com/file/d/1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4/view?usp=drivesdk", "bytes": 46115, "format": "png" }
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4",
+              "originalName": "faction-marquise.png",
+              "viewUrl": "https://drive.google.com/file/d/1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4/view?usp=drivesdk",
+              "bytes": 46115,
+              "format": "png"
+            }
           ],
-          "meeple":   { "source": "decimator85-assets", "fileId": "1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI", "viewUrl": "https://drive.google.com/file/d/1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI/view?usp=drivesdk", "bytes": 29870, "format": "png" },
-          "vpMarker": { "source": "decimator85-assets", "fileId": "1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW", "viewUrl": "https://drive.google.com/file/d/1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW/view?usp=drivesdk", "bytes": 55278, "format": "png" },
-          "adsetCard":{ "source": "decimator85-assets", "fileId": "1VjkYg4VX04udPBKTAabFYyYoxytdrx-y", "viewUrl": "https://drive.google.com/file/d/1VjkYg4VX04udPBKTAabFYyYoxytdrx-y/view?usp=drivesdk", "bytes": 557653, "format": "png" }
+          "meeple": {
+            "source": "decimator85-assets",
+            "fileId": "1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI",
+            "viewUrl": "https://drive.google.com/file/d/1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI/view?usp=drivesdk",
+            "bytes": 29870,
+            "format": "png"
+          },
+          "vpMarker": {
+            "source": "decimator85-assets",
+            "fileId": "1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW",
+            "viewUrl": "https://drive.google.com/file/d/1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW/view?usp=drivesdk",
+            "bytes": 55278,
+            "format": "png"
+          },
+          "adsetCard": {
+            "source": "decimator85-assets",
+            "fileId": "1VjkYg4VX04udPBKTAabFYyYoxytdrx-y",
+            "viewUrl": "https://drive.google.com/file/d/1VjkYg4VX04udPBKTAabFYyYoxytdrx-y/view?usp=drivesdk",
+            "bytes": 557653,
+            "format": "png"
+          }
         }
       },
       "eyrie": {
@@ -116,13 +386,43 @@
           "Tuck 1 card of each suit from your hand under the Recruit, Move, Battle, and Build columns of your Decree."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/eyrie.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/eyrie.svg",
+            "appPath": "factions/root/meeples/eyrie.svg"
+          },
           "headIcon": [
-            { "source": "batmaster-faction-heads", "fileId": "1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu", "originalName": "faction-eyrie.png", "viewUrl": "https://drive.google.com/file/d/1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu/view?usp=drivesdk", "bytes": 42561, "format": "png" }
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu",
+              "originalName": "faction-eyrie.png",
+              "viewUrl": "https://drive.google.com/file/d/1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu/view?usp=drivesdk",
+              "bytes": 42561,
+              "format": "png"
+            }
           ],
-          "meeple":         { "source": "decimator85-assets", "fileId": "1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0", "viewUrl": "https://drive.google.com/file/d/1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0/view?usp=drivesdk", "bytes": 24469, "format": "png" },
-          "hirelingMeeple": { "source": "decimator85-assets", "fileId": "1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn", "viewUrl": "https://drive.google.com/file/d/1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn/view?usp=drivesdk", "bytes": 7582,  "format": "png", "note": "Hireling-card variant." },
-          "vpMarker":       { "source": "decimator85-assets", "fileId": "1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB", "viewUrl": "https://drive.google.com/file/d/1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB/view?usp=drivesdk", "bytes": 173530,"format": "png" }
+          "meeple": {
+            "source": "decimator85-assets",
+            "fileId": "1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0",
+            "viewUrl": "https://drive.google.com/file/d/1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0/view?usp=drivesdk",
+            "bytes": 24469,
+            "format": "png"
+          },
+          "hirelingMeeple": {
+            "source": "decimator85-assets",
+            "fileId": "1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn",
+            "viewUrl": "https://drive.google.com/file/d/1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn/view?usp=drivesdk",
+            "bytes": 7582,
+            "format": "png",
+            "note": "Hireling-card variant."
+          },
+          "vpMarker": {
+            "source": "decimator85-assets",
+            "fileId": "1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB",
+            "viewUrl": "https://drive.google.com/file/d/1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB/view?usp=drivesdk",
+            "bytes": 173530,
+            "format": "png"
+          }
         }
       },
       "alliance": {
@@ -138,9 +438,20 @@
           "Place 4 officer cards next to your faction board (none deployed at start)."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/alliance.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/alliance.svg",
+            "appPath": "factions/root/meeples/alliance.svg"
+          },
           "headIcon": [
-            { "source": "batmaster-faction-heads", "fileId": "19raDWflW80AnLjyZPVxwUjMFA2C9_u9C", "originalName": "faction-woodland.png", "viewUrl": "https://drive.google.com/file/d/19raDWflW80AnLjyZPVxwUjMFA2C9_u9C/view?usp=drivesdk", "bytes": 65943, "format": "png" }
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "19raDWflW80AnLjyZPVxwUjMFA2C9_u9C",
+              "originalName": "faction-woodland.png",
+              "viewUrl": "https://drive.google.com/file/d/19raDWflW80AnLjyZPVxwUjMFA2C9_u9C/view?usp=drivesdk",
+              "bytes": 65943,
+              "format": "png"
+            }
           ]
         }
       },
@@ -151,15 +462,94 @@
         "matchingHireling": "exile",
         "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions.",
         "characterPool": [
-          { "id": "thief",      "label": "Thief",      "startingItems": ["boot", "torch", "tea", "sword"] },
-          { "id": "tinker",     "label": "Tinker",     "startingItems": ["boot", "torch", "bag", "hammer"] },
-          { "id": "ranger",     "label": "Ranger",     "startingItems": ["boot", "torch", "crossbow", "sword"] },
-          { "id": "vagrant",    "label": "Vagrant",    "startingItems": ["coin", "torch", "boot"] },
-          { "id": "arbiter",    "label": "Arbiter",    "startingItems": ["boot", "torch", "sword", "sword"] },
-          { "id": "scoundrel",  "label": "Scoundrel",  "startingItems": ["boot", "boot", "torch", "crossbow"] },
-          { "id": "adventurer", "label": "Adventurer", "startingItems": ["boot", "torch", "hammer"] },
-          { "id": "ronin",      "label": "Ronin",      "startingItems": ["boot", "boot", "torch", "sword"] },
-          { "id": "harrier",    "label": "Harrier",    "startingItems": ["coin", "torch", "sword", "crossbow"] }
+          {
+            "id": "thief",
+            "label": "Thief",
+            "startingItems": [
+              "boot",
+              "torch",
+              "tea",
+              "sword"
+            ]
+          },
+          {
+            "id": "tinker",
+            "label": "Tinker",
+            "startingItems": [
+              "boot",
+              "torch",
+              "bag",
+              "hammer"
+            ]
+          },
+          {
+            "id": "ranger",
+            "label": "Ranger",
+            "startingItems": [
+              "boot",
+              "torch",
+              "crossbow",
+              "sword"
+            ]
+          },
+          {
+            "id": "vagrant",
+            "label": "Vagrant",
+            "startingItems": [
+              "coin",
+              "torch",
+              "boot"
+            ]
+          },
+          {
+            "id": "arbiter",
+            "label": "Arbiter",
+            "startingItems": [
+              "boot",
+              "torch",
+              "sword",
+              "sword"
+            ]
+          },
+          {
+            "id": "scoundrel",
+            "label": "Scoundrel",
+            "startingItems": [
+              "boot",
+              "boot",
+              "torch",
+              "crossbow"
+            ]
+          },
+          {
+            "id": "adventurer",
+            "label": "Adventurer",
+            "startingItems": [
+              "boot",
+              "torch",
+              "hammer"
+            ]
+          },
+          {
+            "id": "ronin",
+            "label": "Ronin",
+            "startingItems": [
+              "boot",
+              "boot",
+              "torch",
+              "sword"
+            ]
+          },
+          {
+            "id": "harrier",
+            "label": "Harrier",
+            "startingItems": [
+              "coin",
+              "torch",
+              "sword",
+              "crossbow"
+            ]
+          }
         ],
         "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
@@ -170,13 +560,39 @@
           "Shuffle the Quest deck; deal 3 quests face-up next to the map."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vagrant.svg", "note": "EwenDC names the Vagabond meeple 'vagrant'." },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/vagrant.svg",
+            "note": "EwenDC names the Vagabond meeple 'vagrant'.",
+            "appPath": "factions/root/meeples/vagabond.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs", "originalName": "faction-vagabond.png", "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk", "bytes": 59851, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs",
+              "originalName": "faction-vagabond.png",
+              "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk",
+              "bytes": 59851,
+              "format": "png"
+            }
           ],
           "vpMarkers": [
-            { "source": "decimator85-assets", "fileId": "1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp", "originalName": "VP Marker 1.png", "viewUrl": "https://drive.google.com/file/d/1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp/view?usp=drivesdk", "bytes": 195181, "format": "png" },
-            { "source": "decimator85-assets", "fileId": "1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF", "originalName": "VP Marker 2.png", "viewUrl": "https://drive.google.com/file/d/1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF/view?usp=drivesdk", "bytes": 156031, "format": "png" }
+            {
+              "source": "decimator85-assets",
+              "fileId": "1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp",
+              "originalName": "VP Marker 1.png",
+              "viewUrl": "https://drive.google.com/file/d/1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp/view?usp=drivesdk",
+              "bytes": 195181,
+              "format": "png"
+            },
+            {
+              "source": "decimator85-assets",
+              "fileId": "1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF",
+              "originalName": "VP Marker 2.png",
+              "viewUrl": "https://drive.google.com/file/d/1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF/view?usp=drivesdk",
+              "bytes": 156031,
+              "format": "png"
+            }
           ],
           "characterClassMeeplesSvg": {
             "source": "ewendc-automated-setup",
@@ -207,9 +623,21 @@
           "Place the Lost Souls pile (empty) next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/cult.svg", "note": "EwenDC names this 'cult'." },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/cult.svg",
+            "note": "EwenDC names this 'cult'.",
+            "appPath": "factions/root/meeples/lizards.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk", "bytes": 63921, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc",
+              "originalName": "faction-cult.png",
+              "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk",
+              "bytes": 63921,
+              "format": "png"
+            }
           ]
         }
       },
@@ -226,11 +654,28 @@
           "Place all payments and trade-post pieces in the supply next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/riverfolk.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/riverfolk.svg",
+            "appPath": "factions/root/meeples/riverfolk.svg"
+          },
           "headIcon": [
-            { "source": "batmaster-faction-heads", "fileId": "1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0", "originalName": "faction-riverfolk.png", "viewUrl": "https://drive.google.com/file/d/1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0/view?usp=drivesdk", "bytes": 72723, "format": "png" }
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0",
+              "originalName": "faction-riverfolk.png",
+              "viewUrl": "https://drive.google.com/file/d/1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0/view?usp=drivesdk",
+              "bytes": 72723,
+              "format": "png"
+            }
           ],
-          "adsetCard": { "source": "decimator85-assets", "fileId": "1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8", "viewUrl": "https://drive.google.com/file/d/1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8/view?usp=drivesdk", "bytes": 482440, "format": "png" }
+          "adsetCard": {
+            "source": "decimator85-assets",
+            "fileId": "1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8",
+            "viewUrl": "https://drive.google.com/file/d/1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8/view?usp=drivesdk",
+            "bytes": 482440,
+            "format": "png"
+          }
         }
       },
       "duchy": {
@@ -247,9 +692,20 @@
           "Place all 12 sway tokens in the supply next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/duchy.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/duchy.svg",
+            "appPath": "factions/root/meeples/duchy.svg"
+          },
           "headIcon": [
-            { "source": "batmaster-faction-heads", "fileId": "1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6", "originalName": "faction-duchy.png", "viewUrl": "https://drive.google.com/file/d/1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6/view?usp=drivesdk", "bytes": 55418, "format": "png" }
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6",
+              "originalName": "faction-duchy.png",
+              "viewUrl": "https://drive.google.com/file/d/1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6/view?usp=drivesdk",
+              "bytes": 55418,
+              "format": "png"
+            }
           ]
         }
       },
@@ -266,10 +722,28 @@
           "Place the Embedded Agent token next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/corvid.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/corvid.svg",
+            "appPath": "factions/root/meeples/corvids.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk", "bytes": 60630, "format": "png" },
-            { "source": "batmaster-faction-heads", "fileId": "1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS/view?usp=drivesdk", "bytes": 60630, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm",
+              "originalName": "faction-corvid.png",
+              "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk",
+              "bytes": 60630,
+              "format": "png"
+            },
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS",
+              "originalName": "faction-corvid.png",
+              "viewUrl": "https://drive.google.com/file/d/1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS/view?usp=drivesdk",
+              "bytes": 60630,
+              "format": "png"
+            }
           ]
         }
       },
@@ -287,17 +761,72 @@
           "Put the 4 \"R\" items under the ruins randomly, unless this has already been done."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/warlord.svg", "note": "EwenDC names this 'warlord'." },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/warlord.svg",
+            "note": "EwenDC names this 'warlord'.",
+            "appPath": "factions/root/meeples/hundreds.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk", "bytes": 16174, "format": "png" },
-            { "source": "batmaster-faction-heads", "fileId": "19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r/view?usp=drivesdk", "bytes": 16174, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd",
+              "originalName": "faction-lord of the hundreds.png",
+              "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk",
+              "bytes": 16174,
+              "format": "png"
+            },
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r",
+              "originalName": "faction-lord of the hundreds.png",
+              "viewUrl": "https://drive.google.com/file/d/19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r/view?usp=drivesdk",
+              "bytes": 16174,
+              "format": "png"
+            }
           ],
-          "meeple":           { "source": "decimator85-assets", "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f", "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk", "bytes": 41653,  "format": "png" },
-          "adsetCard":        { "source": "decimator85-assets", "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC", "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk", "bytes": 518861, "format": "png" },
-          "boardBack":        { "source": "decimator85-assets", "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq", "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk", "bytes": 3593348,"format": "jpg" },
-          "vpMarker":         { "source": "decimator85-assets", "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd", "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk", "bytes": 256187, "format": "png" },
-          "reputationMarker": { "source": "decimator85-assets", "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ", "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk", "bytes": 59981,  "format": "png" },
-          "citadelToken":     { "source": "decimator85-assets", "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi", "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk", "bytes": 24429,  "format": "png" }
+          "meeple": {
+            "source": "decimator85-assets",
+            "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f",
+            "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk",
+            "bytes": 41653,
+            "format": "png"
+          },
+          "adsetCard": {
+            "source": "decimator85-assets",
+            "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC",
+            "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk",
+            "bytes": 518861,
+            "format": "png"
+          },
+          "boardBack": {
+            "source": "decimator85-assets",
+            "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq",
+            "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk",
+            "bytes": 3593348,
+            "format": "jpg"
+          },
+          "vpMarker": {
+            "source": "decimator85-assets",
+            "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd",
+            "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk",
+            "bytes": 256187,
+            "format": "png"
+          },
+          "reputationMarker": {
+            "source": "decimator85-assets",
+            "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ",
+            "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk",
+            "bytes": 59981,
+            "format": "png"
+          },
+          "citadelToken": {
+            "source": "decimator85-assets",
+            "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi",
+            "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk",
+            "bytes": 24429,
+            "format": "png"
+          }
         }
       },
       "keepers": {
@@ -314,10 +843,28 @@
           "Take the Faithful Retainer marker and place it on your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/keepers.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/keepers.svg",
+            "appPath": "factions/root/meeples/keepers.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk", "bytes": 25131, "format": "png" },
-            { "source": "batmaster-faction-heads", "fileId": "1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW/view?usp=drivesdk", "bytes": 25131, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX",
+              "originalName": "faction-keepers.png",
+              "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk",
+              "bytes": 25131,
+              "format": "png"
+            },
+            {
+              "source": "batmaster-faction-heads",
+              "fileId": "1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW",
+              "originalName": "faction-keepers.png",
+              "viewUrl": "https://drive.google.com/file/d/1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW/view?usp=drivesdk",
+              "bytes": 25131,
+              "format": "png"
+            }
           ]
         }
       },
@@ -326,7 +873,7 @@
         "color": "#385723",
         "module": "homeland",
         "matchingHireling": "roamers",
-        "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
+        "description": "Frog newcomers seeking a peaceful Woodland home \u2014 but quick to harden under pressure.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
           "Place 1 lilypad garden in any 3 clearings (3 gardens total).",
@@ -334,9 +881,21 @@
           "Place all unrest tokens in the supply next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/diaspora.svg", "note": "EwenDC names this 'diaspora'." },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/diaspora.svg",
+            "note": "EwenDC names this 'diaspora'.",
+            "appPath": "factions/root/meeples/lilypad.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR", "originalName": "Frogs_ Lilypad Diaspora.png", "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk", "bytes": 18336, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR",
+              "originalName": "Frogs_ Lilypad Diaspora.png",
+              "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk",
+              "bytes": 18336,
+              "format": "png"
+            }
           ]
         }
       },
@@ -354,9 +913,21 @@
           "Place all remaining Agenda cards in a shuffled deck next to your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/council.svg", "note": "EwenDC names this 'council'." },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/council.svg",
+            "note": "EwenDC names this 'council'.",
+            "appPath": "factions/root/meeples/twilight.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE", "originalName": "Bats_ Twilight Council.png", "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk", "bytes": 22986, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE",
+              "originalName": "Bats_ Twilight Council.png",
+              "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk",
+              "bytes": 22986,
+              "format": "png"
+            }
           ]
         }
       },
@@ -367,18 +938,102 @@
         "matchingHireling": "exile",
         "description": "Forest miscreants raiding warriors and ransoming hostages back for victory.",
         "captainPool": [
-          { "id": "adventurer", "label": "Adventurer", "startingItems": ["hammer", "coin"] },
-          { "id": "arbiter",    "label": "Arbiter",    "startingItems": ["sword", "coin"] },
-          { "id": "cheat",      "label": "Cheat",      "startingItems": ["boot", "tea"] },
-          { "id": "gladiator",  "label": "Gladiator",  "startingItems": ["sword", "hammer"] },
-          { "id": "harrier",    "label": "Harrier",    "startingItems": ["boot", "crossbow"] },
-          { "id": "jailor",     "label": "Jailor",     "startingItems": ["crossbow", "bag"] },
-          { "id": "ranger",     "label": "Ranger",     "startingItems": ["sword", "crossbow"] },
-          { "id": "ronin",      "label": "Ronin",      "startingItems": ["boot", "sword"] },
-          { "id": "scoundrel",  "label": "Scoundrel",  "startingItems": ["crossbow", "tea"] },
-          { "id": "thief",      "label": "Thief",      "startingItems": ["boot", "bag"] },
-          { "id": "tinker",     "label": "Tinker",     "startingItems": ["bag", "hammer"] },
-          { "id": "vagrant",    "label": "Vagrant",    "startingItems": ["tea", "coin"] }
+          {
+            "id": "adventurer",
+            "label": "Adventurer",
+            "startingItems": [
+              "hammer",
+              "coin"
+            ]
+          },
+          {
+            "id": "arbiter",
+            "label": "Arbiter",
+            "startingItems": [
+              "sword",
+              "coin"
+            ]
+          },
+          {
+            "id": "cheat",
+            "label": "Cheat",
+            "startingItems": [
+              "boot",
+              "tea"
+            ]
+          },
+          {
+            "id": "gladiator",
+            "label": "Gladiator",
+            "startingItems": [
+              "sword",
+              "hammer"
+            ]
+          },
+          {
+            "id": "harrier",
+            "label": "Harrier",
+            "startingItems": [
+              "boot",
+              "crossbow"
+            ]
+          },
+          {
+            "id": "jailor",
+            "label": "Jailor",
+            "startingItems": [
+              "crossbow",
+              "bag"
+            ]
+          },
+          {
+            "id": "ranger",
+            "label": "Ranger",
+            "startingItems": [
+              "sword",
+              "crossbow"
+            ]
+          },
+          {
+            "id": "ronin",
+            "label": "Ronin",
+            "startingItems": [
+              "boot",
+              "sword"
+            ]
+          },
+          {
+            "id": "scoundrel",
+            "label": "Scoundrel",
+            "startingItems": [
+              "crossbow",
+              "tea"
+            ]
+          },
+          {
+            "id": "thief",
+            "label": "Thief",
+            "startingItems": [
+              "boot",
+              "bag"
+            ]
+          },
+          {
+            "id": "tinker",
+            "label": "Tinker",
+            "startingItems": [
+              "bag",
+              "hammer"
+            ]
+          },
+          {
+            "id": "vagrant",
+            "label": "Vagrant",
+            "startingItems": [
+              "tea",
+              "coin"
+            ]
+          }
         ],
         "captainPoolNote": "Four Captain cards are dealt face-up alongside the Knaves setup card; the player chooses three to use.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
@@ -388,11 +1043,28 @@
           "Place 1 hostage token of your choice in the Hostage area on your faction board."
         ],
         "assets": {
-          "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/knaves.svg" },
+          "meepleSvg": {
+            "source": "ewendc-automated-setup",
+            "path": "src/images/meeples/knaves.svg",
+            "appPath": "factions/root/meeples/knaves.svg"
+          },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-", "originalName": "Skunks_ Knaves of the Deepwood.png", "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk", "bytes": 20375, "format": "png" }
+            {
+              "source": "mrmirz-head-icons",
+              "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-",
+              "originalName": "Skunks_ Knaves of the Deepwood.png",
+              "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk",
+              "bytes": 20375,
+              "format": "png"
+            }
           ],
-          "background": { "source": "mrmirz-faction-backgrounds", "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy", "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk", "bytes": 11167301, "format": "png" }
+          "background": {
+            "source": "mrmirz-faction-backgrounds",
+            "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy",
+            "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk",
+            "bytes": 11167301,
+            "format": "png"
+          }
         }
       }
     }
@@ -403,47 +1075,184 @@
     "intent": "External asset references gathered from therootdatabase.com Workshop and the EwenDC repo. Drive viewUrls require auth; the static-export app cannot fetch them. Anything that needs to render in-app must be mirrored locally (e.g. /public/factions/<id>.png or .svg) with attribution to Leder Games and EwenDC (CC-BY-NC-SA 4.0).",
     "adsetTextProvenance": "Per-faction `adsetSteps` are first-pass community-knowledge transcriptions, except Lord of the Hundreds (transcribed from the Decimator85 card scan). Each faction carries an `adsetNote` flagging verification needs. The canonical source is the per-faction setup cards / the law page at https://www.therootdatabase.com/law/advanced-setup/en/.",
     "sources": [
-      { "id": "user-palette",                 "label": "Canonical faction hex palette (user-supplied, 2026-05-19)" },
-      { "id": "ewendc-automated-setup",       "label": "EwenDC/root-automated-setup", "url": "https://github.com/EwenDC/root-automated-setup", "rawBase": "https://raw.githubusercontent.com/EwenDC/root-automated-setup/main/", "license": "CC-BY-NC-SA 4.0", "attribution": "Meeple SVGs by EwenDC; reuse requires attribution + share-alike + non-commercial." },
-      { "id": "rdb-workshop",                 "label": "Root Database Workshop", "url": "https://www.therootdatabase.com/workshop/" },
-      { "id": "mrmirz-head-icons",            "label": "Faction Head Icons (MrMirz, Oct 2025)", "viewUrl": "https://drive.google.com/drive/folders/1-pVdQBwnjM7D4HcZtnsAuZ0HgudpoRCA?usp=share_link" },
-      { "id": "batmaster-faction-heads",      "label": "Faction Head Icons (batmaster1337, Jan 2023) — fills base-game gaps", "viewUrl": "https://drive.google.com/drive/folders/1fKgErFKzZtg2ONebon98_srT-lWeRVQ5" },
-      { "id": "decimator85-assets",           "label": "Root Assets up to Marauders (Decimator85, 2022, pinned 2026)", "viewUrl": "https://drive.google.com/drive/folders/1M2tB_F63TUOTKVqZ2o3631SSYOJXQ1Lq" },
-      { "id": "mrmirz-faction-backgrounds",   "label": "Faction Backgrounds (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/10yopeLwvzPTC32XyOBWEUPeruTmzZVph?usp=share_link" },
-      { "id": "mrmirz-vp-laurels",            "label": "VP Laurels (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/1LCDc4NWYkHcYe82RxAjlnoy2GEEedOVF" },
-      { "id": "mrmirz-hireling-icons",        "label": "Hireling Icons (MrMirz)", "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link" }
+      {
+        "id": "user-palette",
+        "label": "Canonical faction hex palette (user-supplied, 2026-05-19)"
+      },
+      {
+        "id": "ewendc-automated-setup",
+        "label": "EwenDC/root-automated-setup",
+        "url": "https://github.com/EwenDC/root-automated-setup",
+        "rawBase": "https://raw.githubusercontent.com/EwenDC/root-automated-setup/main/",
+        "license": "CC-BY-NC-SA 4.0",
+        "attribution": "Meeple SVGs by EwenDC; reuse requires attribution + share-alike + non-commercial."
+      },
+      {
+        "id": "rdb-workshop",
+        "label": "Root Database Workshop",
+        "url": "https://www.therootdatabase.com/workshop/"
+      },
+      {
+        "id": "mrmirz-head-icons",
+        "label": "Faction Head Icons (MrMirz, Oct 2025)",
+        "viewUrl": "https://drive.google.com/drive/folders/1-pVdQBwnjM7D4HcZtnsAuZ0HgudpoRCA?usp=share_link"
+      },
+      {
+        "id": "batmaster-faction-heads",
+        "label": "Faction Head Icons (batmaster1337, Jan 2023) \u2014 fills base-game gaps",
+        "viewUrl": "https://drive.google.com/drive/folders/1fKgErFKzZtg2ONebon98_srT-lWeRVQ5"
+      },
+      {
+        "id": "decimator85-assets",
+        "label": "Root Assets up to Marauders (Decimator85, 2022, pinned 2026)",
+        "viewUrl": "https://drive.google.com/drive/folders/1M2tB_F63TUOTKVqZ2o3631SSYOJXQ1Lq"
+      },
+      {
+        "id": "mrmirz-faction-backgrounds",
+        "label": "Faction Backgrounds (MrMirz)",
+        "viewUrl": "https://drive.google.com/drive/folders/10yopeLwvzPTC32XyOBWEUPeruTmzZVph?usp=share_link"
+      },
+      {
+        "id": "mrmirz-vp-laurels",
+        "label": "VP Laurels (MrMirz)",
+        "viewUrl": "https://drive.google.com/drive/folders/1LCDc4NWYkHcYe82RxAjlnoy2GEEedOVF"
+      },
+      {
+        "id": "mrmirz-hireling-icons",
+        "label": "Hireling Icons (MrMirz)",
+        "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link"
+      }
     ],
     "colourPalette": {
       "source": "user-palette",
       "appliedToDefinitionAt": "2026-05-19",
       "uiContrastWarnings": [
-        "vagabond #EBEBEB is near-white — clashes with the dark theme's light text token; player chip needs an outline.",
-        "twilight #4A2E1B / lilypad #385723 / knaves #595959 are dark — low contrast against the dark surface tokens. Best rendered via the meeple silhouette on top of the faction-coloured fill."
+        "vagabond #EBEBEB is near-white \u2014 clashes with the dark theme's light text token; player chip needs an outline.",
+        "twilight #4A2E1B / lilypad #385723 / knaves #595959 are dark \u2014 low contrast against the dark surface tokens. Best rendered via the meeple silhouette on top of the faction-coloured fill."
       ]
     },
     "vpLaurel": {
       "source": "mrmirz-vp-laurels",
       "candidates": [
-        { "fileId": "1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3", "originalName": "vp laurels.png", "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk", "bytes": 11804, "format": "png", "note": "Primary laurel — wraps the leading-player head icon." },
-        { "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb", "originalName": "VP_Frills.png", "viewUrl": "https://drive.google.com/file/d/176qhUSZWP0zNE4JRAPG4G43HxuV29iQb/view?usp=drivesdk", "bytes": 10758, "format": "png", "note": "Laurel + frills variant." },
-        { "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF", "originalName": "VPTrace-goblioc.png", "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk", "bytes": 32666, "format": "png", "note": "Traced/Lioc variant." },
-        { "fileId": "1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR", "originalName": "+VP.png", "viewUrl": "https://drive.google.com/file/d/1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR/view?usp=drivesdk", "bytes": 14393, "format": "png", "note": "+VP delta icon." },
-        { "fileId": "1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L", "originalName": "+VP_2.png", "viewUrl": "https://drive.google.com/file/d/1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L/view?usp=drivesdk", "bytes": 9469, "format": "png", "note": "+VP delta icon, variant 2." }
+        {
+          "fileId": "1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3",
+          "originalName": "vp laurels.png",
+          "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk",
+          "bytes": 11804,
+          "format": "png",
+          "note": "Primary laurel \u2014 wraps the leading-player head icon."
+        },
+        {
+          "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb",
+          "originalName": "VP_Frills.png",
+          "viewUrl": "https://drive.google.com/file/d/176qhUSZWP0zNE4JRAPG4G43HxuV29iQb/view?usp=drivesdk",
+          "bytes": 10758,
+          "format": "png",
+          "note": "Laurel + frills variant."
+        },
+        {
+          "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF",
+          "originalName": "VPTrace-goblioc.png",
+          "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk",
+          "bytes": 32666,
+          "format": "png",
+          "note": "Traced/Lioc variant."
+        },
+        {
+          "fileId": "1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR",
+          "originalName": "+VP.png",
+          "viewUrl": "https://drive.google.com/file/d/1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR/view?usp=drivesdk",
+          "bytes": 14393,
+          "format": "png",
+          "note": "+VP delta icon."
+        },
+        {
+          "fileId": "1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L",
+          "originalName": "+VP_2.png",
+          "viewUrl": "https://drive.google.com/file/d/1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L/view?usp=drivesdk",
+          "bytes": 9469,
+          "format": "png",
+          "note": "+VP delta icon, variant 2."
+        }
       ]
     },
     "hirelingIcons": {
-      "clockwork-otters":  { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw", "originalName": "Clockwork Otters Logo.png",  "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk", "bytes": 26395, "format": "png", "note": "Hireling-card variant of Riverfolk." } },
-      "clockwork-lizards": { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp", "originalName": "Clockwork Lizards Logo.png", "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk", "bytes": 23230, "format": "png", "note": "Hireling-card variant of Lizard Cult." } },
-      "birdsong":          { "headIcon": { "source": "mrmirz-hireling-icons","fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB", "originalName": "Hireling_Birdsong.png",      "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk", "bytes": 2653,  "format": "png", "note": "Generic Birdsong-phase hireling marker." } }
+      "clockwork-otters": {
+        "headIcon": {
+          "source": "mrmirz-head-icons",
+          "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw",
+          "originalName": "Clockwork Otters Logo.png",
+          "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk",
+          "bytes": 26395,
+          "format": "png",
+          "note": "Hireling-card variant of Riverfolk."
+        }
+      },
+      "clockwork-lizards": {
+        "headIcon": {
+          "source": "mrmirz-head-icons",
+          "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp",
+          "originalName": "Clockwork Lizards Logo.png",
+          "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk",
+          "bytes": 23230,
+          "format": "png",
+          "note": "Hireling-card variant of Lizard Cult."
+        }
+      },
+      "birdsong": {
+        "headIcon": {
+          "source": "mrmirz-hireling-icons",
+          "fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB",
+          "originalName": "Hireling_Birdsong.png",
+          "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk",
+          "bytes": 2653,
+          "format": "png",
+          "note": "Generic Birdsong-phase hireling marker."
+        }
+      }
     },
     "mapElements": {
-      "ruins":      { "icon": { "source": "decimator85-assets", "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC", "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk", "bytes": 16200, "format": "png" } },
-      "closedPath": { "icon": { "source": "decimator85-assets", "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9", "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk", "bytes": 42554, "format": "png" } }
+      "ruins": {
+        "icon": {
+          "source": "decimator85-assets",
+          "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC",
+          "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk",
+          "bytes": 16200,
+          "format": "png"
+        }
+      },
+      "closedPath": {
+        "icon": {
+          "source": "decimator85-assets",
+          "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9",
+          "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk",
+          "bytes": 42554,
+          "format": "png"
+        }
+      }
     },
     "gaps": {
-      "maps": ["lake", "marsh", "gorge"],
-      "decks": ["exiles", "squires"],
-      "adsetCards": ["eyrie", "alliance", "vagabond", "lizards", "duchy", "corvids", "keepers", "lilypad", "twilight", "knaves"],
+      "maps": [
+        "lake",
+        "marsh",
+        "gorge"
+      ],
+      "decks": [
+        "exiles",
+        "squires"
+      ],
+      "adsetCards": [
+        "eyrie",
+        "alliance",
+        "vagabond",
+        "lizards",
+        "duchy",
+        "corvids",
+        "keepers",
+        "lilypad",
+        "twilight",
+        "knaves"
+      ],
       "notes": [
         "All 13 factions have meeple SVGs (EwenDC) + PNG head icons.",
         "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85. The per-faction `adsetSteps` are first-pass text and need verification against the rulebook (see `adsetNote` per faction).",
