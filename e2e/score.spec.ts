@@ -1,15 +1,25 @@
 import { test, expect, type Page } from "@playwright/test";
+import { startGame } from "./_setup-helpers";
 
 // Dev server runs under basePath "/game-timer" (see next.config.js).
 const BASE = "/game-timer";
 
-const startRoot = async (page: Page, playerCount = 2) => {
-  await page.goto(`${BASE}/timer`);
-  await page.getByLabel(/^Game$/).selectOption("root");
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill(String(playerCount));
-  await page.getByRole("button", { name: /start game/i }).click();
-};
+const ROOT_FACTIONS = [
+  { id: "marquise", label: "Marquise de Cat" },
+  { id: "eyrie", label: "Eyrie Dynasties" },
+  { id: "alliance", label: "Woodland Alliance" },
+  { id: "vagabond", label: "Vagabond" },
+];
+
+// Seat each player AS their faction so the assertions below (which key
+// off player.name in score-button aria-labels) keep working.
+const startRoot = (page: Page, playerCount = 2) =>
+  startGame(page, {
+    game: "root",
+    playerCount,
+    factions: ROOT_FACTIONS.slice(0, playerCount).map((f) => f.id),
+    seatNames: ROOT_FACTIONS.slice(0, playerCount).map((f) => f.label),
+  });
 
 // Marker (selects which player the +/- controls target).
 const marker = (page: Page, playerName: string) =>
@@ -38,20 +48,19 @@ test.describe("score layer", () => {
   test("no score panel when the picked definition has no scoreConfig (Generic)", async ({
     page,
   }) => {
-    await page.goto(`${BASE}/timer`);
-    await page.getByLabel(/track individual players/i).check();
-    await page.getByRole("button", { name: /start game/i }).click();
+    await startGame(page, { trackPlayers: true, playerCount: 2 });
     await expect(page.getByLabel(/^Scores$/)).toHaveCount(0);
   });
 
-  test("no score panel when Root is picked but player tracking is off", async ({
-    page,
-  }) => {
-    await page.goto(`${BASE}/timer`);
-    await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByRole("button", { name: /start game/i }).click();
-    await expect(page.getByLabel(/^Scores$/)).toHaveCount(0);
-  });
+  test.skip(
+    "no score panel when Root is picked but player tracking is off",
+    async () => {
+      // Premise no longer applies: in the wizard, Root's seat-players
+      // step is part of the flow, so you can't reach the timer without
+      // seats. If we want to verify "no players", we'd need to allow
+      // 0-seat Root — not currently supported.
+    },
+  );
 
   test("Root + players renders a track marker per faction, starting at min", async ({
     page,
@@ -115,10 +124,10 @@ test.describe("score layer", () => {
     await startRoot(page, 2);
     await page.locator("main").click();
     await page.locator("main").click();
-    await expect(page.getByText(/79\s*turns left/i)).toBeVisible();
+    await expect(page.getByText(/39\s*turns left/i)).toBeVisible();
     // After the turn rotation, Eyrie is the active player → auto-selected.
     await incButton(page, "Eyrie Dynasties").click();
-    await expect(page.getByText(/79\s*turns left/i)).toBeVisible();
+    await expect(page.getByText(/39\s*turns left/i)).toBeVisible();
   });
 
   test("hitting Root's max (30) fires a victory banner and stops the active-player banner", async ({

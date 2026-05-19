@@ -12,6 +12,9 @@ test.describe("share session menu", () => {
     page,
   }) => {
     await page.goto(`${BASE}/timer`);
+    // Walk Generic wizard quickly: Game → Turns → Players → Start.
+    await page.getByRole("button", { name: /^Next/ }).click();
+    await page.getByRole("button", { name: /^Next/ }).click();
     await page.getByRole("button", { name: /start game/i }).click();
     await expect(
       page.getByRole("button", { name: /share this session/i }),
@@ -20,6 +23,9 @@ test.describe("share session menu", () => {
 
   test("clicking Share transitions to an opening state", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
+    // Walk Generic wizard quickly: Game → Turns → Players → Start.
+    await page.getByRole("button", { name: /^Next/ }).click();
+    await page.getByRole("button", { name: /^Next/ }).click();
     await page.getByRole("button", { name: /start game/i }).click();
     await page
       .getByRole("button", { name: /share this session/i })

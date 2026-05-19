@@ -1,26 +1,18 @@
 import { test, expect, type Page } from "@playwright/test";
+import { startGame as walkWizard } from "./_setup-helpers";
 
-// Dev server runs under basePath "/game-timer" (see next.config.js).
-const BASE = "/game-timer";
-
-// Helper: open /timer, optionally enable player tracking, then submit the
-// setup modal. Returns once the timer view is visible and interactive.
-const startGame = async (
+// `walkWizard` drives the multi-screen wizard. The local startGame
+// preserves this test file's existing "playerCount enables tracking"
+// shorthand from when the modal had a single checkbox.
+const startGame = (
   page: Page,
   options: { expectedTurns?: number; playerCount?: number } = {},
-) => {
-  await page.goto(`${BASE}/timer`);
-  if (options.expectedTurns !== undefined) {
-    await page
-      .getByLabel(/expected turns/i)
-      .fill(String(options.expectedTurns));
-  }
-  if (options.playerCount !== undefined) {
-    await page.getByLabel(/track individual players/i).check();
-    await page.getByLabel(/number of players/i).fill(String(options.playerCount));
-  }
-  await page.getByRole("button", { name: /start game/i }).click();
-};
+) =>
+  walkWizard(page, {
+    expectedTurns: options.expectedTurns,
+    trackPlayers: options.playerCount !== undefined,
+    playerCount: options.playerCount,
+  });
 
 // Helper: advance one turn via the tap-to-advance zone. The very first
 // tap starts the timer; subsequent taps record a turn each.

@@ -361,9 +361,11 @@
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
-.factionCard:disabled {
+.factionCard:disabled,
+.factionCardDisabled {
   opacity: 0.35;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .factionHeader {

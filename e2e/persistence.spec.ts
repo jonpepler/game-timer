@@ -1,25 +1,33 @@
 import { test, expect, type Page } from "@playwright/test";
+import { startGame } from "./_setup-helpers";
 
 const BASE = "/game-timer";
 
-const startGenericPlayers = async (
+const startGenericPlayers = (
   page: Page,
   { expectedTurns, playerCount }: { expectedTurns: number; playerCount: number },
-) => {
-  await page.goto(`${BASE}/timer`);
-  await page.getByLabel(/expected turns/i).fill(String(expectedTurns));
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill(String(playerCount));
-  await page.getByRole("button", { name: /start game/i }).click();
-};
+) =>
+  startGame(page, {
+    expectedTurns,
+    trackPlayers: true,
+    playerCount,
+  });
 
-const startRoot = async (page: Page, playerCount: number) => {
-  await page.goto(`${BASE}/timer`);
-  await page.getByLabel(/^Game$/).selectOption("root");
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill(String(playerCount));
-  await page.getByRole("button", { name: /start game/i }).click();
-};
+// Root with N seats — faction picks default to the first N option ids.
+const ROOT_FACTION_IDS = [
+  "marquise",
+  "eyrie",
+  "alliance",
+  "vagabond",
+  "lizards",
+  "riverfolk",
+];
+const startRoot = (page: Page, playerCount: number) =>
+  startGame(page, {
+    game: "root",
+    playerCount,
+    factions: ROOT_FACTION_IDS.slice(0, playerCount),
+  });
 
 const tapToAdvance = (page: Page) => page.locator("main").click();
 
@@ -47,8 +55,8 @@ test.describe("session persistence", () => {
 
   test("Root: scores + faction roster survive a refresh", async ({ page }) => {
     await startRoot(page, 2);
-    // The new score panel routes +/- through whichever player marker is
-    // currently selected.
+    // Score buttons are labelled by player.name (default "Player 1",
+    // "Player 2" — the seating step's default names).
     const marker = (name: string) =>
       page.getByRole("button", {
         name: new RegExp(`^${name} score `, "i"),
@@ -57,22 +65,20 @@ test.describe("session persistence", () => {
       page.getByRole("button", {
         name: new RegExp(`Increase score for ${name}`, "i"),
       });
-    // Marquise is auto-selected as the active player.
-    for (let i = 0; i < 5; i++) await inc("Marquise de Cat").click();
-    await marker("Eyrie Dynasties").click();
-    for (let i = 0; i < 3; i++) await inc("Eyrie Dynasties").click();
+    for (let i = 0; i < 5; i++) await inc("Player 1").click();
+    await marker("Player 2").click();
+    for (let i = 0; i < 3; i++) await inc("Player 2").click();
 
     await page.reload();
 
     await expect(
       page.getByRole("heading", { name: /game setup/i }),
     ).toHaveCount(0);
-    // The track marker labels carry the score; verify each persists.
     await expect(
-      page.getByRole("button", { name: /Marquise de Cat score 5/i }),
+      page.getByRole("button", { name: /Player 1 score 5/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /Eyrie Dynasties score 3/i }),
+      page.getByRole("button", { name: /Player 2 score 3/i }),
     ).toBeVisible();
   });
 
@@ -107,7 +113,11 @@ test.describe("session persistence", () => {
     await expect(page.getByText(/28\s*turns left/i)).toBeVisible();
 
     await page.getByRole("button", { name: /start a new game/i }).click();
+    // Wizard opens at the Game screen. Next → Expected turns screen.
+    await page.getByRole("button", { name: /^Next/ }).click();
     await page.getByLabel(/expected turns/i).fill("50");
+    await page.getByRole("button", { name: /^Next/ }).click();
+    // Generic Players screen → Start.
     await page.getByRole("button", { name: /start game/i }).click();
 
     // Turn counter resets to the new expectedTurns; old turns are gone.

@@ -13,11 +13,14 @@ test("landing → timer navigation works", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("setup modal's expectedTurns flows into the footer", async ({ page }) => {
+test("setup wizard's expectedTurns flows into the footer", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
+  // Game screen → Next to reach Expected turns.
+  await page.getByRole("button", { name: /^Next/ }).click();
   const turnsInput = page.getByLabel(/expected turns/i);
   await expect(turnsInput).toBeVisible();
   await turnsInput.fill("42");
+  await page.getByRole("button", { name: /^Next/ }).click();
   await page.getByRole("button", { name: /start game/i }).click();
   await expect(page.getByText(/42\s*turns\s*left/i)).toBeVisible();
 });

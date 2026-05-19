@@ -3,161 +3,123 @@ import { test, expect } from "@playwright/test";
 // Dev server runs under basePath "/game-timer" (see next.config.js).
 const BASE = "/game-timer";
 
-test.describe("game definitions", () => {
-  test("Generic is preselected and seeds 90 expected turns", async ({
-    page,
-  }) => {
+const advance = (page: import("@playwright/test").Page) =>
+  page.getByRole("button", { name: /^Next/ }).click();
+
+test.describe("game definitions (wizard)", () => {
+  test("Generic is preselected, seeds 90 expected turns", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await expect(page.getByLabel(/^Game$/)).toHaveValue("generic");
+    await advance(page);
     await expect(page.getByLabel(/expected turns/i)).toHaveValue("90");
   });
 
-  test("picking Root reseeds expected turns and the player palette", async ({
-    page,
-  }) => {
+  test("picking Root reseeds expected turns", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-
-    // Root's default expected turns is 80.
-    await expect(page.getByLabel(/expected turns/i)).toHaveValue("80");
-
-    // Enable player tracking; default count is 2, so player rows should
-    // pre-fill with the first two Root factions in registry order.
-    await page.getByLabel(/track individual players/i).check();
-    await expect(page.getByLabel(/^Player 1 name$/)).toHaveValue(
-      "Marquise de Cat",
-    );
-    await expect(page.getByLabel(/^Player 2 name$/)).toHaveValue(
-      "Eyrie Dynasties",
-    );
+    await advance(page);
+    // Root's default is 40 (post-2026-05 tune).
+    await expect(page.getByLabel(/expected turns/i)).toHaveValue("40");
   });
 
-  test("Root caps the player count at maxPlayers (6) even though it has 13 factions", async ({
-    page,
-  }) => {
+  test("Root caps the seat count at maxPlayers (6)", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByLabel(/track individual players/i).check();
-    const countInput = page.getByLabel(/number of players/i);
-    // Root declares maxPlayers: 6 in the JSON, so the input caps at 6
-    // regardless of the larger faction roster.
-    await expect(countInput).toHaveAttribute("max", "6");
-    await countInput.fill("6");
-    await expect(countInput).toHaveValue("6");
-    await expect(page.getByLabel(/^Player 6 name$/)).toHaveValue(
-      "Riverfolk Company",
+    // Game → Turns → Expansions → Map → Deck → Landmarks → Seating
+    for (let i = 0; i < 6; i++) await advance(page);
+    // Default seat count is 4; max is 6 → 2 add-seat clicks fills it.
+    for (let i = 0; i < 2; i++) {
+      await page.getByRole("button", { name: /add seat/i }).click();
+    }
+    const addBtn = page.getByRole("button", { name: /add seat/i });
+    await expect(addBtn).toBeDisabled();
+    const seatRows = page.locator(
+      'input[aria-label^="Seat "][aria-label$=" name"]',
     );
-  });
-
-  test("switching from Root back to Generic re-seeds Player N defaults", async ({
-    page,
-  }) => {
-    await page.goto(`${BASE}/timer`);
-    await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByLabel(/track individual players/i).check();
-    await expect(page.getByLabel(/^Player 1 name$/)).toHaveValue(
-      "Marquise de Cat",
-    );
-
-    await page.getByLabel(/^Game$/).selectOption("generic");
-    // After switching back, the player rows reset to the generic Player N
-    // palette, expected turns reset to 90.
-    await expect(page.getByLabel(/expected turns/i)).toHaveValue("90");
-    await expect(page.getByLabel(/^Player 1 name$/)).toHaveValue("Player 1");
-    await expect(page.getByLabel(/^Player 2 name$/)).toHaveValue("Player 2");
+    await expect(seatRows).toHaveCount(6);
   });
 });
 
-test.describe("Root advanced setup", () => {
-  test("renders maps + decks + landmarks + hirelings + draft", async ({
+test.describe("Root setup wizard surface", () => {
+  test("Map screen lists every map, defaulting to Autumn", async ({ page }) => {
+    await page.goto(`${BASE}/timer`);
+    await page.getByLabel(/^Game$/).selectOption("root");
+    // Game → Turns → Expansions → Map.
+    await advance(page);
+    await advance(page);
+    // Default expansions: just "base"; turn the rest on so all maps show.
+    await page.getByLabel(/Riverfolk Expansion/).check();
+    await page.getByLabel(/Underworld Expansion/).check();
+    await page.getByLabel(/Marauder Expansion/).check();
+    await page.getByLabel(/Homeland Expansion/).check();
+    await advance(page);
+    await expect(page.getByRole("heading", { name: /^Map$/ })).toBeVisible();
+    for (const name of [
+      "Autumn",
+      "Winter",
+      "Lake",
+      "Mountain",
+      "Marsh",
+      "Gorge",
+    ]) {
+      await expect(page.getByRole("button", { name })).toBeVisible();
+    }
+  });
+
+  test("Deck screen shows Base + Exiles + Squires when their modules are on", async ({
     page,
   }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-
-    // Map picker shows every map and defaults to Autumn (the first in
-    // the registry order).
-    const mapSelect = page.getByLabel(/^Map$/);
-    await expect(mapSelect).toBeVisible();
-    await expect(mapSelect).toContainText("Autumn");
-    await expect(mapSelect).toContainText("Winter");
-    await expect(mapSelect).toContainText("Lake");
-    await expect(mapSelect).toContainText("Mountain");
-    await expect(mapSelect).toContainText("Marsh");
-    await expect(mapSelect).toContainText("Gorge");
-
-    // Deck picker shows all three.
-    const deckSelect = page.getByLabel(/^Deck$/);
-    await expect(deckSelect).toContainText("Base deck");
-    await expect(deckSelect).toContainText("Exiles and Partisans");
-    await expect(deckSelect).toContainText("Squires and Disciples");
-
-    // Landmarks cap input.
-    await expect(page.getByLabel(/^Landmarks$/)).toHaveAttribute("max", "2");
-    // Hirelings switched from a select-count to a deal-random step kind
-    // (ADSET A.6: 0 or 3, never partial). The wizard rebuild renders
-    // that step; until then the modal silently skips it. Re-add the
-    // assertion against the deal-random screen when the wizard lands.
-
-    // Draft toggle exposed (off by default).
-    await expect(page.getByLabel(/^Draft factions$/)).not.toBeChecked();
+    await advance(page);
+    await advance(page);
+    await page.getByLabel(/Riverfolk Expansion/).check();
+    await page.getByLabel(/Marauder Expansion/).check();
+    await advance(page); // map screen
+    await advance(page); // deck screen
+    await expect(page.getByRole("heading", { name: /^Deck$/ })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Base deck/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Exiles and Partisans/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Squires and Disciples/ }),
+    ).toBeVisible();
   });
 
-  test("Generic has no Advanced setup section", async ({ page }) => {
+  test("Generic shows no setup-step screens", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
-    // Generic doesn't declare a setupSchema, so no advanced controls.
-    await expect(page.getByLabel(/^Map$/)).toHaveCount(0);
-    await expect(page.getByLabel(/^Deck$/)).toHaveCount(0);
+    // Generic only has Game + Turns + Players. The next button on the
+    // Players screen reads "Start Game" not "Next".
+    await advance(page);
+    await advance(page);
+    await expect(
+      page.getByRole("heading", { name: /Players \(optional\)/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /start game/i }),
+    ).toBeVisible();
   });
 
-  test("faction picker disables already-picked factions", async ({ page }) => {
-    await page.goto(`${BASE}/timer`);
-    await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByLabel(/track individual players/i).check();
-
-    // Default: Player 1 = Marquise (the picker reflects this).
-    const p1Faction = page.getByLabel(/^Faction for player 1$/);
-    await expect(p1Faction).toHaveValue("marquise");
-    const p2Faction = page.getByLabel(/^Faction for player 2$/);
-    await expect(p2Faction).toHaveValue("eyrie");
-
-    // Marquise should be disabled on row 2's dropdown (already taken).
-    const marquiseOnRow2 = p2Faction.locator(`option[value="marquise"]`);
-    await expect(marquiseOnRow2).toBeDisabled();
-  });
-
-  test("picking a faction updates the player name + colour", async ({
+  test("faction mutex: Vagabond + Knaves of the Deepwood can't both be picked", async ({
     page,
   }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByLabel(/track individual players/i).check();
-    // Swap Player 2 from Eyrie to Lord of the Hundreds.
-    await page
-      .getByLabel(/^Faction for player 2$/)
-      .selectOption("hundreds");
-    await expect(page.getByLabel(/^Player 2 name$/)).toHaveValue(
-      "Lord of the Hundreds",
+    // Walk to the faction picker: Game→Turns→Expansions→Map→Deck→Landmarks→Seating→Hirelings→Draft→Faction
+    // = 9 Next clicks. We also need Homeland on to surface Knaves.
+    await advance(page);
+    await advance(page);
+    await page.getByLabel(/Homeland Expansion/).check();
+    for (let i = 0; i < 7; i++) await advance(page);
+    // First seat picks Vagabond.
+    await page.getByTestId("faction-card-vagabond").click();
+    // The Knaves card should now be visually disabled (aria-disabled).
+    await expect(page.getByTestId("faction-card-knaves")).toHaveAttribute(
+      "aria-disabled",
+      "true",
     );
-  });
-
-  test("mutex: Vagabond + Knaves of the Deepwood can't both be picked", async ({
-    page,
-  }) => {
-    await page.goto(`${BASE}/timer`);
-    await page.getByLabel(/^Game$/).selectOption("root");
-    await page.getByLabel(/track individual players/i).check();
-
-    // Pick Vagabond for Player 1.
-    await page
-      .getByLabel(/^Faction for player 1$/)
-      .selectOption("vagabond");
-
-    // Knaves of the Deepwood should now be disabled on Player 2's
-    // dropdown via the mutex pair declared in root.json.
-    const knavesOnRow2 = page
-      .getByLabel(/^Faction for player 2$/)
-      .locator(`option[value="knaves"]`);
-    await expect(knavesOnRow2).toBeDisabled();
   });
 });

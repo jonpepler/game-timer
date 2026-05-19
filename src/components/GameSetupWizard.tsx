@@ -259,7 +259,12 @@ export const GameSetupWizard = ({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (isOpen && !dialog.open) dialog.showModal();
+    if (isOpen && !dialog.open) {
+      // Fresh open: rewind to the first screen so the user doesn't
+      // resume in the middle of an old in-progress wizard.
+      setScreenIndex(0);
+      dialog.showModal();
+    }
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
@@ -572,6 +577,9 @@ function ExpectedTurnsScreen({
         Used to predict when the game will finish and to set the first
         countdown.
       </p>
+      <label htmlFor="expected-turns" className={styles.label}>
+        Expected turns
+      </label>
       <NumberField
         id="expected-turns"
         min={1}
@@ -1153,16 +1161,31 @@ function PlayerPickScreen({
           const adsetSteps = (
             o as unknown as { adsetSteps?: string[] }
           ).adsetSteps;
+          // Card is a div, not a button, so it can host the inner
+          // "Show setup" button. role="button" + tabIndex keeps it
+          // keyboard- and AT-accessible.
+          const onActivate = () => {
+            if (blocked) return;
+            pick(o.id);
+          };
           return (
-            <button
+            <div
               key={o.id}
-              type="button"
+              role="button"
+              aria-pressed={active}
+              aria-disabled={blocked}
+              data-testid={`faction-card-${o.id}`}
+              tabIndex={blocked ? -1 : 0}
               className={`${styles.factionCard} ${
                 active ? styles.factionCardActive : ""
-              }`}
-              onClick={() => pick(o.id)}
-              disabled={blocked}
-              aria-pressed={active}
+              } ${blocked ? styles.factionCardDisabled : ""}`}
+              onClick={onActivate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onActivate();
+                }
+              }}
             >
               <div className={styles.factionHeader}>
                 <span
@@ -1180,10 +1203,12 @@ function PlayerPickScreen({
                   <button
                     type="button"
                     className={styles.factionAdsetToggle}
+                    data-testid={`faction-adset-toggle-${o.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setAdsetOpen(open ? null : o.id);
                     }}
+                    aria-label={`${open ? "Hide" : "Show"} setup for ${o.label}`}
                   >
                     {open ? "Hide setup" : "Show setup"}
                   </button>
@@ -1201,7 +1226,7 @@ function PlayerPickScreen({
                   )}
                 </>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -1305,6 +1330,9 @@ function TrackPlayersScreen({
       </label>
       {enabled && (
         <div className={styles.trackBlock}>
+          <label htmlFor="track-player-count" className={styles.label}>
+            Number of players
+          </label>
           <NumberField
             id="track-player-count"
             min={1}

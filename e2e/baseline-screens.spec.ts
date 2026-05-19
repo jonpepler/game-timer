@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import path from "node:path";
 
-// Captures baseline screenshots of every key surface for the UI overhaul.
-// Outputs go to local_docs/screenshots/ (gitignored). The spec also acts
-// as a smoke test — every screen must render without throwing.
+// Visual baselines for the landing page + key timer states.
+// Output goes to local_docs/screenshots/ (gitignored). The wizard
+// screenshots live in wizard-walkthrough.spec.ts.
 
 const BASE = "/game-timer";
 const OUT_DIR = path.resolve(__dirname, "../local_docs/screenshots");
@@ -21,47 +21,27 @@ test("landing screen baseline", async ({ page }) => {
   await save(page, "01-landing");
 });
 
-test("setup modal baseline (default)", async ({ page }) => {
-  await page.goto(`${BASE}/timer`);
-  await expect(
-    page.getByRole("heading", { name: /game setup/i }),
-  ).toBeVisible();
-  await save(page, "02-setup-default");
-});
-
-test("setup modal baseline (with player tracking enabled)", async ({ page }) => {
-  await page.goto(`${BASE}/timer`);
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill("4");
-  await save(page, "03-setup-players");
-});
-
-test("setup modal baseline (Root definition picked)", async ({ page }) => {
-  await page.goto(`${BASE}/timer`);
-  await page.getByLabel(/^Game$/).selectOption("root");
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill("4");
-  await save(page, "03b-setup-root");
-});
-
+// Walk the wizard to default (Generic, no tracking) and screenshot the timer.
 test("timer view baseline (no players, mid-session)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
+  // Click Next through the three Generic wizard screens (Game → Turns → Players)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
   await page.getByRole("button", { name: /start game/i }).click();
-  // Start the timer (first tap on container) and let a beat pass so the
-  // countdown is visibly running.
   await page.locator("main").click();
   await page.waitForTimeout(1500);
   await save(page, "04-timer-default");
 });
 
-test("timer view baseline (with players)", async ({ page }) => {
+test("timer view baseline (with players, Generic)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
   await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill("3");
+  await page.getByLabel(/^Player 1 colour$/).waitFor();
   await page.getByRole("button", { name: /start game/i }).click();
   await page.locator("main").click();
   await page.waitForTimeout(1500);
-  // Advance a few turns so PlayerTimeShare has data
   await page.locator("main").click();
   await page.waitForTimeout(1000);
   await page.locator("main").click();
@@ -69,15 +49,36 @@ test("timer view baseline (with players)", async ({ page }) => {
   await save(page, "05-timer-with-players");
 });
 
-test("timer view baseline (Root with scores in play)", async ({ page }) => {
+test("timer view baseline (Root, scores in play)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
+  // Game: switch to Root.
   await page.getByLabel(/^Game$/).selectOption("root");
-  await page.getByLabel(/track individual players/i).check();
-  await page.getByLabel(/number of players/i).fill("4");
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Expected turns
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Expansions (defaults to base only — leave as-is)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Map (default Autumn)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Deck (default Base)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Landmarks
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Seating — leave defaults
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Hirelings (skipped by default)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Draft
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Faction picker — pick 4 in turn order.
+  await page.getByTestId("faction-card-marquise").click();
+  await page.getByTestId("faction-card-eyrie").click();
+  await page.getByTestId("faction-card-alliance").click();
+  await page.getByTestId("faction-card-vagabond").click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // ADSET confirmation → Start.
   await page.getByRole("button", { name: /start game/i }).click();
-  // Score-panel markers at identical scores stack on top of each other,
-  // so the screenshot fixture selects via a synthetic click on the
-  // exact element rather than relying on hit-testing.
+
   const selectMarker = (name: string) =>
     page.evaluate((n) => {
       const btn = document.querySelector(
@@ -89,11 +90,13 @@ test("timer view baseline (Root with scores in play)", async ({ page }) => {
     page.getByRole("button", {
       name: new RegExp(`Increase score for ${name}`, "i"),
     });
-  await selectMarker("Marquise de Cat");
-  for (let i = 0; i < 7; i++) await inc("Marquise de Cat").click();
-  await selectMarker("Eyrie Dynasties");
-  for (let i = 0; i < 4; i++) await inc("Eyrie Dynasties").click();
-  await selectMarker("Woodland Alliance");
-  for (let i = 0; i < 12; i++) await inc("Woodland Alliance").click();
+  // Score buttons key off player.name now. The default seating names
+  // are "Player 1".."Player 4" since the test doesn't rename them.
+  await selectMarker("Player 1");
+  for (let i = 0; i < 7; i++) await inc("Player 1").click();
+  await selectMarker("Player 2");
+  for (let i = 0; i < 4; i++) await inc("Player 2").click();
+  await selectMarker("Player 3");
+  for (let i = 0; i < 12; i++) await inc("Player 3").click();
   await save(page, "06-timer-with-scores");
 });
