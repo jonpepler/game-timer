@@ -7,11 +7,14 @@ import "react-circular-progressbar/dist/styles.css";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { Footer } from "@/components/timer/Footer";
 import { FullScreen } from "@/components/FullScreen";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
-import { GameConfig } from "@/components/GameSetupWizard";
+import {
+  type GameConfig,
+  type GameSetupWizardHandle,
+} from "@/components/GameSetupWizard";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
@@ -74,6 +77,12 @@ export default function Home() {
   const players = state.players;
   // peerId → claimed playerIndex. Released when the companion disconnects.
   const [claimMap, setClaimMap] = useState<Record<string, number>>({});
+
+  // Forward-declared wizard handle so peer SETUP_PICK messages can
+  // call applyPick before useGameSetup() runs further down. The
+  // wizard <ref> is set when it mounts; before then this is null
+  // and SETUP_PICK is a no-op.
+  const wizardHandleRef = useRef<GameSetupWizardHandle | null>(null);
 
   const handleCompanionMessage = (peerId: string, data: unknown) => {
     const msg = data as CompanionToHostMessage;
@@ -232,6 +241,19 @@ export default function Home() {
         });
         return;
       }
+      case "SETUP_PICK": {
+        // Wizard-time picker pick from a seated companion. We route it
+        // straight into the wizard's setupContext via the imperative
+        // handle; the wizard handles its own validation against the
+        // setupSteps schema + already-applied picks.
+        const handle = wizardHandleRef.current;
+        if (!handle) {
+          peerLog.warn("SETUP_PICK dropped — wizard not mounted", { peerId });
+          return;
+        }
+        handle.applyPick(msg.stepId, msg.seatIndex, msg.optionId);
+        return;
+      }
     }
   };
 
@@ -281,7 +303,50 @@ export default function Home() {
     setScoreConfig(incoming.players ? definition?.score : undefined);
   };
 
-  const { open, isOpen, modal } = useGameSetup(applyConfig);
+  // Peer hooks: forward the wizard's turn-based picker events to the
+  // peer broker so seated companions can pick on their own screens.
+  // Incoming SETUP_PICK messages route back into the wizard via
+  // wizardRef.applyPick (wired below in handleCompanionMessage).
+  const sessionHostSendRef = useRef(sessionHost.send);
+  useEffect(() => {
+    sessionHostSendRef.current = sessionHost.send;
+  }, [sessionHost.send]);
+  const wizardPeerHooks = useMemo(
+    () => ({
+      onTurnStart: (info: {
+        stepId: string;
+        seatIndex: number;
+        seatName: string;
+        optionIds: string[];
+        excludedOptionIds: string[];
+        definition: ReturnType<typeof findDefinition>;
+      }) => {
+        if (!info.definition) return;
+        sessionHostSendRef.current({
+          type: "SETUP_TURN",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          stepId: info.stepId,
+          seatIndex: info.seatIndex,
+          optionIds: info.optionIds,
+          excludedOptionIds: info.excludedOptionIds,
+          definition: info.definition,
+        });
+      },
+      onTurnEnd: (info: { stepId: string }) => {
+        sessionHostSendRef.current({
+          type: "SETUP_DONE",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          stepId: info.stepId,
+        });
+      },
+    }),
+    [],
+  );
+  const { open, isOpen, modal } = useGameSetup({
+    onSubmit: applyConfig,
+    peerHooks: wizardPeerHooks,
+    wizardRef: wizardHandleRef,
+  });
 
   // Only auto-open the setup modal on first mount when there's nothing
   // to resume — a restored session counts as already-configured.

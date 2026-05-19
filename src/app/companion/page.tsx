@@ -74,9 +74,25 @@ function CompanionScreen() {
   const { status, lastMessage, error, send } =
     useSessionCompanion<HostToCompanionMessage>(code);
 
-  const state = lastMessage?.type === "STATE" ? lastMessage.state : null;
-  const definition =
-    lastMessage?.type === "STATE" ? lastMessage.definition : undefined;
+  // Track the most recent message of each type. STATE arrives during
+  // gameplay; SETUP_TURN / SETUP_DONE arrive during the host's
+  // wizard. We keep both so the picker overlay can layer on top of
+  // the state view.
+  const [lastState, setLastState] = useState<
+    Extract<HostToCompanionMessage, { type: "STATE" }> | null
+  >(null);
+  const [pendingTurn, setPendingTurn] = useState<
+    Extract<HostToCompanionMessage, { type: "SETUP_TURN" }> | null
+  >(null);
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (lastMessage.type === "STATE") setLastState(lastMessage);
+    else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
+    else if (lastMessage.type === "SETUP_DONE") setPendingTurn(null);
+  }, [lastMessage]);
+
+  const state = lastState?.state ?? null;
+  const definition = pendingTurn?.definition ?? lastState?.definition;
 
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
 
@@ -161,6 +177,22 @@ function CompanionScreen() {
       stepId: pick.step.id,
       optionId,
     } satisfies CompanionToHostMessage);
+  };
+
+  // Wizard-time pick response. Sent in answer to a SETUP_TURN from
+  // the host; the host applies it to the wizard's setupContext.
+  const sendSetupPick = (optionId: string) => {
+    if (!pendingTurn) return;
+    send({
+      type: "SETUP_PICK",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      stepId: pendingTurn.stepId,
+      seatIndex: pendingTurn.seatIndex,
+      optionId,
+    } satisfies CompanionToHostMessage);
+    // Clear locally — host will broadcast the next SETUP_TURN (or
+    // SETUP_DONE) shortly. Optimistic to avoid flicker.
+    setPendingTurn(null);
   };
 
   const stats = useMemo(
@@ -288,7 +320,15 @@ function CompanionScreen() {
         )}
       </div>
 
-      {!state && status === "connected" && (
+      {pendingTurn && (
+        <SetupTurnPanel
+          pendingTurn={pendingTurn}
+          claimedSlot={claimedSlot}
+          onPick={sendSetupPick}
+        />
+      )}
+
+      {!state && !pendingTurn && status === "connected" && (
         <div className={styles.empty}>Waiting for the host to share state…</div>
       )}
 
@@ -455,6 +495,67 @@ function CompanionScreen() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function SetupTurnPanel({
+  pendingTurn,
+  claimedSlot,
+  onPick,
+}: {
+  pendingTurn: Extract<HostToCompanionMessage, { type: "SETUP_TURN" }>;
+  claimedSlot: number | null;
+  onPick: (optionId: string) => void;
+}) {
+  const myTurn = claimedSlot === pendingTurn.seatIndex;
+  const pick = pendingTurn.definition
+    ? findPlayerPickStep(pendingTurn.definition)
+    : undefined;
+  // The host sends a synthetic single-step definition snapshot; the
+  // step's options are the resolved SetupOption objects. Filter to
+  // what the host says is currently visible.
+  const allOptions = pick?.options ?? [];
+  const visible = pendingTurn.optionIds
+    .map((id) => allOptions.find((o) => o.id === id))
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  const excluded = new Set(pendingTurn.excludedOptionIds);
+
+  if (!myTurn) {
+    return (
+      <div className={styles.empty}>
+        Waiting for seat {pendingTurn.seatIndex + 1} to pick a {pick?.step.label.toLowerCase() ?? "card"}…
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.factionPicker}>
+      <div className={styles.factionPickerHeader}>
+        Your turn — choose a {pick?.step.label.toLowerCase() ?? "card"}
+      </div>
+      {visible.map((option) => {
+        const isBlocked = excluded.has(option.id);
+        return (
+          <button
+            key={option.id}
+            type="button"
+            disabled={isBlocked}
+            onClick={() => onPick(option.id)}
+            className={styles.factionButton}
+            style={{
+              borderColor: option.color ?? "var(--color-border)",
+            }}
+          >
+            <span
+              className={styles.factionSwatch}
+              style={{ background: option.color ?? "var(--color-border)" }}
+              aria-hidden
+            />
+            <span>{option.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

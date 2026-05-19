@@ -13,7 +13,16 @@
  * setupContext is the contract handed back via onSubmit; the parent
  * /timer page projects it onto the runtime player.metadata bag.
  */
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -58,12 +67,39 @@ export interface GameConfig {
   setupContext?: SetupContext;
 }
 
+// Imperative handle exposed to parents (the timer page) so peer
+// messages can route into the wizard without lifting all of its state.
+// Currently a single method — adds more if more peer-driven steps land.
+export interface GameSetupWizardHandle {
+  applyPick: (stepId: string, seatIndex: number, optionId: string) => void;
+}
+
+// Signals the wizard emits when it's on a turn-based player-pick step.
+// The parent wires these to peer messages so seated companions can
+// pick on their own devices.
+export interface WizardPeerHooks {
+  // Called when the active seat changes on a turn-based step (and on
+  // first entry to the step). The seat the host is currently awaiting.
+  onTurnStart?: (info: {
+    stepId: string;
+    seatIndex: number;
+    seatName: string;
+    optionIds: string[];
+    excludedOptionIds: string[];
+    definition: GameDefinition;
+  }) => void;
+  // Called when a turn-based step finishes (all seats filled, wizard
+  // advances past the step, or wizard closes).
+  onTurnEnd?: (info: { stepId: string }) => void;
+}
+
 interface GameSetupWizardProps {
   isOpen: boolean;
   onSubmit: (config: GameConfig) => void;
   onClose?: () => void;
   definitions?: GameDefinition[];
   initialDefinitionId?: string;
+  peerHooks?: WizardPeerHooks;
 }
 
 // ── Screen catalogue ────────────────────────────────────────────────
@@ -254,13 +290,20 @@ interface TrackPlayersRow {
 
 // ── Component ───────────────────────────────────────────────────────
 
-export const GameSetupWizard = ({
-  isOpen,
-  onSubmit,
-  onClose,
-  definitions = listDefinitions(),
-  initialDefinitionId = DEFAULT_DEFINITION_ID,
-}: GameSetupWizardProps) => {
+export const GameSetupWizard = forwardRef<
+  GameSetupWizardHandle,
+  GameSetupWizardProps
+>(function GameSetupWizard(
+  {
+    isOpen,
+    onSubmit,
+    onClose,
+    definitions = listDefinitions(),
+    initialDefinitionId = DEFAULT_DEFINITION_ID,
+    peerHooks,
+  },
+  ref,
+) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const initialDefinition = useMemo(
@@ -318,6 +361,50 @@ export const GameSetupWizard = ({
   const currentScreen = screens[screenIndex];
   const isLast = screenIndex === screens.length - 1;
   const isFirst = screenIndex === 0;
+
+  // Imperative pick (driven by peer SETUP_PICK messages). Same shape
+  // as the picker's local pick() so the host's reducer is the only
+  // mutator of player-pick context.
+  const applyPick = useCallback(
+    (stepId: string, seatIndex: number, optionId: string) => {
+      setContext((prev) => {
+        const current =
+          prev[stepId]?.kind === "player-pick"
+            ? (prev[stepId] as Extract<
+                SetupChoice,
+                { kind: "player-pick" }
+              >)
+            : { kind: "player-pick" as const, picks: {} };
+        return {
+          ...prev,
+          [stepId]: {
+            ...current,
+            picks: { ...current.picks, [seatIndex]: optionId },
+          },
+        };
+      });
+    },
+    [],
+  );
+  useImperativeHandle(ref, () => ({ applyPick }), [applyPick]);
+
+  // Fire onTurnEnd when navigating away from a turn-based player-pick
+  // screen so the parent can broadcast SETUP_DONE to companions.
+  const lastTurnBasedStepIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const cs = currentScreen;
+    const onScreenForStep =
+      cs.kind === "setup-step" &&
+      cs.step.kind.type === "player-pick" &&
+      cs.step.kind.mode === "turn-based"
+        ? cs.step.id
+        : null;
+    const prev = lastTurnBasedStepIdRef.current;
+    if (prev && prev !== onScreenForStep) {
+      peerHooks?.onTurnEnd?.({ stepId: prev });
+    }
+    lastTurnBasedStepIdRef.current = onScreenForStep;
+  }, [currentScreen, peerHooks]);
 
   // ── Per-screen guards ───────────────────────────────────────────
 
@@ -405,6 +492,7 @@ export const GameSetupWizard = ({
               step={currentScreen.step}
               context={context}
               setContext={setContext}
+              peerHooks={peerHooks}
             />
           )}
           {currentScreen.kind === "track-players" && (
@@ -459,7 +547,7 @@ export const GameSetupWizard = ({
       </form>
     </dialog>
   );
-};
+});
 
 // ── Validation ──────────────────────────────────────────────────────
 
@@ -641,10 +729,12 @@ function StepScreen({
   step,
   context,
   setContext,
+  peerHooks,
 }: {
   step: SetupStep;
   context: SetupContext;
   setContext: (updater: (prev: SetupContext) => SetupContext) => void;
+  peerHooks?: WizardPeerHooks;
 }) {
   switch (step.kind.type) {
     case "multi-toggle":
@@ -769,7 +859,9 @@ function StepScreen({
           step={step}
           options={step.kind.options}
           constraints={mutexPairsOf(step.kind.constraints)}
+          mode={step.kind.mode}
           context={context}
+          peerHooks={peerHooks}
           onChange={(updater) =>
             setContext((prev) => {
               const current =
@@ -1243,13 +1335,17 @@ function PlayerPickScreen({
   step,
   options,
   constraints,
+  mode,
   context,
+  peerHooks,
   onChange,
 }: {
   step: SetupStep;
   options: SetupOption[];
   constraints: [string, string][];
+  mode: "host-only" | "turn-based";
   context: SetupContext;
+  peerHooks?: WizardPeerHooks;
   onChange: (
     updater: (
       current: Extract<SetupChoice, { kind: "player-pick" }>,
@@ -1431,6 +1527,45 @@ function PlayerPickScreen({
       nextDown !== -1 ? nextDown : seats.findIndex((_, i) => picks[i] == null);
     if (next !== -1 && next !== activeSeat) setActiveSeat(next);
   }, [picks, activeSeat, seats]);
+
+  // Emit onTurnStart per active seat when in turn-based mode. The
+  // parent broadcasts SETUP_TURN; companions seated at that index
+  // render their picker overlay. Re-fires when the visible pool
+  // shrinks (e.g. after a draft re-shuffle) so the seated companion
+  // sees the latest legal list.
+  const findDefinition = (): GameDefinition | undefined => {
+    // The picker has access to the merged option list but not the
+    // top-level definition. Reconstruct a minimal definition so the
+    // companion can render the picker — for now we ship the step's
+    // options inline as `definition.setupSteps[0].kind.options` via
+    // the picker-only synthetic def below.
+    return undefined;
+  };
+  useEffect(() => {
+    if (mode !== "turn-based") return;
+    if (!peerHooks?.onTurnStart) return;
+    if (activeSeat < 0 || activeSeat >= seats.length) return;
+    if (picks[activeSeat] != null) return; // already filled, no turn
+    peerHooks.onTurnStart({
+      stepId: step.id,
+      seatIndex: activeSeat,
+      seatName: seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`,
+      optionIds: visible.map((o) => o.id),
+      excludedOptionIds: Array.from(blockedForActive),
+      definition:
+        findDefinition() ??
+        // Synthetic minimal definition for the companion picker —
+        // a single-step shell with this step's resolved options.
+        ({
+          schemaVersion: 1,
+          id: "__wizard-snapshot",
+          name: "Setup",
+          defaultExpectedTurns: 0,
+          defaultAverageSeconds: 0,
+          setupSteps: [step],
+        } as unknown as GameDefinition),
+    });
+  }, [mode, peerHooks, activeSeat, seats, picks, visible, blockedForActive, step]);
 
   return (
     <>
