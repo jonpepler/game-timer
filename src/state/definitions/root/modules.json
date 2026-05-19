@@ -62,28 +62,29 @@
       "squires": { "label": "Squires and Disciples", "module": "marauders" }
     },
     "hireling": {
-      "patrol":       { "label": "Forest Patrol",     "module": "marauders",  "excludeOptionIds": ["marquise"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/patrol.svg" } } },
-      "dynasty":      { "label": "Last Dynasty",      "module": "marauders",  "excludeOptionIds": ["eyrie"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/dynasty.svg" } } },
-      "uprising":     { "label": "Spring Uprising",   "module": "marauders",  "excludeOptionIds": ["alliance"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/uprising.svg" } } },
-      "exile":        { "label": "The Exile",         "module": "marauders",  "excludeOptionIds": ["vagabond", "knaves"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/exile.svg" } } },
-      "prophets":     { "label": "Prophets of the Sun","module": "riverfolk", "excludeOptionIds": ["lizards"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/prophets.svg" } } },
-      "flotilla":     { "label": "Riverfolk Flotilla","module": "riverfolk",  "excludeOptionIds": ["riverfolk"],"assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flotilla.svg" } } },
-      "bandits":      { "label": "Bandit Crew",       "module": "riverfolk",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/bandits.svg" } } },
-      "expedition":   { "label": "Sunward Expedition","module": "underworld", "excludeOptionIds": ["duchy"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/expedition.svg" } } },
-      "spies":        { "label": "Corvid Spies",      "module": "underworld", "excludeOptionIds": ["corvids"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/spies.svg" } } },
-      "protector":    { "label": "Furious Protector", "module": "underworld",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/protector.svg" } } },
-      "flameBearers": { "label": "Flame Bearers",     "module": "marauders",  "excludeOptionIds": ["hundreds"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flameBearers.svg" } } },
-      "vaultKeepers": { "label": "Vault Keepers",     "module": "marauders",  "excludeOptionIds": ["keepers"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vaultKeepers.svg" } } },
-      "band":         { "label": "Street Band",       "module": "marauders",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/band.svg" } } },
-      "advocates":    { "label": "Advocates",         "module": "homeland",   "excludeOptionIds": ["twilight"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/advocates.svg" } } },
-      "roamers":      { "label": "Roamers",           "module": "homeland",   "excludeOptionIds": ["lilypad"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/roamers.svg" } } },
-      "farmers":      { "label": "Farmers",           "module": "homeland",                                     "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/farmers.svg" } } }
+      "patrol":       { "label": "Forest Patrol",      "demotedLabel": "Feline Physicians", "module": "marauders",  "excludeOptionIds": ["marquise"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/patrol.svg" } } },
+      "dynasty":      { "label": "Last Dynasty",       "demotedLabel": "Bluebird Nobles",   "module": "marauders",  "excludeOptionIds": ["eyrie"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/dynasty.svg" } } },
+      "uprising":     { "label": "Spring Uprising",    "demotedLabel": "Rabbit Scouts",     "module": "marauders",  "excludeOptionIds": ["alliance"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/uprising.svg" } } },
+      "exile":        { "label": "The Exile",          "demotedLabel": "The Brigand",       "module": "marauders",  "excludeOptionIds": ["vagabond", "knaves"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/exile.svg" } } },
+      "prophets":     { "label": "Prophets of the Sun","demotedLabel": null,                "module": "riverfolk",  "excludeOptionIds": ["lizards"],  "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/prophets.svg" } } },
+      "flotilla":     { "label": "Riverfolk Flotilla", "demotedLabel": null,                "module": "riverfolk",  "excludeOptionIds": ["riverfolk"], "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flotilla.svg" } } },
+      "bandits":      { "label": "Bandit Crew",        "demotedLabel": null,                "module": "riverfolk",                                    "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/bandits.svg" } } },
+      "expedition":   { "label": "Sunward Expedition", "demotedLabel": "Mole Artisans",     "module": "underworld", "excludeOptionIds": ["duchy"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/expedition.svg" } } },
+      "spies":        { "label": "Corvid Spies",       "demotedLabel": "Raven Sentinels",   "module": "underworld", "excludeOptionIds": ["corvids"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/spies.svg" } } },
+      "protector":    { "label": "Furious Protector",  "demotedLabel": "Stoic Protector",   "module": "underworld",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/protector.svg" } } },
+      "flameBearers": { "label": "Flame Bearers",      "demotedLabel": "Rat Smugglers",     "module": "marauders",  "excludeOptionIds": ["hundreds"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flameBearers.svg" } } },
+      "vaultKeepers": { "label": "Vault Keepers",      "demotedLabel": "Badger Bodyguards", "module": "marauders",  "excludeOptionIds": ["keepers"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vaultKeepers.svg" } } },
+      "band":         { "label": "Street Band",        "demotedLabel": "Popular Band",      "module": "marauders",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/band.svg" } } },
+      "advocates":    { "label": "Sunny Advocates",    "demotedLabel": "Bat Messengers",    "module": "homeland",   "excludeOptionIds": ["twilight"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/advocates.svg" } } },
+      "roamers":      { "label": "River Roamers",      "demotedLabel": "Frog Tinkers",      "module": "homeland",   "excludeOptionIds": ["lilypad"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/roamers.svg" } } },
+      "farmers":      { "label": "Prosperous Farmers", "demotedLabel": "Struggling Farmers","module": "homeland",                                     "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/farmers.svg" } } }
     },
     "faction": {
       "marquise": {
         "label": "Marquise de Cat",
         "color": "#F37021",
         "module": "base",
+        "matchingHireling": "patrol",
         "description": "Industrial cats building sawmills, workshops, and recruiters across the wood.",
         "adsetNote": "First-pass setup text; verify against the official rulebook before relying on it for tournament play.",
         "adsetSteps": [
@@ -105,6 +106,7 @@
         "label": "Eyrie Dynasties",
         "color": "#2862A1",
         "module": "base",
+        "matchingHireling": "dynasty",
         "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -127,6 +129,7 @@
         "label": "Woodland Alliance",
         "color": "#4D8C3D",
         "module": "base",
+        "matchingHireling": "uprising",
         "description": "Forest revolutionaries spreading sympathy and igniting open revolt.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -145,7 +148,20 @@
         "label": "Vagabond",
         "color": "#EBEBEB",
         "module": "base",
+        "matchingHireling": "exile",
         "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions.",
+        "characterPool": [
+          { "id": "thief",      "label": "Thief",      "startingItems": ["boot", "torch", "tea", "sword"] },
+          { "id": "tinker",     "label": "Tinker",     "startingItems": ["boot", "torch", "bag", "hammer"] },
+          { "id": "ranger",     "label": "Ranger",     "startingItems": ["boot", "torch", "crossbow", "sword"] },
+          { "id": "vagrant",    "label": "Vagrant",    "startingItems": ["coin", "torch", "boot"] },
+          { "id": "arbiter",    "label": "Arbiter",    "startingItems": ["boot", "torch", "sword", "sword"] },
+          { "id": "scoundrel",  "label": "Scoundrel",  "startingItems": ["boot", "boot", "torch", "crossbow"] },
+          { "id": "adventurer", "label": "Adventurer", "startingItems": ["boot", "torch", "hammer"] },
+          { "id": "ronin",      "label": "Ronin",      "startingItems": ["boot", "boot", "torch", "sword"] },
+          { "id": "harrier",    "label": "Harrier",    "startingItems": ["coin", "torch", "sword", "crossbow"] }
+        ],
+        "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
           "Use the Vagabond character that was dealt with this setup card.",
@@ -182,6 +198,7 @@
         "label": "Lizard Cult",
         "color": "#FCD629",
         "module": "riverfolk",
+        "matchingHireling": "prophets",
         "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -200,6 +217,7 @@
         "label": "Riverfolk Company",
         "color": "#50B8B4",
         "module": "riverfolk",
+        "matchingHireling": "flotilla",
         "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -219,6 +237,7 @@
         "label": "Underground Duchy",
         "color": "#E39C76",
         "module": "underworld",
+        "matchingHireling": "expedition",
         "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -238,6 +257,7 @@
         "label": "Corvid Conspiracy",
         "color": "#6E448F",
         "module": "underworld",
+        "matchingHireling": "spies",
         "description": "Crow plotters laying secret tokens that punish meddling rivals.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -257,6 +277,7 @@
         "label": "Lord of the Hundreds",
         "color": "#C8232A",
         "module": "marauders",
+        "matchingHireling": "flameBearers",
         "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours.",
         "adsetNote": "Transcribed from the Decimator85 ADSET card scan (corrected for OCR errors).",
         "adsetSteps": [
@@ -283,6 +304,7 @@
         "label": "Keepers in Iron",
         "color": "#969696",
         "module": "marauders",
+        "matchingHireling": "vaultKeepers",
         "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -303,6 +325,7 @@
         "label": "Lilypad Diaspora",
         "color": "#385723",
         "module": "homeland",
+        "matchingHireling": "roamers",
         "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -321,6 +344,7 @@
         "label": "Twilight Council",
         "color": "#4A2E1B",
         "module": "homeland",
+        "matchingHireling": "advocates",
         "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
@@ -340,7 +364,23 @@
         "label": "Knaves of the Deepwood",
         "color": "#595959",
         "module": "homeland",
+        "matchingHireling": "exile",
         "description": "Forest miscreants raiding warriors and ransoming hostages back for victory.",
+        "captainPool": [
+          { "id": "adventurer", "label": "Adventurer", "startingItems": ["hammer", "coin"] },
+          { "id": "arbiter",    "label": "Arbiter",    "startingItems": ["sword", "coin"] },
+          { "id": "cheat",      "label": "Cheat",      "startingItems": ["boot", "tea"] },
+          { "id": "gladiator",  "label": "Gladiator",  "startingItems": ["sword", "hammer"] },
+          { "id": "harrier",    "label": "Harrier",    "startingItems": ["boot", "crossbow"] },
+          { "id": "jailor",     "label": "Jailor",     "startingItems": ["crossbow", "bag"] },
+          { "id": "ranger",     "label": "Ranger",     "startingItems": ["sword", "crossbow"] },
+          { "id": "ronin",      "label": "Ronin",      "startingItems": ["boot", "sword"] },
+          { "id": "scoundrel",  "label": "Scoundrel",  "startingItems": ["crossbow", "tea"] },
+          { "id": "thief",      "label": "Thief",      "startingItems": ["boot", "bag"] },
+          { "id": "tinker",     "label": "Tinker",     "startingItems": ["bag", "hammer"] },
+          { "id": "vagrant",    "label": "Vagrant",    "startingItems": ["tea", "coin"] }
+        ],
+        "captainPoolNote": "Four Captain cards are dealt face-up alongside the Knaves setup card; the player chooses three to use.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
           "Choose 3 of the 4 Captain cards dealt with this setup card; return the rejected card to the box.",

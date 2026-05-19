@@ -367,9 +367,17 @@ export type SetupChoice =
   | { kind: "toggle"; value: boolean }
   | { kind: "multi-toggle"; selectedIds: string[] }
   // Optional steps record `skipped: true`; otherwise `dealtIds` holds
-  // the randomly-drawn option ids (length === step.kind.count).
+  // the randomly-drawn option ids (length === step.kind.count) and
+  // `demotedIds` is a subset of those that should render in their
+  // demoted (flipped-card) state. Demotion is driven by the seat count
+  // for the hireling deal (ADSET A.6.2).
   | { kind: "deal-random"; skipped: true }
-  | { kind: "deal-random"; skipped: false; dealtIds: string[] }
+  | {
+      kind: "deal-random";
+      skipped: false;
+      dealtIds: string[];
+      demotedIds?: string[];
+    }
   // Per-seat name + order. Index in the array is the seat (turn order).
   // Later turn-based steps (player-pick) read this to drive the picker.
   | { kind: "seat-players"; seats: Array<{ name: string }> }
@@ -377,7 +385,20 @@ export type SetupChoice =
   // collects this from the faction-picker rows; the page projects it
   // onto player.metadata at apply time so renderers can read it
   // generically.
-  | { kind: "player-pick"; picks: Record<number, string> };
+  //
+  // `dealtIds` is populated when the upstream draft toggle is on:
+  // n+1 option ids drawn from the legal pool (modules visible, not
+  // matched by an already-dealt hireling, not picked by a prior seat).
+  // When undefined, the picker offers the entire visible pool.
+  //
+  // `characters` carries per-option subdraws — Vagabond gets 1
+  // character, Knaves get 4 captains. Keyed by option id.
+  | {
+      kind: "player-pick";
+      picks: Record<number, string>;
+      dealtIds?: string[];
+      characters?: Record<string, string[]>;
+    };
 
 export type SetupContext = Record<string, SetupChoice>;
 

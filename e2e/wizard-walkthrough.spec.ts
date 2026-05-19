@@ -103,6 +103,10 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   // Shuffle in 3 (random Marauder + Riverfolk pool since those expansions are on).
   await page.getByRole("button", { name: /Shuffle/ }).click();
   await save(page, "09-hirelings-dealt");
+  // The shuffled hirelings might exclude some factions via matchingHireling.
+  // For a deterministic faction-picker screenshot below, skip them out
+  // before advancing.
+  await page.getByRole("button", { name: /^Skip$/ }).click();
   await page.getByRole("button", { name: /^Next/ }).click();
 
   // ── 9. Draft factions (toggle) ───────────────────────────
@@ -128,23 +132,63 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   await page.getByTestId("faction-card-alliance").click();
   await page.getByTestId("faction-card-riverfolk").click();
   await save(page, "12-faction-picker-all-picked");
-  await page.getByRole("button", { name: /^Next/ }).click();
 
-  // ── 11. ADSET confirmation ───────────────────────────────
-  await expect(
-    page.getByRole("heading", { name: /set up the table/i }),
-  ).toBeVisible();
-  await expect(page.getByText("Marquise de Cat")).toBeVisible();
-  await expect(page.getByText("Place your Keep")).toBeVisible();
-  await save(page, "13-adset-confirm");
-
-  // Final Start Game.
+  // ── 11. Start Game (no confirmation screen per ADSET — players
+  //        perform their setup immediately on pick) ──────────────
   await page.getByRole("button", { name: /start game/i }).click();
   // Modal closes; timer page shows the active-player banner.
   await expect(
     page.getByRole("heading", { name: /game setup/i }),
   ).toHaveCount(0);
-  await save(page, "14-timer-after-start");
+  await save(page, "13-timer-after-start");
+});
+
+test("Root faction draft — draft toggle dishes n+1 cards and re-shuffles", async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  // Game → Turns → Expansions → Map → Deck → Landmarks → Seating →
+  // Hirelings → Draft → Faction. Default Marauder is off; turn on so
+  // the wizard reaches the picker with a meaningful pool.
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByLabel("Marauder Expansion").check();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Hirelings — leave skipped.
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Draft → ON.
+  await page.getByLabel(/Enabled|Disabled/).check();
+  await save(page, "draft-01-toggle-on");
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Faction picker with draft on: n+1 cards visible. With 4 seats →
+  // 5 dealt cards out of the legal pool.
+  await expect(page.getByText(/Drafting 5 cards/)).toBeVisible();
+  await save(page, "draft-02-faction-pool");
+});
+
+test("Hireling demotion — three dealt, two demoted at 4 players", async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByLabel("Marauder Expansion").check();
+  // Map / Deck / Landmarks / Seating (default 4)
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Now Hirelings — shuffle.
+  await page.getByRole("button", { name: /Shuffle/ }).click();
+  await expect(page.getByText(/2 of 3 start demoted at 4 players/)).toBeVisible();
+  await save(page, "hirelings-demoted-4p");
 });
 
 test("Generic flow — collapses to Game / Turns / Players", async ({

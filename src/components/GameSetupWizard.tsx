@@ -71,8 +71,7 @@ type WizardScreen =
   | { kind: "game"; id: "game"; label: string }
   | { kind: "expected-turns"; id: "expected-turns"; label: string }
   | { kind: "setup-step"; id: string; label: string; step: SetupStep }
-  | { kind: "track-players"; id: "track-players"; label: string }
-  | { kind: "adset-confirm"; id: "adset-confirm"; label: string };
+  | { kind: "track-players"; id: "track-players"; label: string };
 
 const buildScreens = (definition: GameDefinition): WizardScreen[] => {
   const screens: WizardScreen[] = [
@@ -81,11 +80,9 @@ const buildScreens = (definition: GameDefinition): WizardScreen[] => {
   ];
   const steps = definition.setupSteps ?? [];
   let hasSeating = false;
-  let hasFactionPick = false;
   for (const step of steps) {
     screens.push({ kind: "setup-step", id: step.id, label: step.label, step });
     if (step.kind.type === "seat-players") hasSeating = true;
-    if (step.kind.type === "player-pick") hasFactionPick = true;
   }
   if (!hasSeating) {
     screens.push({
@@ -94,9 +91,8 @@ const buildScreens = (definition: GameDefinition): WizardScreen[] => {
       label: "Players",
     });
   }
-  if (hasFactionPick) {
-    screens.push({ kind: "adset-confirm", id: "adset-confirm", label: "Setup" });
-  }
+  // Per ADSET: players perform their faction setup immediately on pick,
+  // not retrospectively. No closing confirmation screen.
   return screens;
 };
 
@@ -189,6 +185,56 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   return pool.slice(0, Math.min(count, pool.length));
+};
+
+// Per-faction character draw (ADSET A.8.2): if Vagabond is dealt, deal
+// 1 character; if Knaves is dealt, deal 4 captains. Pools live on the
+// faction option as `characterPool` / `captainPool` (passthrough).
+interface CharacterDraw {
+  poolField: "characterPool" | "captainPool";
+  count: number;
+}
+const CHARACTER_DRAWS: Record<string, CharacterDraw> = {
+  vagabond: { poolField: "characterPool", count: 1 },
+  knaves: { poolField: "captainPool", count: 4 },
+};
+
+const labelForCharacter = (
+  factionOption: SetupOption,
+  characterId: string,
+): string => {
+  const draw = CHARACTER_DRAWS[factionOption.id];
+  if (!draw) return characterId;
+  const pool = (
+    factionOption as unknown as Record<
+      string,
+      Array<{ id: string; label?: string }> | undefined
+    >
+  )[draw.poolField];
+  if (!Array.isArray(pool)) return characterId;
+  return pool.find((c) => c.id === characterId)?.label ?? characterId;
+};
+
+const dealCharactersFor = (
+  factionIds: string[],
+  options: SetupOption[],
+): Record<string, string[]> => {
+  const out: Record<string, string[]> = {};
+  for (const id of factionIds) {
+    const draw = CHARACTER_DRAWS[id];
+    if (!draw) continue;
+    const option = options.find((o) => o.id === id);
+    if (!option) continue;
+    const pool = (
+      option as unknown as Record<string, Array<{ id: string }> | undefined>
+    )[draw.poolField];
+    if (!Array.isArray(pool) || pool.length === 0) continue;
+    out[id] = shuffleAndTake(
+      pool.map((c) => c.id),
+      draw.count,
+    );
+  }
+  return out;
 };
 
 const GENERIC_PALETTE = [
@@ -366,13 +412,6 @@ export const GameSetupWizard = ({
               onEnabledChange={setTrackPlayers}
               roster={trackRoster}
               onRosterChange={setTrackRoster}
-            />
-          )}
-          {currentScreen.kind === "adset-confirm" && (
-            <AdsetConfirmScreen
-              definition={definition}
-              context={context}
-              expectedTurns={expectedTurns}
             />
           )}
           {screenError && <p className={styles.error}>{screenError}</p>}
@@ -724,11 +763,17 @@ function StepScreen({
           options={step.kind.options}
           constraints={mutexPairsOf(step.kind.constraints)}
           context={context}
-          onChange={(picks) =>
-            setContext((prev) => ({
-              ...prev,
-              [step.id]: { kind: "player-pick", picks },
-            }))
+          onChange={(updater) =>
+            setContext((prev) => {
+              const current =
+                prev[step.id]?.kind === "player-pick"
+                  ? (prev[step.id] as Extract<
+                      SetupChoice,
+                      { kind: "player-pick" }
+                    >)
+                  : { kind: "player-pick" as const, picks: {} };
+              return { ...prev, [step.id]: updater(current) };
+            })
           }
         />
       );
@@ -995,6 +1040,15 @@ function SeatPlayersScreen({
   );
 }
 
+// ADSET A.6.2: how many of the dealt hirelings start demoted given
+// the player count. 1-2 players: 0; 3: 1; 4: 2; 5+: 3.
+const demoteCountForSeats = (seats: number): number => {
+  if (seats <= 2) return 0;
+  if (seats === 3) return 1;
+  if (seats === 4) return 2;
+  return 3;
+};
+
 function DealRandomScreen({
   step,
   options,
@@ -1019,23 +1073,37 @@ function DealRandomScreen({
     choice?.kind === "deal-random" && choice.skipped === false
       ? choice.dealtIds
       : null;
+  const demotedIds =
+    choice?.kind === "deal-random" && choice.skipped === false
+      ? choice.demotedIds ?? []
+      : [];
+
+  // Seat count drives the demote rule. We treat any seat-players choice
+  // in the context as the source — Root has one, generic games have
+  // none (in which case demoteCount = 0).
+  const seatChoice = Object.values(context).find(
+    (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
+      c.kind === "seat-players",
+  );
+  const seatCount = seatChoice?.seats.length ?? 0;
+  const demoteN = demoteCountForSeats(seatCount);
 
   const reshuffle = () => {
+    const newDealt = shuffleAndTake(
+      visible.map((o) => o.id),
+      count,
+    );
+    const newDemoted = shuffleAndTake(newDealt, demoteN);
     onChange({
       kind: "deal-random",
       skipped: false,
-      dealtIds: shuffleAndTake(
-        visible.map((o) => o.id),
-        count,
-      ),
+      dealtIds: newDealt,
+      demotedIds: newDemoted,
     });
   };
 
   const skip = () => onChange({ kind: "deal-random", skipped: true });
 
-  // If we don't have a deal yet (and we're not skipping), deal once on
-  // first render via effect would be cleaner — but doing it here keeps
-  // the screen idempotent during navigation.
   const cards = dealtIds
     ? dealtIds.map((id) => visible.find((o) => o.id === id)).filter(Boolean)
     : [];
@@ -1053,16 +1121,42 @@ function DealRandomScreen({
           <div className={styles.skipNotice}>Skipped — no hirelings this game.</div>
         )}
         {!isSkipped && dealtIds && (
-          <div className={styles.dealtList}>
-            {(cards as SetupOption[]).map((o) => (
-              <div key={o.id} className={styles.dealtCard}>
-                <span className={styles.dealtLabel}>{o.label}</span>
-                {o.module && (
-                  <span className={styles.dealtModule}>{o.module}</span>
-                )}
-              </div>
-            ))}
-          </div>
+          <>
+            {demoteN > 0 && (
+              <span className={styles.help}>
+                Per ADSET A.6.2: {demoteN} of {count} start demoted at {seatCount}{" "}
+                players.
+              </span>
+            )}
+            <div className={styles.dealtList}>
+              {(cards as SetupOption[]).map((o) => {
+                const isDemoted = demotedIds.includes(o.id);
+                const demoLabel = (
+                  o as unknown as { demotedLabel?: string | null }
+                ).demotedLabel;
+                return (
+                  <div
+                    key={o.id}
+                    className={`${styles.dealtCard} ${
+                      isDemoted ? styles.dealtCardDemoted : ""
+                    }`}
+                  >
+                    <span className={styles.dealtLabel}>
+                      {isDemoted && demoLabel ? demoLabel : o.label}
+                    </span>
+                    {isDemoted && (
+                      <span className={styles.dealtDemotedTag}>
+                        demoted{demoLabel == null ? " (?)" : ""}
+                      </span>
+                    )}
+                    {o.module && (
+                      <span className={styles.dealtModule}>{o.module}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
         <div className={styles.actionsLeft}>
           <button
@@ -1083,6 +1177,35 @@ function DealRandomScreen({
   );
 }
 
+// Convention helper: find a kind="toggle" choice in context whose id
+// starts with "draft" (case-insensitive). Lets the player-pick step
+// react to a sibling Draft toggle without taking a hard dep on its id.
+const findDraftToggle = (context: SetupContext): boolean => {
+  for (const [id, choice] of Object.entries(context)) {
+    if (
+      choice.kind === "toggle" &&
+      id.toLowerCase().startsWith("draft") &&
+      choice.value
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Find the dealt hireling ids (if any). Walks every deal-random in
+// the context — pragmatic for now; if a definition has more than one
+// deal-random step the picker would treat both as sources of exclusion.
+const findDealtHirelingIds = (context: SetupContext): string[] => {
+  const ids: string[] = [];
+  for (const choice of Object.values(context)) {
+    if (choice.kind === "deal-random" && choice.skipped === false) {
+      ids.push(...choice.dealtIds);
+    }
+  }
+  return ids;
+};
+
 function PlayerPickScreen({
   step,
   options,
@@ -1094,17 +1217,103 @@ function PlayerPickScreen({
   options: SetupOption[];
   constraints: [string, string][];
   context: SetupContext;
-  onChange: (picks: Record<number, string>) => void;
+  onChange: (
+    updater: (
+      current: Extract<SetupChoice, { kind: "player-pick" }>,
+    ) => Extract<SetupChoice, { kind: "player-pick" }>,
+  ) => void;
 }) {
-  const filtered = visibleOptions(options, context);
   const seatChoice = Object.values(context).find(
     (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
       c.kind === "seat-players",
   );
   const seats = seatChoice?.seats ?? [];
   const choice = context[step.id];
-  const picks =
-    choice?.kind === "player-pick" ? choice.picks : {};
+  const playerPick: Extract<SetupChoice, { kind: "player-pick" }> =
+    choice?.kind === "player-pick"
+      ? choice
+      : { kind: "player-pick", picks: {} };
+  const picks = playerPick.picks;
+  const dealtIds = playerPick.dealtIds;
+  const characters = playerPick.characters ?? {};
+
+  const draftEnabled = findDraftToggle(context);
+  const dealtHirelings = findDealtHirelingIds(context);
+
+  // Faction ids excluded by any dealt hireling (via faction.matchingHireling).
+  const hirelingExcludedIds = useMemo(() => {
+    if (dealtHirelings.length === 0) return new Set<string>();
+    const excluded = new Set<string>();
+    for (const o of options) {
+      const mh = (o as { matchingHireling?: string }).matchingHireling;
+      if (mh && dealtHirelings.includes(mh)) excluded.add(o.id);
+    }
+    return excluded;
+  }, [options, dealtHirelings]);
+
+  // The legal pool — module-visible AND not hireling-excluded. This
+  // is what the draft draws from, and what's shown when draft is off.
+  const pool = useMemo(
+    () =>
+      visibleOptions(options, context).filter(
+        (o) => !hirelingExcludedIds.has(o.id),
+      ),
+    [options, context, hirelingExcludedIds],
+  );
+
+  const targetDealCount = seats.length + 1;
+
+  // Lazy deal when draft turns on and we don't yet have a hand.
+  useEffect(() => {
+    if (!draftEnabled) return;
+    if (dealtIds != null) return;
+    if (pool.length === 0 || seats.length === 0) return;
+    const newDealt = shuffleAndTake(
+      pool.map((o) => o.id),
+      targetDealCount,
+    );
+    const newCharacters = dealCharactersFor(newDealt, options);
+    onChange((curr) => ({
+      ...curr,
+      dealtIds: newDealt,
+      characters: newCharacters,
+    }));
+  }, [draftEnabled, dealtIds, pool, seats.length, targetDealCount, options, onChange]);
+
+  // If draft toggled off, drop the dealt hand so re-enabling redeals
+  // fresh against the current pool.
+  useEffect(() => {
+    if (draftEnabled) return;
+    if (dealtIds == null) return;
+    onChange((curr) => {
+      const { dealtIds: _d, characters: _c, ...rest } = curr;
+      return rest;
+    });
+  }, [draftEnabled, dealtIds, onChange]);
+
+  const reshuffle = () => {
+    const newDealt = shuffleAndTake(
+      pool.map((o) => o.id),
+      targetDealCount,
+    );
+    const newCharacters = dealCharactersFor(newDealt, options);
+    onChange((curr) => ({
+      ...curr,
+      picks: {},
+      dealtIds: newDealt,
+      characters: newCharacters,
+    }));
+    setActiveSeat(0);
+  };
+
+  // What's actually rendered: dealt subset (if draft) or full pool.
+  const visible = useMemo(() => {
+    if (!draftEnabled) return pool;
+    if (!dealtIds) return [];
+    return dealtIds
+      .map((id) => pool.find((o) => o.id === id))
+      .filter((x): x is SetupOption => !!x);
+  }, [draftEnabled, dealtIds, pool]);
 
   const [activeSeat, setActiveSeat] = useState(0);
   // When seats change, clamp activeSeat to range.
@@ -1129,13 +1338,23 @@ function PlayerPickScreen({
 
   const blockedForActive = blockedFor(activeSeat, picks, constraints);
 
+  // pick() writes via the updater so it composes correctly even when
+  // multiple clicks land before React re-renders. Auto-advance happens
+  // in an effect below — keeping pick() pure on the choice.
   const pick = (optionId: string) => {
-    const next = { ...picks, [activeSeat]: optionId };
-    onChange(next);
-    // Auto-advance to next unfilled seat.
-    const nextUnfilled = seats.findIndex((_, i) => next[i] == null);
-    if (nextUnfilled !== -1) setActiveSeat(nextUnfilled);
+    const seatIdx = activeSeat;
+    onChange((curr) => ({
+      ...curr,
+      picks: { ...curr.picks, [seatIdx]: optionId },
+    }));
   };
+
+  // Whenever the current seat gets filled, jump to the next unfilled.
+  useEffect(() => {
+    if (picks[activeSeat] == null) return;
+    const next = seats.findIndex((_, i) => picks[i] == null);
+    if (next !== -1 && next !== activeSeat) setActiveSeat(next);
+  }, [picks, activeSeat, seats]);
 
   return (
     <>
@@ -1153,8 +1372,27 @@ function PlayerPickScreen({
         </span>
       </div>
 
+      {draftEnabled && (
+        <div className={styles.draftBar}>
+          <span className={styles.help}>
+            Drafting {targetDealCount} cards from {pool.length} legal options
+            {dealtHirelings.length > 0
+              ? ` (${hirelingExcludedIds.size} excluded by dealt hirelings)`
+              : ""}
+            .
+          </span>
+          <button
+            type="button"
+            onClick={reshuffle}
+            className={styles.secondary}
+          >
+            <RefreshCw size={14} aria-hidden /> Shuffle again
+          </button>
+        </div>
+      )}
+
       <div className={styles.factionGrid}>
-        {filtered.map((o) => {
+        {visible.map((o) => {
           const blocked = blockedForActive.has(o.id);
           const active = picks[activeSeat] === o.id;
           const open = adsetOpen === o.id;
@@ -1198,6 +1436,20 @@ function PlayerPickScreen({
               {o.description && (
                 <span className={styles.chipDesc}>{o.description}</span>
               )}
+              {characters[o.id] && characters[o.id].length > 0 && (
+                <div className={styles.characterDeal}>
+                  <span className={styles.characterDealHeader}>
+                    Dealt {characters[o.id].length === 1 ? "character" : "captains"}:
+                  </span>
+                  <ul className={styles.characterList}>
+                    {characters[o.id].map((charId) => (
+                      <li key={charId} className={styles.characterChip}>
+                        {labelForCharacter(o, charId)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {adsetSteps && adsetSteps.length > 0 && (
                 <>
                   <button
@@ -1235,7 +1487,7 @@ function PlayerPickScreen({
         {seats.map((seat, i) => {
           const factionId = picks[i];
           const option = factionId
-            ? filtered.find((o) => o.id === factionId) ??
+            ? visible.find((o) => o.id === factionId) ??
               options.find((o) => o.id === factionId)
             : undefined;
           const isActive = i === activeSeat;
@@ -1367,134 +1619,3 @@ function TrackPlayersScreen({
   );
 }
 
-function AdsetConfirmScreen({
-  definition,
-  context,
-  expectedTurns,
-}: {
-  definition: GameDefinition;
-  context: SetupContext;
-  expectedTurns: number;
-}) {
-  const pickStep = findPlayerPickStep(definition);
-  const seatStep = findSeatPlayersStep(definition);
-  const pickChoice =
-    pickStep && context[pickStep.id]?.kind === "player-pick"
-      ? (context[pickStep.id] as Extract<
-          SetupChoice,
-          { kind: "player-pick" }
-        >)
-      : null;
-  const seatChoice =
-    seatStep && context[seatStep.id]?.kind === "seat-players"
-      ? (context[seatStep.id] as Extract<
-          SetupChoice,
-          { kind: "seat-players" }
-        >)
-      : null;
-  const factionOptions =
-    pickStep && pickStep.kind.type === "player-pick"
-      ? pickStep.kind.options
-      : [];
-  const seats = seatChoice?.seats ?? [];
-
-  // Summary lines pulled from other steps (map, deck, etc.).
-  const summaryLines: { key: string; value: string }[] = [];
-  for (const step of definition.setupSteps ?? []) {
-    const choice = context[step.id];
-    if (!choice) continue;
-    if (choice.kind === "select-one") {
-      const opt =
-        step.kind.type === "select-one"
-          ? step.kind.options.find((o) => o.id === choice.optionId)
-          : null;
-      if (opt) summaryLines.push({ key: step.label, value: opt.label });
-    } else if (choice.kind === "multi-toggle") {
-      summaryLines.push({
-        key: step.label,
-        value: choice.selectedIds.join(", ") || "—",
-      });
-    } else if (choice.kind === "select-count") {
-      summaryLines.push({ key: step.label, value: String(choice.count) });
-    } else if (choice.kind === "toggle") {
-      summaryLines.push({
-        key: step.label,
-        value: choice.value ? "Yes" : "No",
-      });
-    } else if (choice.kind === "deal-random") {
-      if (choice.skipped) {
-        summaryLines.push({ key: step.label, value: "Skipped" });
-      } else if (step.kind.type === "deal-random") {
-        const opts = step.kind.options;
-        const labels = choice.dealtIds
-          .map((id) => opts.find((o) => o.id === id)?.label ?? id)
-          .join(", ");
-        summaryLines.push({ key: step.label, value: labels });
-      }
-    }
-  }
-  summaryLines.push({ key: "Expected turns", value: String(expectedTurns) });
-
-  return (
-    <>
-      <h3 className={styles.screenTitle} id="screen-title">
-        Set up the table
-      </h3>
-      <p className={styles.screenSubtitle}>
-        Walk through these steps before starting the timer.
-      </p>
-
-      <div className={styles.confirmSummary}>
-        {summaryLines.map((line) => (
-          <div key={line.key} className={styles.summaryRow}>
-            <span className={styles.summaryKey}>{line.key}</span>
-            <span>{line.value}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className={styles.confirmList}>
-        {seats.map((seat, i) => {
-          const factionId = pickChoice?.picks[i];
-          const option = factionId
-            ? factionOptions.find((o) => o.id === factionId)
-            : undefined;
-          const adset = (
-            option as unknown as { adsetSteps?: string[] } | undefined
-          )?.adsetSteps;
-          return (
-            <div key={i} className={styles.confirmCard}>
-              <div className={styles.confirmHeader}>
-                <span
-                  className={styles.factionSwatch}
-                  style={{ background: option?.color ?? "var(--color-border)" }}
-                  aria-hidden
-                />
-                <span className={styles.confirmName}>
-                  {seat.name}
-                  {option && (
-                    <>
-                      {" — "}
-                      <span className={styles.confirmFaction}>
-                        {option.label}
-                      </span>
-                    </>
-                  )}
-                </span>
-              </div>
-              {adset && adset.length > 0 ? (
-                <ol className={styles.confirmSteps}>
-                  {adset.map((s, j) => (
-                    <li key={j}>{s}</li>
-                  ))}
-                </ol>
-              ) : (
-                <span className={styles.help}>No setup steps recorded.</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}

@@ -96,14 +96,14 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
     await next(page);
     // Screen 9: draft — default off.
     await next(page);
-    // Screen 10: faction picker.
+    // Screen 10 (LAST): faction picker. The footer button reads
+    // "Start Game" here, not "Next" — clicking faction cards fills
+    // the seats; Start Game submits.
     if (options.factions) {
       for (const id of options.factions) {
         await page.getByTestId(`faction-card-${id}`).click();
       }
     }
-    await next(page);
-    // Screen 11: ADSET confirm → Start.
   } else {
     // Generic: Players screen.
     if (options.trackPlayers) {

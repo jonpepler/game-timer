@@ -70,13 +70,11 @@ test("timer view baseline (Root, scores in play)", async ({ page }) => {
   await page.getByRole("button", { name: /^Next/ }).click();
   // Draft
   await page.getByRole("button", { name: /^Next/ }).click();
-  // Faction picker — pick 4 in turn order.
+  // Faction picker — last screen; pick 4 in turn order then Start.
   await page.getByTestId("faction-card-marquise").click();
   await page.getByTestId("faction-card-eyrie").click();
   await page.getByTestId("faction-card-alliance").click();
   await page.getByTestId("faction-card-vagabond").click();
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // ADSET confirmation → Start.
   await page.getByRole("button", { name: /start game/i }).click();
 
   const selectMarker = (name: string) =>
