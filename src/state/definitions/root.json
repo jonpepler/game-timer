@@ -124,79 +124,79 @@
           {
             "id": "marquise",
             "label": "Marquise de Cat",
-            "color": "#F39C2A",
+            "color": "#F37021",
             "description": "Industrial cats building sawmills, workshops, and recruiters across the wood."
           },
           {
             "id": "eyrie",
             "label": "Eyrie Dynasties",
-            "color": "#1E4A8C",
+            "color": "#2862A1",
             "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act."
           },
           {
             "id": "alliance",
             "label": "Woodland Alliance",
-            "color": "#3E9E48",
+            "color": "#4D8C3D",
             "description": "Forest revolutionaries spreading sympathy and igniting open revolt."
           },
           {
             "id": "vagabond",
             "label": "Vagabond",
-            "color": "#B0B0B0",
+            "color": "#EBEBEB",
             "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions."
           },
           {
             "id": "lizards",
             "label": "Lizard Cult",
-            "color": "#E8D547",
+            "color": "#FCD629",
             "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals."
           },
           {
             "id": "riverfolk",
             "label": "Riverfolk Company",
-            "color": "#3FB8C2",
+            "color": "#50B8B4",
             "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river."
           },
           {
             "id": "duchy",
             "label": "Underground Duchy",
-            "color": "#9E5A29",
+            "color": "#E39C76",
             "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions."
           },
           {
             "id": "corvids",
             "label": "Corvid Conspiracy",
-            "color": "#2A2A2A",
+            "color": "#6E448F",
             "description": "Crow plotters laying secret tokens that punish meddling rivals."
           },
           {
             "id": "hundreds",
             "label": "Lord of the Hundreds",
-            "color": "#C13E3E",
+            "color": "#C8232A",
             "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours."
           },
           {
             "id": "keepers",
             "label": "Keepers in Iron",
-            "color": "#7FA8A2",
+            "color": "#969696",
             "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige."
           },
           {
             "id": "lilypad",
             "label": "Lilypad Diaspora",
-            "color": "#5DBE7C",
+            "color": "#385723",
             "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure."
           },
           {
             "id": "twilight",
             "label": "Twilight Council",
-            "color": "#7B6CA8",
+            "color": "#4A2E1B",
             "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation."
           },
           {
             "id": "knaves",
             "label": "Knaves of the Deepwood",
-            "color": "#8C6B3F",
+            "color": "#595959",
             "description": "Forest miscreants raiding warriors and ransoming hostages back for victory."
           }
         ],

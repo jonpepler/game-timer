@@ -1,43 +1,27 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "definitionId": "root",
   "status": "reference-only",
-  "statusNote": "All viewUrls point to Google Drive items that require auth — the static-export app cannot fetch them directly. To use any asset in the UI, the file would need to be mirrored (e.g. under /public/factions/<id>.png) with attribution to Leder Games.",
+  "statusNote": "Catalogue of external assets that could enrich the Root setup definition. Drive viewUrls require auth; the static-export app cannot fetch them. Anything that needs to render in-app must be mirrored locally (e.g. /public/factions/<id>.png or .svg) with appropriate attribution to Leder Games (game IP) and EwenDC (meeple silhouettes, CC-BY-NC-SA 4.0).",
   "fetchedAt": "2026-05-19",
-  "gaps": {
-    "headIcons": [
-      "marquise",
-      "eyrie",
-      "alliance",
-      "riverfolk",
-      "duchy"
-    ],
-    "maps": [
-      "lake",
-      "marsh",
-      "gorge"
-    ],
-    "decks": [
-      "exiles",
-      "squires"
-    ],
-    "adsetCards": [
-      "marquise",
-      "eyrie",
-      "alliance",
-      "vagabond",
-      "lizards",
-      "riverfolk",
-      "duchy",
-      "corvids",
-      "keepers",
-      "lilypad",
-      "twilight",
-      "knaves"
-    ],
-    "colourPalette": "No canonical faction colour palette document was found via Workshop search. The colours in root.json remain authoritative; Marauders and Homeland values are still best-guess (see local_docs/TODO.md \"Open colour TODOs\")."
-  },
+  "intent": "The primary per-faction visual is the meeple silhouette (paired with the faction colour). Head icons are the secondary visual. ADSET card scans are reference material for the wizard's setup-instructions screen, but the on-screen instruction should be the meeple-prefixed text per the user's design intent, not necessarily the card image.",
   "sources": [
+    {
+      "id": "user-palette",
+      "label": "Canonical faction hex palette (user-supplied, 2026-05-19)"
+    },
+    {
+      "id": "ewendc-automated-setup",
+      "label": "EwenDC/root-automated-setup",
+      "url": "https://github.com/EwenDC/root-automated-setup",
+      "rawBase": "https://raw.githubusercontent.com/EwenDC/root-automated-setup/main/",
+      "license": "CC-BY-NC-SA 4.0",
+      "attribution": "Meeple SVGs by EwenDC; reuse requires attribution + share-alike + non-commercial.",
+      "structureRefs": [
+        "src/images/meeples/<faction>.svg",
+        "src/setupSteps/definitions/*.ts (sequential setup-wizard step inspiration)"
+      ]
+    },
     {
       "id": "rdb-workshop",
       "label": "Root Database Workshop",
@@ -50,10 +34,30 @@
       "resourceUrl": "https://www.therootdatabase.com/resources/48/"
     },
     {
+      "id": "batmaster-faction-heads",
+      "label": "Faction Head Icons (batmaster1337, Jan 2023) — fills base-game gaps",
+      "viewUrl": "https://drive.google.com/drive/folders/1fKgErFKzZtg2ONebon98_srT-lWeRVQ5"
+    },
+    {
       "id": "decimator85-assets",
       "label": "Root Assets up to Marauders (Decimator85, 2022, pinned 2026)",
       "viewUrl": "https://drive.google.com/drive/folders/1M2tB_F63TUOTKVqZ2o3631SSYOJXQ1Lq",
-      "resourceUrl": "https://www.therootdatabase.com/resources/53/"
+      "resourceUrl": "https://www.therootdatabase.com/resources/53/",
+      "subfolders": {
+        "factions": "1MFx-NK40quaThNRBovrjISwbuQdUddkJ",
+        "maps": "1L3-cmYFgmC-7TjoheW9hSTMkDvnPg-ia",
+        "decks": "1MF3qqm0ceTM75H6uwGDp0HZsjsV1rdrm",
+        "suits": "1MH4vVPjuKwkVPFh5fE0M7Gj8G-_zA1D0",
+        "items": "1M5fVejaXHgrtbmkl1lNBGrmKLHZoDljg",
+        "marquise": "1Mp7_up2eX7G6B8BiHPc56o32v4uHukhR",
+        "eyrie": "1MJVUGL_mpbkqa2l9mn7KTtaOUGzRpL_3",
+        "alliance": "1Mcb0k-5IwUOXgqavOPmHhS4kh1OV1fzE",
+        "vagabond": "1MLWncsQebIT6cv-Ex-eRhZIRg241GWs6",
+        "riverfolk": "1MmgcRjvASGJx64Mk-oKQFdqZBY6daW2F",
+        "duchy": "1Mi6yUzunmpwRZncXVvSR_A7zczIg2UD8",
+        "hundreds": "1VcGFvY4L4V-mu8VMV9BRpifyMmxd91w4",
+        "miscHirelings": "1Mp3tMT3Tdo6_5ZjMNyRI4EbE4WDO_VhT"
+      }
     },
     {
       "id": "mrmirz-faction-backgrounds",
@@ -62,250 +66,216 @@
       "resourceUrl": "https://www.therootdatabase.com/resources/8/"
     },
     {
+      "id": "mrmirz-vp-laurels",
+      "label": "VP Laurels (MrMirz)",
+      "viewUrl": "https://drive.google.com/drive/folders/1LCDc4NWYkHcYe82RxAjlnoy2GEEedOVF",
+      "note": "Use to wrap the leading-player's head icon as a victory laurel."
+    },
+    {
       "id": "mrmirz-hireling-icons",
       "label": "Hireling Icons (MrMirz)",
       "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link",
       "resourceUrl": "https://www.therootdatabase.com/resources/22/"
     }
   ],
+  "colourPalette": {
+    "source": "user-palette",
+    "appliedToRootJsonAt": "2026-05-19",
+    "byFactionId": {
+      "marquise":  { "name": "Orange",         "hex": "#F37021", "expansion": "Base Game" },
+      "eyrie":     { "name": "Blue",           "hex": "#2862A1", "expansion": "Base Game" },
+      "alliance":  { "name": "Green",          "hex": "#4D8C3D", "expansion": "Base Game" },
+      "vagabond":  { "name": "White",          "hex": "#EBEBEB", "expansion": "Base Game", "altHex": "#363636", "altName": "Dark Charcoal", "altExpansion": "Riverfolk Expansion (second Vagabond piece)" },
+      "lizards":   { "name": "Yellow",         "hex": "#FCD629", "expansion": "Riverfolk Expansion" },
+      "riverfolk": { "name": "Cyan",           "hex": "#50B8B4", "expansion": "Riverfolk Expansion" },
+      "duchy":     { "name": "Fleshy Peach",   "hex": "#E39C76", "expansion": "Underworld Expansion" },
+      "corvids":   { "name": "Purple",         "hex": "#6E448F", "expansion": "Underworld Expansion" },
+      "hundreds":  { "name": "Red",            "hex": "#C8232A", "expansion": "Marauder Expansion" },
+      "keepers":   { "name": "Silver Grey",    "hex": "#969696", "expansion": "Marauder Expansion" },
+      "lilypad":   { "name": "Olive Green",    "hex": "#385723", "expansion": "Homeland Expansion" },
+      "twilight":  { "name": "Dark Brown",     "hex": "#4A2E1B", "expansion": "Homeland Expansion" },
+      "knaves":    { "name": "Dark Grey",      "hex": "#595959", "expansion": "Homeland Expansion" }
+    },
+    "uiContrastWarnings": [
+      "vagabond #EBEBEB is near-white — clashes with the dark theme's light text and the white --color-text token; player chip needs an outline or contrasting border.",
+      "twilight #4A2E1B / lilypad #385723 / knaves #595959 are all dark — low contrast against the dark surface tokens. Consider rendering these via the meeple silhouette with a thin outline or against the faction colour fill."
+    ]
+  },
   "perFaction": {
+    "marquise": {
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/marquise.svg" },
+      "headIcon": [
+        { "source": "batmaster-faction-heads", "fileId": "1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4", "originalName": "faction-marquise.png", "viewUrl": "https://drive.google.com/file/d/1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4/view?usp=drivesdk", "bytes": 46115, "format": "png" }
+      ],
+      "meeple":   { "source": "decimator85-assets", "fileId": "1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI", "viewUrl": "https://drive.google.com/file/d/1NcrWddPBIrzLDHVE9RbPmxvQ-0A0jZWI/view?usp=drivesdk", "bytes": 29870, "format": "png" },
+      "vpMarker": { "source": "decimator85-assets", "fileId": "1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW", "viewUrl": "https://drive.google.com/file/d/1NUSSh1S3pziNmStAEykgbkW0Mw9vLHXW/view?usp=drivesdk", "bytes": 55278, "format": "png" },
+      "adsetCard":{ "source": "decimator85-assets", "fileId": "1VjkYg4VX04udPBKTAabFYyYoxytdrx-y", "viewUrl": "https://drive.google.com/file/d/1VjkYg4VX04udPBKTAabFYyYoxytdrx-y/view?usp=drivesdk", "bytes": 557653, "format": "png" }
+    },
+    "eyrie": {
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/eyrie.svg" },
+      "headIcon": [
+        { "source": "batmaster-faction-heads", "fileId": "1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu", "originalName": "faction-eyrie.png", "viewUrl": "https://drive.google.com/file/d/1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu/view?usp=drivesdk", "bytes": 42561, "format": "png" }
+      ],
+      "meeple":         { "source": "decimator85-assets", "fileId": "1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0", "viewUrl": "https://drive.google.com/file/d/1QCrzoPimgKCfCLAMiK2nXJGYrciDxiR0/view?usp=drivesdk", "bytes": 24469, "format": "png" },
+      "hirelingMeeple": { "source": "decimator85-assets", "fileId": "1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn", "viewUrl": "https://drive.google.com/file/d/1PbkZZGVliyN0L8LSJPPThFHrlpT7qAEn/view?usp=drivesdk", "bytes": 7582, "format": "png", "note": "Hireling-card variant of the Eyrie." },
+      "vpMarker":       { "source": "decimator85-assets", "fileId": "1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB", "viewUrl": "https://drive.google.com/file/d/1PabET1HQ5lT9Jf33CIUccHF18Jl0CsyB/view?usp=drivesdk", "bytes": 173530, "format": "png" }
+    },
+    "alliance": {
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/alliance.svg" },
+      "headIcon": [
+        { "source": "batmaster-faction-heads", "fileId": "19raDWflW80AnLjyZPVxwUjMFA2C9_u9C", "originalName": "faction-woodland.png", "viewUrl": "https://drive.google.com/file/d/19raDWflW80AnLjyZPVxwUjMFA2C9_u9C/view?usp=drivesdk", "bytes": 65943, "format": "png" }
+      ]
+    },
     "vagabond": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs",
-        "originalName": "faction-vagabond.png",
-        "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 59851
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vagrant.svg", "note": "EwenDC names the Vagabond meeple 'vagrant'." },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs", "originalName": "faction-vagabond.png", "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk", "bytes": 59851, "format": "png" }
+      ],
+      "vpMarkers": [
+        { "source": "decimator85-assets", "fileId": "1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp", "originalName": "VP Marker 1.png", "viewUrl": "https://drive.google.com/file/d/1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp/view?usp=drivesdk", "bytes": 195181, "format": "png" },
+        { "source": "decimator85-assets", "fileId": "1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF", "originalName": "VP Marker 2.png", "viewUrl": "https://drive.google.com/file/d/1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF/view?usp=drivesdk", "bytes": 156031, "format": "png" }
+      ],
+      "characterClassMeeplesSvg": {
+        "source": "ewendc-automated-setup",
+        "paths": [
+          "src/images/meeples/adventurer.svg",
+          "src/images/meeples/arbiter.svg",
+          "src/images/meeples/harrier.svg",
+          "src/images/meeples/ranger.svg",
+          "src/images/meeples/ronin.svg",
+          "src/images/meeples/scoundrel.svg",
+          "src/images/meeples/thief.svg",
+          "src/images/meeples/tinker.svg"
+        ],
+        "note": "Vagabond character classes (cards). Useful if we ever model Vagabond character selection."
       }
     },
     "lizards": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc",
-        "originalName": "faction-cult.png",
-        "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 63921
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/cult.svg", "note": "EwenDC names this 'cult'." },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk", "bytes": 63921, "format": "png" },
+        { "source": "batmaster-faction-heads", "fileId": "18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8/view?usp=drivesdk", "bytes": 63921, "format": "png", "note": "Duplicate of the MrMirz file (same byte count)." }
+      ]
+    },
+    "riverfolk": {
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/riverfolk.svg" },
+      "adsetCard": { "source": "decimator85-assets", "fileId": "1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8", "viewUrl": "https://drive.google.com/file/d/1VkFPzt74VdYsuasyMnY8jzSwm2tei3h8/view?usp=drivesdk", "bytes": 482440, "format": "png" }
+    },
+    "duchy": {
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/duchy.svg" },
+      "headIcon": [
+        { "source": "batmaster-faction-heads", "fileId": "1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6", "originalName": "faction-duchy.png", "viewUrl": "https://drive.google.com/file/d/1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6/view?usp=drivesdk", "bytes": 55418, "format": "png" }
+      ]
     },
     "corvids": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm",
-        "originalName": "faction-corvid.png",
-        "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 60630
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/corvid.svg" },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk", "bytes": 60630, "format": "png" },
+        { "source": "batmaster-faction-heads", "fileId": "1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS", "originalName": "faction-corvid.png", "viewUrl": "https://drive.google.com/file/d/1zyE7EB2_jEWlDg3OwC6Lj8gcsm4VZ_eS/view?usp=drivesdk", "bytes": 60630, "format": "png" }
+      ]
     },
     "hundreds": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd",
-        "originalName": "faction-lord of the hundreds.png",
-        "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 16174
-      },
-      "adsetCard": {
-        "source": "decimator85-assets",
-        "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC",
-        "originalName": "ADSET.png",
-        "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 518861
-      },
-      "boardBack": {
-        "source": "decimator85-assets",
-        "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq",
-        "originalName": "Board - Back.jpg",
-        "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk",
-        "format": "jpg",
-        "bytes": 3593348
-      },
-      "vpMarker": {
-        "source": "decimator85-assets",
-        "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd",
-        "originalName": "VP Marker.png",
-        "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 256187
-      },
-      "reputationMarker": {
-        "source": "decimator85-assets",
-        "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ",
-        "originalName": "Reputation Marker.png",
-        "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 59981
-      },
-      "citadelToken": {
-        "source": "decimator85-assets",
-        "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi",
-        "originalName": "Citadel.png",
-        "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 24429
-      },
-      "meeple": {
-        "source": "decimator85-assets",
-        "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f",
-        "originalName": "Meeple.png",
-        "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 41653
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/warlord.svg", "note": "EwenDC names this 'warlord'." },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk", "bytes": 16174, "format": "png" },
+        { "source": "batmaster-faction-heads", "fileId": "19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r", "originalName": "faction-lord of the hundreds.png", "viewUrl": "https://drive.google.com/file/d/19u05aerpyOgnx2RF4O5UBpOkZ9O1aO5r/view?usp=drivesdk", "bytes": 16174, "format": "png" }
+      ],
+      "meeple":           { "source": "decimator85-assets", "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f", "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk", "bytes": 41653, "format": "png" },
+      "adsetCard":        { "source": "decimator85-assets", "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC", "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk", "bytes": 518861, "format": "png" },
+      "boardBack":        { "source": "decimator85-assets", "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq", "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk", "bytes": 3593348, "format": "jpg" },
+      "vpMarker":         { "source": "decimator85-assets", "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd", "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk", "bytes": 256187, "format": "png" },
+      "reputationMarker": { "source": "decimator85-assets", "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ", "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk", "bytes": 59981, "format": "png" },
+      "citadelToken":     { "source": "decimator85-assets", "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi", "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk", "bytes": 24429, "format": "png" }
     },
     "keepers": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX",
-        "originalName": "faction-keepers.png",
-        "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 25131
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/keepers.svg" },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk", "bytes": 25131, "format": "png" },
+        { "source": "batmaster-faction-heads", "fileId": "1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW", "originalName": "faction-keepers.png", "viewUrl": "https://drive.google.com/file/d/1WeQ_Nu_8WKsk1SAOhTKLTrwtR8VByOcW/view?usp=drivesdk", "bytes": 25131, "format": "png" }
+      ]
     },
     "lilypad": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR",
-        "originalName": "Frogs_ Lilypad Diaspora.png",
-        "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 18336
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/diaspora.svg", "note": "EwenDC names this 'diaspora'." },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR", "originalName": "Frogs_ Lilypad Diaspora.png", "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk", "bytes": 18336, "format": "png" }
+      ]
     },
     "twilight": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE",
-        "originalName": "Bats_ Twilight Council.png",
-        "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 22986
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/council.svg", "note": "EwenDC names this 'council'." },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE", "originalName": "Bats_ Twilight Council.png", "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk", "bytes": 22986, "format": "png" }
+      ]
     },
     "knaves": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-",
-        "originalName": "Skunks_ Knaves of the Deepwood.png",
-        "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 20375
-      },
-      "background": {
-        "source": "mrmirz-faction-backgrounds",
-        "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy",
-        "originalName": "RootBG_Knaves.png",
-        "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 11167301
-      }
+      "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/knaves.svg" },
+      "headIcon": [
+        { "source": "mrmirz-head-icons", "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-", "originalName": "Skunks_ Knaves of the Deepwood.png", "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk", "bytes": 20375, "format": "png" }
+      ],
+      "background": { "source": "mrmirz-faction-backgrounds", "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy", "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk", "bytes": 11167301, "format": "png" }
     }
   },
-  "hirelingIcons": {
-    "clockwork-otters": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw",
-        "originalName": "Clockwork Otters Logo.png",
-        "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 26395,
-        "note": "Hireling-card variant of Riverfolk Company (not the main-faction head icon)."
-      }
+  "hirelingMeeplesSvg": {
+    "source": "ewendc-automated-setup",
+    "byHirelingKey": {
+      "advocates": "src/images/meeples/advocates.svg",
+      "band": "src/images/meeples/band.svg",
+      "bandits": "src/images/meeples/bandits.svg",
+      "cheat": "src/images/meeples/cheat.svg",
+      "exile": "src/images/meeples/exile.svg",
+      "expedition": "src/images/meeples/expedition.svg",
+      "farmers": "src/images/meeples/farmers.svg",
+      "flameBearers": "src/images/meeples/flameBearers.svg",
+      "flotilla": "src/images/meeples/flotilla.svg",
+      "gladiator": "src/images/meeples/gladiator.svg",
+      "jailor": "src/images/meeples/jailor.svg",
+      "patrol": "src/images/meeples/patrol.svg",
+      "prophets": "src/images/meeples/prophets.svg",
+      "protector": "src/images/meeples/protector.svg",
+      "roamers": "src/images/meeples/roamers.svg",
+      "spies": "src/images/meeples/spies.svg",
+      "uprising": "src/images/meeples/uprising.svg",
+      "vaultKeepers": "src/images/meeples/vaultKeepers.svg",
+      "dynasty": "src/images/meeples/dynasty.svg"
     },
-    "clockwork-lizards": {
-      "headIcon": {
-        "source": "mrmirz-head-icons",
-        "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp",
-        "originalName": "Clockwork Lizards Logo.png",
-        "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 23230,
-        "note": "Hireling-card variant of Lizard Cult (not the main-faction head icon)."
-      }
-    },
-    "birdsong": {
-      "headIcon": {
-        "source": "mrmirz-hireling-icons",
-        "fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB",
-        "originalName": "Hireling_Birdsong.png",
-        "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 2653,
-        "note": "Generic Birdsong-phase hireling marker, not faction-specific."
-      }
-    }
+    "note": "EwenDC's full meeples folder. Map these to our hireling step option ids when we get round to it."
+  },
+  "vpLaurel": {
+    "source": "mrmirz-vp-laurels",
+    "candidates": [
+      { "fileId": "1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3", "originalName": "vp laurels.png", "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk", "bytes": 11804, "format": "png", "note": "Primary laurel — wraps the leading-player head icon." },
+      { "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb", "originalName": "VP_Frills.png", "viewUrl": "https://drive.google.com/file/d/176qhUSZWP0zNE4JRAPG4G43HxuV29iQb/view?usp=drivesdk", "bytes": 10758, "format": "png", "note": "Laurel + frills variant." },
+      { "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF", "originalName": "VPTrace-goblioc.png", "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk", "bytes": 32666, "format": "png", "note": "Traced/Lioc variant." },
+      { "fileId": "1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR", "originalName": "+VP.png", "viewUrl": "https://drive.google.com/file/d/1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR/view?usp=drivesdk", "bytes": 14393, "format": "png", "note": "+VP delta icon." },
+      { "fileId": "1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L", "originalName": "+VP_2.png", "viewUrl": "https://drive.google.com/file/d/1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L/view?usp=drivesdk", "bytes": 9469, "format": "png", "note": "+VP delta icon, variant 2." }
+    ]
   },
   "perMap": {
-    "autumn": {
-      "image": {
-        "source": "decimator85-assets",
-        "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF",
-        "originalName": "Map - Autumn.png",
-        "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 7387394
-      }
-    },
-    "winter": {
-      "image": {
-        "source": "decimator85-assets",
-        "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc",
-        "originalName": "Map - Winter.jpg",
-        "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk",
-        "format": "jpg",
-        "bytes": 2080428
-      }
-    },
-    "mountain": {
-      "image": {
-        "source": "decimator85-assets",
-        "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A",
-        "originalName": "Map - Mountain.png",
-        "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 5893253
-      }
-    }
+    "autumn":   { "image": { "source": "decimator85-assets", "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF", "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk", "bytes": 7387394, "format": "png" } },
+    "winter":   { "image": { "source": "decimator85-assets", "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc", "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk", "bytes": 2080428, "format": "jpg" } },
+    "mountain": { "image": { "source": "decimator85-assets", "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A", "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk", "bytes": 5893253, "format": "png" } }
   },
   "perDeck": {
-    "base": {
-      "cardSheet": {
-        "source": "decimator85-assets",
-        "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z",
-        "originalName": "Base.png",
-        "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 5867658,
-        "note": "Single composite sheet of base-deck cards (OCR-recognised cards include Ambush, Crossbow, Codebreakers, Dominance, Favor of the —, etc.)."
-      }
-    }
+    "base": { "cardSheet": { "source": "decimator85-assets", "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z", "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk", "bytes": 5867658, "format": "png", "note": "Composite sheet of base-deck cards." } }
   },
   "mapElements": {
-    "ruins": {
-      "icon": {
-        "source": "decimator85-assets",
-        "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC",
-        "originalName": "Ruins.png",
-        "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 16200
-      }
-    },
-    "closedPath": {
-      "icon": {
-        "source": "decimator85-assets",
-        "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9",
-        "originalName": "Closed Path.png",
-        "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk",
-        "format": "png",
-        "bytes": 42554
-      }
-    }
+    "ruins":      { "icon": { "source": "decimator85-assets", "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC", "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk", "bytes": 16200, "format": "png" } },
+    "closedPath": { "icon": { "source": "decimator85-assets", "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9", "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk", "bytes": 42554, "format": "png" } }
+  },
+  "hirelingIcons": {
+    "clockwork-otters": { "headIcon": { "source": "mrmirz-head-icons", "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw", "originalName": "Clockwork Otters Logo.png", "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk", "bytes": 26395, "format": "png", "note": "Hireling-card variant of Riverfolk." } },
+    "clockwork-lizards":{ "headIcon": { "source": "mrmirz-head-icons", "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp", "originalName": "Clockwork Lizards Logo.png", "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk", "bytes": 23230, "format": "png", "note": "Hireling-card variant of Lizard Cult." } },
+    "birdsong":         { "headIcon": { "source": "mrmirz-hireling-icons", "fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB", "originalName": "Hireling_Birdsong.png", "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk", "bytes": 2653, "format": "png", "note": "Generic Birdsong-phase hireling marker." } }
+  },
+  "gaps": {
+    "meeplesSvg": [],
+    "headIconsPng": ["riverfolk"],
+    "headIconsNote": "All 13 factions are covered by EwenDC's meeple SVGs. Of the PNG head icons, riverfolk is the only one still missing.",
+    "maps": ["lake", "marsh", "gorge"],
+    "decks": ["exiles", "squires"],
+    "adsetCards": ["eyrie", "alliance", "vagabond", "lizards", "duchy", "corvids", "keepers", "lilypad", "twilight", "knaves"],
+    "notes": [
+      "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85's collection. The rest exist on therootdatabase.com but weren't in the scraped Drive folders; the law page (https://www.therootdatabase.com/law/advanced-setup/en/) is the authoritative transcription source.",
+      "Per user's intent the on-screen ADSET should be 'faction meeple + setup text', not the card scan, so missing card scans are not blocking."
+    ]
   }
 }
