@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "definitionId": "root",
+  "status": "reference-only",
+  "statusNote": "All viewUrls point to Google Drive items that require auth — the static-export app cannot fetch them directly. To use any asset in the UI, the file would need to be mirrored (e.g. under /public/factions/<id>.png) with attribution to Leder Games.",
+  "fetchedAt": "2026-05-19",
+  "gaps": {
+    "headIcons": [
+      "marquise",
+      "eyrie",
+      "alliance",
+      "riverfolk",
+      "duchy"
+    ],
+    "maps": [
+      "lake",
+      "marsh",
+      "gorge"
+    ],
+    "decks": [
+      "exiles",
+      "squires"
+    ],
+    "adsetCards": [
+      "marquise",
+      "eyrie",
+      "alliance",
+      "vagabond",
+      "lizards",
+      "riverfolk",
+      "duchy",
+      "corvids",
+      "keepers",
+      "lilypad",
+      "twilight",
+      "knaves"
+    ],
+    "colourPalette": "No canonical faction colour palette document was found via Workshop search. The colours in root.json remain authoritative; Marauders and Homeland values are still best-guess (see local_docs/TODO.md \"Open colour TODOs\")."
+  },
+  "sources": [
+    {
+      "id": "rdb-workshop",
+      "label": "Root Database Workshop",
+      "url": "https://www.therootdatabase.com/workshop/"
+    },
+    {
+      "id": "mrmirz-head-icons",
+      "label": "Faction Head Icons (MrMirz, Oct 2025)",
+      "viewUrl": "https://drive.google.com/drive/folders/1-pVdQBwnjM7D4HcZtnsAuZ0HgudpoRCA?usp=share_link",
+      "resourceUrl": "https://www.therootdatabase.com/resources/48/"
+    },
+    {
+      "id": "decimator85-assets",
+      "label": "Root Assets up to Marauders (Decimator85, 2022, pinned 2026)",
+      "viewUrl": "https://drive.google.com/drive/folders/1M2tB_F63TUOTKVqZ2o3631SSYOJXQ1Lq",
+      "resourceUrl": "https://www.therootdatabase.com/resources/53/"
+    },
+    {
+      "id": "mrmirz-faction-backgrounds",
+      "label": "Faction Backgrounds (MrMirz)",
+      "viewUrl": "https://drive.google.com/drive/folders/10yopeLwvzPTC32XyOBWEUPeruTmzZVph?usp=share_link",
+      "resourceUrl": "https://www.therootdatabase.com/resources/8/"
+    },
+    {
+      "id": "mrmirz-hireling-icons",
+      "label": "Hireling Icons (MrMirz)",
+      "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link",
+      "resourceUrl": "https://www.therootdatabase.com/resources/22/"
+    }
+  ],
+  "perFaction": {
+    "vagabond": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs",
+        "originalName": "faction-vagabond.png",
+        "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 59851
+      }
+    },
+    "lizards": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc",
+        "originalName": "faction-cult.png",
+        "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 63921
+      }
+    },
+    "corvids": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm",
+        "originalName": "faction-corvid.png",
+        "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 60630
+      }
+    },
+    "hundreds": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd",
+        "originalName": "faction-lord of the hundreds.png",
+        "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 16174
+      },
+      "adsetCard": {
+        "source": "decimator85-assets",
+        "fileId": "1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC",
+        "originalName": "ADSET.png",
+        "viewUrl": "https://drive.google.com/file/d/1VfoueAz0gM_nSLeg_Kh77IzID6_e1RTC/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 518861
+      },
+      "boardBack": {
+        "source": "decimator85-assets",
+        "fileId": "1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq",
+        "originalName": "Board - Back.jpg",
+        "viewUrl": "https://drive.google.com/file/d/1QJuUBq_gKkRDZGP5OBH_G9Rhaihb0ZYq/view?usp=drivesdk",
+        "format": "jpg",
+        "bytes": 3593348
+      },
+      "vpMarker": {
+        "source": "decimator85-assets",
+        "fileId": "1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd",
+        "originalName": "VP Marker.png",
+        "viewUrl": "https://drive.google.com/file/d/1Z6P_c_I8JUBl5MxWEtLK7l9qjkCNdAdd/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 256187
+      },
+      "reputationMarker": {
+        "source": "decimator85-assets",
+        "fileId": "1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ",
+        "originalName": "Reputation Marker.png",
+        "viewUrl": "https://drive.google.com/file/d/1Z4rGRlzdI1sV4jrZq3xMeHbWVyhh77zQ/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 59981
+      },
+      "citadelToken": {
+        "source": "decimator85-assets",
+        "fileId": "1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi",
+        "originalName": "Citadel.png",
+        "viewUrl": "https://drive.google.com/file/d/1Z9REm5fHjIoeDa_NNffKcwTKK7NIfrTi/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 24429
+      },
+      "meeple": {
+        "source": "decimator85-assets",
+        "fileId": "1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f",
+        "originalName": "Meeple.png",
+        "viewUrl": "https://drive.google.com/file/d/1MNtzMEGewVbYZVK3ONHNNUJqcCXxVn6f/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 41653
+      }
+    },
+    "keepers": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX",
+        "originalName": "faction-keepers.png",
+        "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 25131
+      }
+    },
+    "lilypad": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1AsDXS5-LN79m7YZwrM49jRNv6I663ASR",
+        "originalName": "Frogs_ Lilypad Diaspora.png",
+        "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 18336
+      }
+    },
+    "twilight": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE",
+        "originalName": "Bats_ Twilight Council.png",
+        "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 22986
+      }
+    },
+    "knaves": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-",
+        "originalName": "Skunks_ Knaves of the Deepwood.png",
+        "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 20375
+      },
+      "background": {
+        "source": "mrmirz-faction-backgrounds",
+        "fileId": "1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy",
+        "originalName": "RootBG_Knaves.png",
+        "viewUrl": "https://drive.google.com/file/d/1fJLJjIsQlMWSXhCXf9fGBww9PHGx8KIy/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 11167301
+      }
+    }
+  },
+  "hirelingIcons": {
+    "clockwork-otters": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw",
+        "originalName": "Clockwork Otters Logo.png",
+        "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 26395,
+        "note": "Hireling-card variant of Riverfolk Company (not the main-faction head icon)."
+      }
+    },
+    "clockwork-lizards": {
+      "headIcon": {
+        "source": "mrmirz-head-icons",
+        "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp",
+        "originalName": "Clockwork Lizards Logo.png",
+        "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 23230,
+        "note": "Hireling-card variant of Lizard Cult (not the main-faction head icon)."
+      }
+    },
+    "birdsong": {
+      "headIcon": {
+        "source": "mrmirz-hireling-icons",
+        "fileId": "1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB",
+        "originalName": "Hireling_Birdsong.png",
+        "viewUrl": "https://drive.google.com/file/d/1u1LLPDy6DFSxut-12CiZSuhTUIU1RbxB/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 2653,
+        "note": "Generic Birdsong-phase hireling marker, not faction-specific."
+      }
+    }
+  },
+  "perMap": {
+    "autumn": {
+      "image": {
+        "source": "decimator85-assets",
+        "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF",
+        "originalName": "Map - Autumn.png",
+        "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 7387394
+      }
+    },
+    "winter": {
+      "image": {
+        "source": "decimator85-assets",
+        "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc",
+        "originalName": "Map - Winter.jpg",
+        "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk",
+        "format": "jpg",
+        "bytes": 2080428
+      }
+    },
+    "mountain": {
+      "image": {
+        "source": "decimator85-assets",
+        "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A",
+        "originalName": "Map - Mountain.png",
+        "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 5893253
+      }
+    }
+  },
+  "perDeck": {
+    "base": {
+      "cardSheet": {
+        "source": "decimator85-assets",
+        "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z",
+        "originalName": "Base.png",
+        "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 5867658,
+        "note": "Single composite sheet of base-deck cards (OCR-recognised cards include Ambush, Crossbow, Codebreakers, Dominance, Favor of the —, etc.)."
+      }
+    }
+  },
+  "mapElements": {
+    "ruins": {
+      "icon": {
+        "source": "decimator85-assets",
+        "fileId": "1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC",
+        "originalName": "Ruins.png",
+        "viewUrl": "https://drive.google.com/file/d/1MA_Ki1YTgPhjVNzXIxfnyEIWPS486wmC/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 16200
+      }
+    },
+    "closedPath": {
+      "icon": {
+        "source": "decimator85-assets",
+        "fileId": "1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9",
+        "originalName": "Closed Path.png",
+        "viewUrl": "https://drive.google.com/file/d/1ZG_yNMUe05LsyFhlpYM4ryIFsCqku8U9/view?usp=drivesdk",
+        "format": "png",
+        "bytes": 42554
+      }
+    }
+  }
+}
