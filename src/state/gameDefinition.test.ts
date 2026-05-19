@@ -364,9 +364,9 @@ describe("ADSET-shaped step kinds", () => {
             marauders: { label: "Marauders" },
           },
           hireling: {
-            h1: { label: "Hireling One",   tag: "base" },
-            h2: { label: "Hireling Two",   tag: "marauders" },
-            h3: { label: "Hireling Three", tag: "base" },
+            h1: { label: "Hireling One",   module: "base" },
+            h2: { label: "Hireling Two",   module: "marauders" },
+            h3: { label: "Hireling Three", module: "base" },
           },
         },
       },
@@ -383,25 +383,25 @@ describe("ADSET-shaped step kinds", () => {
 });
 
 describe("optionVisibleUnderContext", () => {
-  it("treats an untagged option as always visible", () => {
+  it("treats an option without `module` as always visible", () => {
     const ctx: SetupContext = {
       exp: { kind: "multi-toggle", selectedIds: ["base"] },
     };
     expect(optionVisibleUnderContext({}, ctx)).toBe(true);
   });
 
-  it("hides a tagged option when no multi-toggle includes its tag", () => {
+  it("hides an option whose module isn't in any multi-toggle selection", () => {
     const ctx: SetupContext = {
       exp: { kind: "multi-toggle", selectedIds: ["base"] },
     };
-    expect(optionVisibleUnderContext({ tag: "marauders" }, ctx)).toBe(false);
-    expect(optionVisibleUnderContext({ tag: "base" }, ctx)).toBe(true);
+    expect(optionVisibleUnderContext({ module: "marauders" }, ctx)).toBe(false);
+    expect(optionVisibleUnderContext({ module: "base" }, ctx)).toBe(true);
   });
 
   it("falls through to visible when the wizard hasn't hit a multi-toggle yet", () => {
     const ctx: SetupContext = {
       map: { kind: "select-one", optionId: "autumn" },
     };
-    expect(optionVisibleUnderContext({ tag: "marauders" }, ctx)).toBe(true);
+    expect(optionVisibleUnderContext({ module: "marauders" }, ctx)).toBe(true);
   });
 });

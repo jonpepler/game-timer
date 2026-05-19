@@ -92,9 +92,12 @@ test.describe("Root advanced setup", () => {
     await expect(deckSelect).toContainText("Exiles and Partisans");
     await expect(deckSelect).toContainText("Squires and Disciples");
 
-    // Landmarks + hirelings cap inputs.
+    // Landmarks cap input.
     await expect(page.getByLabel(/^Landmarks$/)).toHaveAttribute("max", "2");
-    await expect(page.getByLabel(/^Hirelings$/)).toHaveAttribute("max", "3");
+    // Hirelings switched from a select-count to a deal-random step kind
+    // (ADSET A.6: 0 or 3, never partial). The wizard rebuild renders
+    // that step; until then the modal silently skips it. Re-add the
+    // assertion against the deal-random screen when the wizard lands.
 
     // Draft toggle exposed (off by default).
     await expect(page.getByLabel(/^Draft factions$/)).not.toBeChecked();

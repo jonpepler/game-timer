@@ -59,7 +59,16 @@ const SetupOptionSchema = z
     label: z.string(),
     description: z.string().optional(),
     color: z.string().optional(),
-    tag: z.string().optional(),
+    // The module this option belongs to — an opaque id pointing at an
+    // option in a sibling multi-toggle step (e.g. faction "marquise"
+    // has `module: "base"` referencing the Expansions step's "base"
+    // option). The wizard hides options whose module isn't in the
+    // active multi-toggle set. Untagged options always show.
+    //
+    // Naming note: the *file* is `modules.json` (the content layer in
+    // the structure-vs-content split). This *field* names a single
+    // module-as-expansion within that file. Different scopes, same word.
+    module: z.string().optional(),
   })
   // Passthrough so extra fields supplied by a content modules file
   // (e.g. asset references, custom per-option data the renderers want
@@ -273,7 +282,8 @@ const OptionContentSchema = z
     label: z.string(),
     description: z.string().optional(),
     color: z.string().optional(),
-    tag: z.string().optional(),
+    // See SetupOptionSchema.module — same semantics.
+    module: z.string().optional(),
   })
   // Passthrough so per-option asset refs and other authored fields
   // survive the merge — they ride along on the SetupOption.
@@ -373,28 +383,21 @@ export type SetupContext = Record<string, SetupChoice>;
 
 // ── Wizard helpers ────────────────────────────────────────────────
 
-// Step ids whose downstream options should be filtered by the active
-// expansion set. We treat this generically: if a step kind carries
-// `options`, each option's `tag` (when set) is compared against the
-// `selectedIds` of any earlier multi-toggle step. Options whose tag
-// isn't in *any* multi-toggle's selected set are hidden.
-//
-// Convention: an option's `tag` should equal an option id from an
-// earlier multi-toggle's category (e.g. faction `tag: "riverfolk"`
-// matches the expansions multi-toggle's option id "riverfolk").
-// Untagged options always show.
+// Step-level options are filtered by the active module set. If an
+// option's `module` field points at an id that no earlier multi-toggle
+// step has selected, the option is hidden. Options with no `module`
+// field always show. If the wizard hasn't reached any multi-toggle
+// step yet, everything shows.
 export const optionVisibleUnderContext = (
-  option: { tag?: string },
+  option: { module?: string },
   context: SetupContext,
 ): boolean => {
-  if (!option.tag) return true;
+  if (!option.module) return true;
   for (const choice of Object.values(context)) {
     if (choice.kind === "multi-toggle") {
-      if (choice.selectedIds.includes(option.tag)) return true;
+      if (choice.selectedIds.includes(option.module)) return true;
     }
   }
-  // If no multi-toggle has spoken yet, fall through to visible — the
-  // wizard hasn't reached the expansions step yet.
   const hasMultiToggle = Object.values(context).some(
     (c) => c.kind === "multi-toggle",
   );

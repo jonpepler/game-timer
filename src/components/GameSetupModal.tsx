@@ -622,7 +622,7 @@ function SelectOneStep({
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
-            {o.tag ? ` · ${o.tag}` : ""}
+            {o.module ? ` · ${o.module}` : ""}
           </option>
         ))}
       </select>

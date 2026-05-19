@@ -2,10 +2,17 @@
   "schemaVersion": 3,
   "definitionId": "root",
   "categories": {
+    "expansion": {
+      "base":       { "label": "Base game" },
+      "riverfolk":  { "label": "Riverfolk Expansion" },
+      "underworld": { "label": "Underworld Expansion" },
+      "marauders":  { "label": "Marauder Expansion" },
+      "homeland":   { "label": "Homeland Expansion" }
+    },
     "map": {
       "autumn": {
         "label": "Autumn",
-        "tag": "Base",
+        "module": "base",
         "description": "The default map. No special rules.",
         "assets": {
           "image": { "source": "decimator85-assets", "fileId": "1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF", "viewUrl": "https://drive.google.com/file/d/1Yt7Kbfxdnk_oVQSd82d4lnXhqGbLsxkF/view?usp=drivesdk", "bytes": 7387394, "format": "png" }
@@ -13,7 +20,7 @@
       },
       "winter": {
         "label": "Winter",
-        "tag": "Base",
+        "module": "base",
         "description": "A Raging River divides forests, adding a forest-traversal barrier.",
         "assets": {
           "image": { "source": "decimator85-assets", "fileId": "1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc", "viewUrl": "https://drive.google.com/file/d/1YvvJoBnVCzAxJV9d0be3quPMerZF3lJc/view?usp=drivesdk", "bytes": 2080428, "format": "jpg" }
@@ -21,12 +28,12 @@
       },
       "lake": {
         "label": "Lake",
-        "tag": "Underworld",
+        "module": "underworld",
         "description": "A central lake links coastal clearings; a ferry shuttles between them."
       },
       "mountain": {
         "label": "Mountain",
-        "tag": "Underworld",
+        "module": "underworld",
         "description": "Closed paths must be opened by spending cards; ruling the central Pass scores.",
         "assets": {
           "image": { "source": "decimator85-assets", "fileId": "1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A", "viewUrl": "https://drive.google.com/file/d/1Yx0zkHWJpRqq9ilZPofG08hLb2FxwR6A/view?usp=drivesdk", "bytes": 5893253, "format": "png" }
@@ -34,37 +41,56 @@
       },
       "marsh": {
         "label": "Marsh",
-        "tag": "Homeland",
+        "module": "homeland",
         "description": "Flood markers seal off clearings; flooded paths enclose forests."
       },
       "gorge": {
         "label": "Gorge",
-        "tag": "Homeland",
+        "module": "homeland",
         "description": "A dam separates forests; a bridge crosses without splitting them."
       }
     },
     "deck": {
       "base": {
         "label": "Base deck",
-        "tag": "Base",
+        "module": "base",
         "assets": {
           "cardSheet": { "source": "decimator85-assets", "fileId": "1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z", "viewUrl": "https://drive.google.com/file/d/1MyjA6muaVnNGwFHvM-FhuX3dIcPePG0Z/view?usp=drivesdk", "bytes": 5867658, "format": "png", "note": "Composite sheet of base-deck cards." }
         }
       },
-      "exiles": {
-        "label": "Exiles and Partisans",
-        "tag": "Riverfolk"
-      },
-      "squires": {
-        "label": "Squires and Disciples",
-        "tag": "Marauders"
-      }
+      "exiles":  { "label": "Exiles and Partisans",  "module": "riverfolk" },
+      "squires": { "label": "Squires and Disciples", "module": "marauders" }
+    },
+    "hireling": {
+      "patrol":       { "label": "Forest Patrol",     "module": "marauders",  "excludeOptionIds": ["marquise"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/patrol.svg" } } },
+      "dynasty":      { "label": "Last Dynasty",      "module": "marauders",  "excludeOptionIds": ["eyrie"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/dynasty.svg" } } },
+      "uprising":     { "label": "Spring Uprising",   "module": "marauders",  "excludeOptionIds": ["alliance"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/uprising.svg" } } },
+      "exile":        { "label": "The Exile",         "module": "marauders",  "excludeOptionIds": ["vagabond", "knaves"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/exile.svg" } } },
+      "prophets":     { "label": "Prophets of the Sun","module": "riverfolk", "excludeOptionIds": ["lizards"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/prophets.svg" } } },
+      "flotilla":     { "label": "Riverfolk Flotilla","module": "riverfolk",  "excludeOptionIds": ["riverfolk"],"assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flotilla.svg" } } },
+      "bandits":      { "label": "Bandit Crew",       "module": "riverfolk",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/bandits.svg" } } },
+      "expedition":   { "label": "Sunward Expedition","module": "underworld", "excludeOptionIds": ["duchy"],    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/expedition.svg" } } },
+      "spies":        { "label": "Corvid Spies",      "module": "underworld", "excludeOptionIds": ["corvids"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/spies.svg" } } },
+      "protector":    { "label": "Furious Protector", "module": "underworld",                                   "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/protector.svg" } } },
+      "flameBearers": { "label": "Flame Bearers",     "module": "marauders",  "excludeOptionIds": ["hundreds"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/flameBearers.svg" } } },
+      "vaultKeepers": { "label": "Vault Keepers",     "module": "marauders",  "excludeOptionIds": ["keepers"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vaultKeepers.svg" } } },
+      "band":         { "label": "Street Band",       "module": "marauders",                                    "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/band.svg" } } },
+      "advocates":    { "label": "Advocates",         "module": "homeland",   "excludeOptionIds": ["twilight"], "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/advocates.svg" } } },
+      "roamers":      { "label": "Roamers",           "module": "homeland",   "excludeOptionIds": ["lilypad"],  "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/roamers.svg" } } },
+      "farmers":      { "label": "Farmers",           "module": "homeland",                                     "assets": { "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/farmers.svg" } } }
     },
     "faction": {
       "marquise": {
         "label": "Marquise de Cat",
         "color": "#F37021",
+        "module": "base",
         "description": "Industrial cats building sawmills, workshops, and recruiters across the wood.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook before relying on it for tournament play.",
+        "adsetSteps": [
+          "Place your Keep token in any corner clearing.",
+          "Place 1 sawmill, 1 workshop, and 1 recruiter, one in each clearing adjacent to your Keep.",
+          "Place 1 warrior in every clearing except the corner diagonally opposite your Keep."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/marquise.svg" },
           "headIcon": [
@@ -78,7 +104,15 @@
       "eyrie": {
         "label": "Eyrie Dynasties",
         "color": "#2862A1",
+        "module": "base",
         "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Choose 1 Leader card and place it on your faction board's Leader slot.",
+          "Place your Roost in the corner clearing diagonally opposite the Marquise's Keep (or any corner clearing if Marquise isn't in play).",
+          "Place 6 warriors in your Roost clearing.",
+          "Tuck 1 card of each suit from your hand under the Recruit, Move, Battle, and Build columns of your Decree."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/eyrie.svg" },
           "headIcon": [
@@ -92,7 +126,14 @@
       "alliance": {
         "label": "Woodland Alliance",
         "color": "#4D8C3D",
+        "module": "base",
         "description": "Forest revolutionaries spreading sympathy and igniting open revolt.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place 10 sympathy tokens in the supply next to your faction board.",
+          "Place 3 base tokens (one fox, one mouse, one rabbit) in the supply next to your faction board.",
+          "Place 4 officer cards next to your faction board (none deployed at start)."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/alliance.svg" },
           "headIcon": [
@@ -103,7 +144,15 @@
       "vagabond": {
         "label": "Vagabond",
         "color": "#EBEBEB",
+        "module": "base",
         "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Use the Vagabond character that was dealt with this setup card.",
+          "Place your Vagabond meeple in any forest.",
+          "Take the starting items shown on your character card and place them face-up in your Satchel.",
+          "Shuffle the Quest deck; deal 3 quests face-up next to the map."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/vagrant.svg", "note": "EwenDC names the Vagabond meeple 'vagrant'." },
           "headIcon": [
@@ -132,19 +181,32 @@
       "lizards": {
         "label": "Lizard Cult",
         "color": "#FCD629",
+        "module": "riverfolk",
         "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place the Outcast marker in the empty Hatred space (any suit).",
+          "Place 4 warriors in any 4 clearings (1 per clearing).",
+          "Place the Lost Souls pile (empty) next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/cult.svg", "note": "EwenDC names this 'cult'." },
           "headIcon": [
-            { "source": "mrmirz-head-icons", "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk", "bytes": 63921, "format": "png" },
-            { "source": "batmaster-faction-heads", "fileId": "18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/18oVq9m4mqRQRUXuxvUDRpEuP0xZhhOG8/view?usp=drivesdk", "bytes": 63921, "format": "png", "note": "Duplicate of the MrMirz file (same byte count)." }
+            { "source": "mrmirz-head-icons", "fileId": "1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc", "originalName": "faction-cult.png", "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk", "bytes": 63921, "format": "png" }
           ]
         }
       },
       "riverfolk": {
         "label": "Riverfolk Company",
         "color": "#50B8B4",
+        "module": "riverfolk",
         "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place 4 warriors in two river clearings (2 per clearing).",
+          "Set service-price markers to their starting values (Hand Card 1, Riverboats 2, Mercenaries 2).",
+          "Place all payments and trade-post pieces in the supply next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/riverfolk.svg" },
           "headIcon": [
@@ -156,7 +218,15 @@
       "duchy": {
         "label": "Underground Duchy",
         "color": "#E39C76",
+        "module": "underworld",
         "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place the Burrow token in the Burrow space on your faction board.",
+          "Place 2 warriors and 1 tunnel in any 3 clearings (1 piece per clearing); the tunnel must be in a clearing adjacent to a forest.",
+          "Place all 9 ministers in the Crown area; shuffle and reveal the top 3 to set the starting Crown.",
+          "Place all 12 sway tokens in the supply next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/duchy.svg" },
           "headIcon": [
@@ -167,7 +237,14 @@
       "corvids": {
         "label": "Corvid Conspiracy",
         "color": "#6E448F",
+        "module": "underworld",
         "description": "Crow plotters laying secret tokens that punish meddling rivals.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place 4 warriors in any 4 clearings (1 per clearing).",
+          "Place all plot tokens face-down next to your faction board (out of play).",
+          "Place the Embedded Agent token next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/corvid.svg" },
           "headIcon": [
@@ -179,7 +256,15 @@
       "hundreds": {
         "label": "Lord of the Hundreds",
         "color": "#C8232A",
+        "module": "marauders",
         "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours.",
+        "adsetNote": "Transcribed from the Decimator85 ADSET card scan (corrected for OCR errors).",
+        "adsetSteps": [
+          "Choose a homeland clearing on the map edge that has 2+ clearings between it and enemy homelands.",
+          "Put your Warlord, 4 warriors, and 1 stronghold in your homeland.",
+          "Put your Stubborn mood card in your Mood Card slot.",
+          "Put the 4 \"R\" items under the ruins randomly, unless this has already been done."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/warlord.svg", "note": "EwenDC names this 'warlord'." },
           "headIcon": [
@@ -197,7 +282,15 @@
       "keepers": {
         "label": "Keepers in Iron",
         "color": "#969696",
+        "module": "marauders",
         "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place your Retinue cards in the starting order shown on your faction board.",
+          "Place 4 warriors and 2 waystations in any corner clearing.",
+          "Shuffle the 12 relic tokens face-down; place 1 in each forest space until all relics are placed (or all forests are full).",
+          "Take the Faithful Retainer marker and place it on your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/keepers.svg" },
           "headIcon": [
@@ -209,7 +302,14 @@
       "lilypad": {
         "label": "Lilypad Diaspora",
         "color": "#385723",
+        "module": "homeland",
         "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place 1 lilypad garden in any 3 clearings (3 gardens total).",
+          "Place 5 warriors distributed among your garden clearings.",
+          "Place all unrest tokens in the supply next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/diaspora.svg", "note": "EwenDC names this 'diaspora'." },
           "headIcon": [
@@ -220,7 +320,15 @@
       "twilight": {
         "label": "Twilight Council",
         "color": "#4A2E1B",
+        "module": "homeland",
         "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Place the starting Council token in any clearing.",
+          "Place 5 warriors in or adjacent to the Council clearing.",
+          "Take 1 Agenda card and place it face-up next to your faction board.",
+          "Place all remaining Agenda cards in a shuffled deck next to your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/council.svg", "note": "EwenDC names this 'council'." },
           "headIcon": [
@@ -231,7 +339,14 @@
       "knaves": {
         "label": "Knaves of the Deepwood",
         "color": "#595959",
+        "module": "homeland",
         "description": "Forest miscreants raiding warriors and ransoming hostages back for victory.",
+        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetSteps": [
+          "Choose 3 of the 4 Captain cards dealt with this setup card; return the rejected card to the box.",
+          "Place 1 warrior in any 4 clearings (4 warriors total).",
+          "Place 1 hostage token of your choice in the Hostage area on your faction board."
+        ],
         "assets": {
           "meepleSvg": { "source": "ewendc-automated-setup", "path": "src/images/meeples/knaves.svg" },
           "headIcon": [
@@ -246,6 +361,7 @@
     "status": "reference-only",
     "fetchedAt": "2026-05-19",
     "intent": "External asset references gathered from therootdatabase.com Workshop and the EwenDC repo. Drive viewUrls require auth; the static-export app cannot fetch them. Anything that needs to render in-app must be mirrored locally (e.g. /public/factions/<id>.png or .svg) with attribution to Leder Games and EwenDC (CC-BY-NC-SA 4.0).",
+    "adsetTextProvenance": "Per-faction `adsetSteps` are first-pass community-knowledge transcriptions, except Lord of the Hundreds (transcribed from the Decimator85 card scan). Each faction carries an `adsetNote` flagging verification needs. The canonical source is the per-faction setup cards / the law page at https://www.therootdatabase.com/law/advanced-setup/en/.",
     "sources": [
       { "id": "user-palette",                 "label": "Canonical faction hex palette (user-supplied, 2026-05-19)" },
       { "id": "ewendc-automated-setup",       "label": "EwenDC/root-automated-setup", "url": "https://github.com/EwenDC/root-automated-setup", "rawBase": "https://raw.githubusercontent.com/EwenDC/root-automated-setup/main/", "license": "CC-BY-NC-SA 4.0", "attribution": "Meeple SVGs by EwenDC; reuse requires attribution + share-alike + non-commercial." },
@@ -275,31 +391,6 @@
         { "fileId": "1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L", "originalName": "+VP_2.png", "viewUrl": "https://drive.google.com/file/d/1_jjaweaArP3mp4c4iC3eiQwlNrqeTQ6L/view?usp=drivesdk", "bytes": 9469, "format": "png", "note": "+VP delta icon, variant 2." }
       ]
     },
-    "hirelingMeeplesSvg": {
-      "source": "ewendc-automated-setup",
-      "byHirelingKey": {
-        "advocates":    "src/images/meeples/advocates.svg",
-        "band":         "src/images/meeples/band.svg",
-        "bandits":      "src/images/meeples/bandits.svg",
-        "cheat":        "src/images/meeples/cheat.svg",
-        "exile":        "src/images/meeples/exile.svg",
-        "expedition":   "src/images/meeples/expedition.svg",
-        "farmers":      "src/images/meeples/farmers.svg",
-        "flameBearers": "src/images/meeples/flameBearers.svg",
-        "flotilla":     "src/images/meeples/flotilla.svg",
-        "gladiator":    "src/images/meeples/gladiator.svg",
-        "jailor":       "src/images/meeples/jailor.svg",
-        "patrol":       "src/images/meeples/patrol.svg",
-        "prophets":     "src/images/meeples/prophets.svg",
-        "protector":    "src/images/meeples/protector.svg",
-        "roamers":      "src/images/meeples/roamers.svg",
-        "spies":        "src/images/meeples/spies.svg",
-        "uprising":     "src/images/meeples/uprising.svg",
-        "vaultKeepers": "src/images/meeples/vaultKeepers.svg",
-        "dynasty":      "src/images/meeples/dynasty.svg"
-      },
-      "note": "EwenDC's full meeples folder. Map these to our hireling step option ids when the hirelings step gets a category."
-    },
     "hirelingIcons": {
       "clockwork-otters":  { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1hQhYwAt-329P8_WplQT0Z97She-KASPw", "originalName": "Clockwork Otters Logo.png",  "viewUrl": "https://drive.google.com/file/d/1hQhYwAt-329P8_WplQT0Z97She-KASPw/view?usp=drivesdk", "bytes": 26395, "format": "png", "note": "Hireling-card variant of Riverfolk." } },
       "clockwork-lizards": { "headIcon": { "source": "mrmirz-head-icons",     "fileId": "1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp", "originalName": "Clockwork Lizards Logo.png", "viewUrl": "https://drive.google.com/file/d/1As-1xx3LfG8FYD_jXHqXiJ6BSs1GQmAp/view?usp=drivesdk", "bytes": 23230, "format": "png", "note": "Hireling-card variant of Lizard Cult." } },
@@ -315,7 +406,7 @@
       "adsetCards": ["eyrie", "alliance", "vagabond", "lizards", "duchy", "corvids", "keepers", "lilypad", "twilight", "knaves"],
       "notes": [
         "All 13 factions have meeple SVGs (EwenDC) + PNG head icons.",
-        "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85. Per user intent the in-app ADSET banner is 'meeple + setup text', not the card scan.",
+        "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85. The per-faction `adsetSteps` are first-pass text and need verification against the rulebook (see `adsetNote` per faction).",
         "Map / deck assets remain partial; not blocking until the wizard renders them."
       ]
     }

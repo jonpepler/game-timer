@@ -18,6 +18,17 @@
   },
   "setupSteps": [
     {
+      "id": "expansions",
+      "label": "Expansions in this game",
+      "description": "Toggle the modules you have at the table. Downstream steps hide any options that belong to an unchecked module.",
+      "kind": {
+        "type": "multi-toggle",
+        "optionCategory": "expansion",
+        "defaultSelectedIds": ["base"],
+        "optionIds": ["base", "riverfolk", "underworld", "marauders", "homeland"]
+      }
+    },
+    {
       "id": "map",
       "label": "Map",
       "description": "Each map changes how clearings link and a few global rules.",
@@ -54,15 +65,32 @@
       }
     },
     {
+      "id": "seating",
+      "label": "Seat players",
+      "description": "Enter player names and drag to reorder. Seating is the turn order for the faction picker.",
+      "kind": {
+        "type": "seat-players",
+        "minPlayers": 1,
+        "maxPlayers": 6,
+        "defaultPlayerCount": 4
+      }
+    },
+    {
       "id": "hirelings",
       "label": "Hirelings",
-      "description": "Bot-driven allies. Take on up to 3.",
+      "description": "Bot-driven allies. Shuffle all hirelings, deal three (or skip to play without).",
       "kind": {
-        "type": "select-count",
-        "min": 0,
-        "max": 3,
-        "defaultValue": 0,
-        "allowRandom": true
+        "type": "deal-random",
+        "optionCategory": "hireling",
+        "count": 3,
+        "optional": true,
+        "optionIds": [
+          "patrol", "dynasty", "uprising", "exile",
+          "prophets", "flotilla", "bandits",
+          "expedition", "spies", "protector",
+          "flameBearers", "vaultKeepers", "band",
+          "advocates", "roamers", "farmers"
+        ]
       }
     },
     {
@@ -77,7 +105,7 @@
     {
       "id": "faction",
       "label": "Faction",
-      "description": "Each player claims one faction. The Vagabond and Knaves of the Deepwood cannot both be in the same game.",
+      "description": "Each seated player claims one faction. The Vagabond and Knaves of the Deepwood cannot both be in the same game.",
       "kind": {
         "type": "player-pick",
         "mode": "host-only",
