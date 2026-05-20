@@ -14,6 +14,59 @@
   will-change: transform, opacity;
 }
 
+/* Landscape mode — when the wizard stacks the side panel above the
+   form on narrow viewports, the SharePanel reflows to a two-column
+   grid so it's much shorter vertically. QR on the left (slightly
+   smaller), rest of the content stacks on the right. Scoped via
+   :has(.qrFrame) so the opening / error states (no QR) keep their
+   simple column layout. */
+@media (max-width: 980px) {
+  .panel:has(.qrFrame) {
+    width: min(640px, 94vw);
+    max-width: none;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "header header"
+      "qr code"
+      "qr link"
+      "qr help"
+      "footer footer";
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: start;
+  }
+  .panel:has(.qrFrame) .header {
+    grid-area: header;
+  }
+  .panel:has(.qrFrame) .qrFrame {
+    grid-area: qr;
+    align-self: center;
+    padding: 10px;
+  }
+  .panel:has(.qrFrame) .qrFrame svg,
+  .panel:has(.qrFrame) .qrFrame img {
+    width: 132px;
+    height: 132px;
+  }
+  /* The two .codeRow divs are 3rd and 4th of their type (after
+     .header and .qrFrame); pin them to the named cells. */
+  .panel:has(.qrFrame) .codeRow:nth-of-type(3) {
+    grid-area: code;
+  }
+  .panel:has(.qrFrame) .codeRow:nth-of-type(4) {
+    grid-area: link;
+  }
+  .panel:has(.qrFrame) .help {
+    grid-area: help;
+  }
+  .panel:has(.qrFrame) .footerActions {
+    grid-area: footer;
+    border-top: 1px solid var(--color-border);
+    padding-top: 12px;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;

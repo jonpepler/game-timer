@@ -34,7 +34,18 @@
     opacity 0.32s ease,
     margin 0.42s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: flex-basis, opacity;
-  overflow: hidden;
+  /* Horizontal overflow stays hidden so the panel content doesn't
+     bleed out during the collapse-to-zero-width transition.
+     Vertical scrolls internally so a tall SharePanel (QR + code +
+     link + help + footer ~500px) doesn't get clipped by the
+     dialog's max-height when paired with a short Game-picker
+     form. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Match the dialog's bound so the panel can take its natural
+     height up to the viewport limit and use internal scroll
+     above that — paired with the .modalInner max-height. */
+  max-height: 92vh;
 }
 
 .sidePanelHidden {

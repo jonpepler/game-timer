@@ -1544,7 +1544,7 @@ function DealRandomScreen({
                     </span>
                     {isDemoted && (
                       <span className={styles.dealtDemotedTag}>
-                        demoted{demoLabel == null ? " (?)" : ""}
+                        demoted
                       </span>
                     )}
                     {o.module && (
