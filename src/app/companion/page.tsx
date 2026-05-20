@@ -731,6 +731,9 @@ function SetupSeatingPanel({
                 onClick={() => onClaim(i)}
                 disabled={isTakenByOther}
                 style={{ all: "unset", cursor: "pointer", flex: 1 }}
+                aria-label={
+                  isTakenByOther ? `Seat ${i + 1} taken` : `Claim seat ${i + 1}`
+                }
               >
                 Seat {i + 1} — {seat.name}
                 {isTakenByOther && (

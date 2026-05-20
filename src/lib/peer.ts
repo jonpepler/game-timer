@@ -47,9 +47,31 @@ export interface CreateHostOptions {
   desiredId?: string;
 }
 
+// Test seam: Playwright multi-page tests inject a window-level factory
+// that provides a BroadcastChannel-based fake peer layer so multiple
+// pages on the same origin can talk to each other without contacting
+// the real PeerJS broker. The shape mirrors `createHost` /
+// `connectToHost` exactly; in production this branch is dead code.
+interface PeerTestFactory {
+  createHost: (options: CreateHostOptions) => Promise<HostSession>;
+  connectToHost: (
+    hostCode: string,
+    options: ConnectToHostOptions,
+  ) => Promise<CompanionSession>;
+}
+const getTestFactory = (): PeerTestFactory | null => {
+  if (typeof window === "undefined") return null;
+  return (
+    (window as unknown as { __PEER_TEST_FACTORY?: PeerTestFactory })
+      .__PEER_TEST_FACTORY ?? null
+  );
+};
+
 export function createHost(
   options: CreateHostOptions = {},
 ): Promise<HostSession> {
+  const testFactory = getTestFactory();
+  if (testFactory) return testFactory.createHost(options);
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
     const peer = new Ctor(options.desiredId, options.peerOptions);
@@ -80,7 +102,10 @@ export function createHost(
           }
         });
         conn.on("error", (err) => {
-          log.warn("connection error", { peerId: conn.peer, error: String(err) });
+          log.warn("connection error", {
+            peerId: conn.peer,
+            error: String(err),
+          });
         });
       });
 
@@ -134,6 +159,8 @@ export function connectToHost(
   hostCode: string,
   options: ConnectToHostOptions = {},
 ): Promise<CompanionSession> {
+  const testFactory = getTestFactory();
+  if (testFactory) return testFactory.connectToHost(hostCode, options);
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
     const peer = new Ctor(undefined, options.peerOptions);

@@ -99,7 +99,7 @@
       "label": "Faction",
       "kind": {
         "type": "player-pick",
-        "mode": "host-only",
+        "mode": "turn-based",
         "optionCategory": "faction",
         "allowRandom": true,
         "optionIds": [
