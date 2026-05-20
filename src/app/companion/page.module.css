@@ -138,7 +138,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: auto;
 }
 
 .claimPanel {
@@ -195,6 +194,34 @@
   display: inline-block;
 }
 
+.nameField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nameFieldLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.nameInput {
+  padding: 12px 14px;
+  font-size: 17px;
+  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.nameInput:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
 .claimedAs {
   font-size: 12px;
   color: var(--color-text-muted);
@@ -217,6 +244,17 @@
   font-family: inherit;
 }
 
+/* Pinned to the bottom of the visible area when content is short —
+   anything else (score panel, time-share) flows naturally above.
+   When content overflows, the End-Turn button still appears AFTER
+   everything else in DOM order; users scroll to find it. */
+.endTurnSlot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .endTurnButton {
   /* Override the global button reset */
   width: 100%;
@@ -231,6 +269,17 @@
   border-radius: 12px;
   cursor: pointer;
   transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.endTurnPending {
+  width: 100%;
+  padding: 18px 24px;
+  font-size: 15px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  text-align: center;
 }
 
 .endTurnButton:disabled {

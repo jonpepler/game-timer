@@ -13,6 +13,7 @@ import {
 import { ScorePanel } from "@/components/ScorePanel";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { VictoryBanner } from "@/components/VictoryBanner";
+import { FullScreen } from "@/components/FullScreen";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
   selectCurrentPlayerIndex,
@@ -95,6 +96,39 @@ function CompanionScreen() {
   const definition = pendingTurn?.definition ?? lastState?.definition;
 
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
+
+  // Companion-local display-name override. The host's STATE carries
+  // the seat's name (set in the seat-players step), but the
+  // companion can override what's shown on its own screen — useful
+  // when the host didn't get round to renaming default "Player N"
+  // seats. Persisted per (code, slot) in localStorage. NOTE: this is
+  // local-only — it doesn't propagate to the host's state.
+  const [customName, setCustomName] = useState<string>("");
+  const customNameKey =
+    code && claimedSlot !== null
+      ? `companion:name:${code}:${claimedSlot}`
+      : null;
+  useEffect(() => {
+    if (!customNameKey) {
+      setCustomName("");
+      return;
+    }
+    try {
+      setCustomName(window.localStorage.getItem(customNameKey) ?? "");
+    } catch {
+      setCustomName("");
+    }
+  }, [customNameKey]);
+  const saveCustomName = (next: string) => {
+    setCustomName(next);
+    if (!customNameKey) return;
+    try {
+      if (next) window.localStorage.setItem(customNameKey, next);
+      else window.localStorage.removeItem(customNameKey);
+    } catch {
+      // localStorage unavailable — name simply won't persist.
+    }
+  };
 
   // Restore a previously-claimed slot for this host when we arrive,
   // and re-announce it once we're connected.
@@ -237,7 +271,12 @@ function CompanionScreen() {
   );
   const claimedPlayer =
     claimedSlot !== null && playerViews.length > 0
-      ? playerViews[claimedSlot]
+      ? {
+          ...playerViews[claimedSlot],
+          // Local override beats the host-supplied name in the
+          // companion UI.
+          name: customName.trim() || playerViews[claimedSlot].name,
+        }
       : undefined;
   const claimedOptionId =
     claimedSlot !== null && state?.players
@@ -245,6 +284,12 @@ function CompanionScreen() {
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
+  // The host treats the very first tap of the timer container as
+  // "start the timer." If a companion fires END_TURN before then,
+  // it accidentally doubles as the start, which is confusing UX.
+  // We gate the End-Turn affordance until the host has recorded at
+  // least one turn — meaning the timer is genuinely running.
+  const gameStarted = (state?.turns.length ?? 0) > 0;
   const myScore =
     claimedSlot !== null && state
       ? (state.scores[claimedSlot] ?? state.scoreConfig?.min ?? 0)
@@ -267,7 +312,8 @@ function CompanionScreen() {
   }
 
   return (
-    <div className={styles.container}>
+    <FullScreen>
+      <div className={styles.container}>
       <div className={styles.header}>
         <span
           className={`${styles.statusDot} ${
@@ -320,6 +366,23 @@ function CompanionScreen() {
         )}
       </div>
 
+      {claimedPlayer && (
+        <label className={styles.nameField}>
+          <span className={styles.nameFieldLabel}>Your name</span>
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => saveCustomName(e.target.value)}
+            placeholder={
+              claimedSlot !== null
+                ? playerViews[claimedSlot]?.name ?? "Your name"
+                : "Your name"
+            }
+            className={styles.nameInput}
+          />
+        </label>
+      )}
+
       {pendingTurn && (
         <SetupTurnPanel
           pendingTurn={pendingTurn}
@@ -370,6 +433,14 @@ function CompanionScreen() {
             <span className={styles.bigStatLabel}>turns remaining</span>
           </div>
 
+          {playerViews.length === 0 && (
+            <div className={styles.empty}>
+              The host is running a game without per-player tracking, so
+              there's nothing to claim or score from here. You'll still
+              see the turn counter as it ticks down.
+            </div>
+          )}
+
           {playerViews.length > 0 && claimedSlot === null && (
             <div className={styles.claimPanel}>
               <span className={styles.claimTitle}>Claim a player</span>
@@ -394,64 +465,9 @@ function CompanionScreen() {
             </div>
           )}
 
-          {claimedPlayer && pickStep && pickStep.options.length > 0 && (
-            <div className={styles.factionPicker}>
-              <label
-                htmlFor="companion-faction"
-                className={styles.factionPickerLabel}
-              >
-                {pickStep.step.label}
-              </label>
-              <select
-                id="companion-faction"
-                value={claimedOptionId ?? ""}
-                onChange={(e) => pickOption(e.target.value)}
-                className={styles.factionSelect}
-              >
-                <option value="" disabled>
-                  — pick a {pickStep.step.label.toLowerCase()} —
-                </option>
-                {pickStep.options.map((o) => {
-                  const ownedByOther = state.players?.some(
-                    (p, i) =>
-                      i !== claimedSlot && optionIdFor(p, visualKey) === o.id,
-                  );
-                  const mutex = pickStep.constraints
-                    .filter((c) => c.type === "mutually-exclusive")
-                    .map((c) => c.optionIds);
-                  const mutexBlocked = state.players?.some((p, i) => {
-                    if (i === claimedSlot) return false;
-                    const oid = optionIdFor(p, visualKey);
-                    if (!oid) return false;
-                    return mutex.some(
-                      ([a, b]) =>
-                        (a === oid && b === o.id) || (b === oid && a === o.id),
-                    );
-                  });
-                  return (
-                    <option
-                      key={o.id}
-                      value={o.id}
-                      disabled={!!ownedByOther || !!mutexBlocked}
-                    >
-                      {o.label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          )}
-
-          {claimedPlayer && !victorPlayer && (
-            <button
-              type="button"
-              onClick={endTurn}
-              disabled={!isMyTurn}
-              className={styles.endTurnButton}
-            >
-              {isMyTurn ? "End my turn" : "Waiting for your turn…"}
-            </button>
-          )}
+          {/* Mid-game faction picker removed — faction selection
+              happens during the host's wizard via the SETUP_TURN /
+              SetupTurnPanel flow, not after the game has started. */}
 
           {claimedPlayer && state.scoreConfig && (
             <div className={styles.scoreControls}>
@@ -493,9 +509,33 @@ function CompanionScreen() {
               <PlayerTimeShare stats={stats} players={playerViews} />
             )}
           </div>
+
+          {/* End-Turn (or pending state) sits AFTER the score panel
+              + time-share so other content can flow above it. The
+              auto margin pushes it to the viewport bottom when there
+              IS spare room. */}
+          {claimedPlayer && !victorPlayer && (
+            <div className={styles.endTurnSlot}>
+              {gameStarted ? (
+                <button
+                  type="button"
+                  onClick={endTurn}
+                  disabled={!isMyTurn}
+                  className={styles.endTurnButton}
+                >
+                  {isMyTurn ? "End my turn" : "Waiting for your turn…"}
+                </button>
+              ) : (
+                <div className={styles.endTurnPending}>
+                  Waiting for the host to start the timer…
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
-    </div>
+      </div>
+    </FullScreen>
   );
 }
 
