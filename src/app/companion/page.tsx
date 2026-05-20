@@ -529,9 +529,9 @@ function CompanionScreen() {
               !pendingTurn && (
                 <>
                   <div className={styles.empty}>
-                    The host is running a game without per-player tracking,
-                    so there&apos;s nothing to claim or score from here. Tap
-                    below to advance the timer.
+                    The host is running a game without per-player tracking, so
+                    there&apos;s nothing to claim or score from here. Tap below
+                    to advance the timer.
                   </div>
                   <div className={styles.endTurnSlot}>
                     <button
@@ -665,6 +665,24 @@ function SetupTurnPanel({
     .filter((x): x is NonNullable<typeof x> => !!x);
   const excluded = new Set(pendingTurn.excludedOptionIds);
 
+  // Two-step pick — mirrors the host's PlayerPickScreen. Tap a card
+  // to open a full-screen confirm view; tap Confirm to send
+  // SETUP_PICK; Back returns to the card list.
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
+
+  // Cancel any open preview if the host moves the turn off this seat
+  // (e.g. host took over and confirmed remotely) or if the previewed
+  // option becomes unavailable.
+  useEffect(() => {
+    if (!myTurn) {
+      setPreviewCardId(null);
+      return;
+    }
+    if (previewCardId && excluded.has(previewCardId)) {
+      setPreviewCardId(null);
+    }
+  }, [myTurn, previewCardId, excluded]);
+
   if (!myTurn) {
     return (
       <div className={styles.empty}>
@@ -675,6 +693,93 @@ function SetupTurnPanel({
   }
 
   const pickLabel = pick?.step.label.toLowerCase() ?? "card";
+
+  if (previewCardId != null) {
+    const previewOption =
+      visible.find((o) => o.id === previewCardId) ??
+      allOptions.find((o) => o.id === previewCardId) ??
+      null;
+    const previewAdset = previewOption
+      ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
+      : undefined;
+    const previewMeeple = previewOption
+      ? (
+          previewOption as unknown as {
+            assets?: { meepleSvg?: { appPath?: string } };
+          }
+        ).assets?.meepleSvg?.appPath
+      : undefined;
+    const previewColor = previewOption?.color ?? "var(--color-border)";
+    const previewLabel = previewOption?.label ?? previewCardId;
+    return (
+      <div
+        className={styles.heroPreview}
+        role="region"
+        aria-label={`Confirm ${previewLabel}`}
+      >
+        <div className={styles.heroPreviewInstruction}>
+          <span className={styles.heroPreviewSubtle}>
+            Your turn — confirm your pick
+          </span>
+          <span className={styles.heroPreviewTitle}>{previewLabel}</span>
+        </div>
+        <div
+          className={styles.heroPreviewCard}
+          style={
+            {
+              background: `color-mix(in srgb, ${previewColor} 18%, var(--color-surface))`,
+              borderColor: previewColor,
+            } as React.CSSProperties
+          }
+        >
+          {previewMeeple && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={previewMeeple}
+              alt=""
+              aria-hidden
+              className={styles.heroPreviewMeeple}
+              style={{
+                background: previewColor,
+                WebkitMaskImage: `url(${previewMeeple})`,
+                maskImage: `url(${previewMeeple})`,
+              }}
+            />
+          )}
+          {previewAdset && previewAdset.length > 0 && (
+            <ol className={styles.heroPreviewSteps}>
+              {previewAdset.map((s, i) => (
+                <li key={i}>
+                  <span className={styles.heroCardAdsetIndex}>{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <div className={styles.heroPreviewActions}>
+          <button
+            type="button"
+            onClick={() => setPreviewCardId(null)}
+            className={styles.heroPreviewSecondary}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onPick(previewCardId);
+              setPreviewCardId(null);
+            }}
+            className={styles.heroPreviewPrimary}
+          >
+            Confirm setup
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={styles.heroPicker}
@@ -699,7 +804,7 @@ function SetupTurnPanel({
               key={option.id}
               type="button"
               disabled={isBlocked}
-              onClick={() => onPick(option.id)}
+              onClick={() => setPreviewCardId(option.id)}
               className={styles.heroCard}
               // Accessible name is just the option label, not the
               // computed text of all child nodes (which would
@@ -733,8 +838,7 @@ function SetupTurnPanel({
                   aria-hidden
                   className={styles.heroCardMeeple}
                   style={{
-                    background:
-                      option.color ?? "var(--color-text)",
+                    background: option.color ?? "var(--color-text)",
                     WebkitMaskImage: `url(${meepleSrc})`,
                     maskImage: `url(${meepleSrc})`,
                   }}

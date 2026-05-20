@@ -304,6 +304,11 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     const pickedLabel = (await firstCard.getAttribute("aria-label")) ?? "";
     if (!pickedLabel) throw new Error("expected dealt card to have aria-label");
     await firstCard.click();
+    // Companion now mirrors the host's two-step pick: tap card →
+    // confirm screen → Confirm setup commits the pick.
+    await companion
+      .getByRole("button", { name: /^Confirm setup$/ })
+      .click();
 
     // Host's dealt-resolve progress tile for seat 1 should now
     // show that seat picked the named hireling.
@@ -354,6 +359,11 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     const pickedLabel = (await firstCard.getAttribute("aria-label")) ?? "";
     if (!pickedLabel) throw new Error("expected dealt card to have aria-label");
     await firstCard.click();
+    // Companion now mirrors the host's two-step pick: tap card →
+    // confirm screen → Confirm setup commits the pick.
+    await companion
+      .getByRole("button", { name: /^Confirm setup$/ })
+      .click();
 
     // Host's wizard records the pick against seat 4. The picker's
     // dot summary uses `title` (and aria-label) to surface each

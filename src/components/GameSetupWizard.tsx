@@ -40,6 +40,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./GameSetupWizard.module.css";
+import { FullScreenToggle } from "./FullScreen";
 import { NumberField } from "./NumberField";
 import {
   DEFAULT_DEFINITION_ID,
@@ -482,10 +483,7 @@ export const GameSetupWizard = forwardRef<
       setContext((prev) => {
         const current =
           prev[stepId]?.kind === "dealt-resolve"
-            ? (prev[stepId] as Extract<
-                SetupChoice,
-                { kind: "dealt-resolve" }
-              >)
+            ? (prev[stepId] as Extract<SetupChoice, { kind: "dealt-resolve" }>)
             : { kind: "dealt-resolve" as const, confirmedIds: [] };
         // Only the seat whose turn it is (= confirmedIds.length)
         // may confirm; ignore everyone else.
@@ -554,10 +552,13 @@ export const GameSetupWizard = forwardRef<
               action.seatIndex >= current.seats.length
             )
               break;
+            // Allow empty names during typing — without this the
+            // companion can't delete the last character (host
+            // would revert to the previous name and bounce the
+            // input back). validateScreen still requires every
+            // seat to have a non-blank name at submit time.
             nextSeats = current.seats.map((s, i) =>
-              i === action.seatIndex
-                ? { ...s, name: action.name.trim() || s.name }
-                : s,
+              i === action.seatIndex ? { ...s, name: action.name } : s,
             );
             mutated = true;
             break;
@@ -604,13 +605,7 @@ export const GameSetupWizard = forwardRef<
       hasSeatingStep,
       getStepKind,
     }),
-    [
-      applyPick,
-      applyResolve,
-      applySeatingChange,
-      hasSeatingStep,
-      getStepKind,
-    ],
+    [applyPick, applyResolve, applySeatingChange, hasSeatingStep, getStepKind],
   );
 
   // Broadcast seating updates so every connected companion can render
@@ -728,125 +723,129 @@ export const GameSetupWizard = forwardRef<
             {sidePanel}
           </aside>
         )}
-      <form
-        className={`${styles.form} ${styles.formCard}`}
-        onSubmit={(e) => {
-          e.preventDefault();
-          next();
-        }}
-      >
-        <header className={styles.header}>
-          <div className={styles.headerRow}>
-            <h2 id="wizard-title" className={styles.title}>
-              Game Setup
-            </h2>
-            <span className={styles.crumbs}>
-              {screenIndex + 1} / {screens.length} · {currentScreen.label}
-            </span>
-          </div>
-          <div
-            className={styles.progress}
-            role="progressbar"
-            aria-valuemin={1}
-            aria-valuemax={screens.length}
-            aria-valuenow={screenIndex + 1}
-          >
-            {screens.map((s, i) => (
-              <span
-                key={s.id}
-                className={
-                  i === screenIndex
-                    ? `${styles.progressTick} ${styles.progressTickActive}`
-                    : i < screenIndex
-                      ? `${styles.progressTick} ${styles.progressTickDone}`
-                      : styles.progressTick
-                }
+        <form
+          className={`${styles.form} ${styles.formCard}`}
+          onSubmit={(e) => {
+            e.preventDefault();
+            next();
+          }}
+        >
+          <header className={styles.header}>
+            <div className={styles.headerRow}>
+              <h2 id="wizard-title" className={styles.title}>
+                Game Setup
+              </h2>
+              <span className={styles.crumbs}>
+                {screenIndex + 1} / {screens.length} · {currentScreen.label}
+              </span>
+              {/* In-modal FullScreen toggle — the dialog's backdrop
+                blocks the one in the page chrome, so this mirrors
+                it inside the modal layer. */}
+              <FullScreenToggle className={styles.headerFullscreen} />
+            </div>
+            <div
+              className={styles.progress}
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={screens.length}
+              aria-valuenow={screenIndex + 1}
+            >
+              {screens.map((s, i) => (
+                <span
+                  key={s.id}
+                  className={
+                    i === screenIndex
+                      ? `${styles.progressTick} ${styles.progressTickActive}`
+                      : i < screenIndex
+                        ? `${styles.progressTick} ${styles.progressTickDone}`
+                        : styles.progressTick
+                  }
+                />
+              ))}
+            </div>
+          </header>
+
+          <section className={styles.body} aria-labelledby="screen-title">
+            {currentScreen.kind === "game" && (
+              <GameScreen
+                definitions={definitions}
+                definitionId={definitionId}
+                onChange={setDefinitionId}
               />
-            ))}
-          </div>
-        </header>
+            )}
+            {currentScreen.kind === "expected-turns" && (
+              <ExpectedTurnsScreen
+                value={expectedTurns}
+                onChange={setExpectedTurns}
+              />
+            )}
+            {currentScreen.kind === "setup-step" && (
+              <StepScreen
+                step={currentScreen.step}
+                steps={definition.setupSteps ?? []}
+                context={context}
+                setContext={setContext}
+                peerHooks={peerHooks}
+                onAllConfirmed={() => {
+                  // Last seat just confirmed its pick — auto-advance
+                  // the wizard. If we're already on the final
+                  // screen, this submits and (via GameConfig.autoStart)
+                  // also starts the timer immediately.
+                  if (isLast) submit(/* autoStart */ true);
+                  else next();
+                }}
+              />
+            )}
+            {currentScreen.kind === "track-players" && (
+              <TrackPlayersScreen
+                enabled={trackPlayers}
+                onEnabledChange={setTrackPlayers}
+                roster={trackRoster}
+                onRosterChange={setTrackRoster}
+              />
+            )}
+            {screenError && <p className={styles.error}>{screenError}</p>}
+          </section>
 
-        <section className={styles.body} aria-labelledby="screen-title">
-          {currentScreen.kind === "game" && (
-            <GameScreen
-              definitions={definitions}
-              definitionId={definitionId}
-              onChange={setDefinitionId}
-            />
-          )}
-          {currentScreen.kind === "expected-turns" && (
-            <ExpectedTurnsScreen
-              value={expectedTurns}
-              onChange={setExpectedTurns}
-            />
-          )}
-          {currentScreen.kind === "setup-step" && (
-            <StepScreen
-              step={currentScreen.step}
-              steps={definition.setupSteps ?? []}
-              context={context}
-              setContext={setContext}
-              peerHooks={peerHooks}
-              onAllConfirmed={() => {
-                // Last seat just confirmed its pick — auto-advance
-                // the wizard. If we're already on the final
-                // screen, this submits and (via GameConfig.autoStart)
-                // also starts the timer immediately.
-                if (isLast) submit(/* autoStart */ true);
-                else next();
-              }}
-            />
-          )}
-          {currentScreen.kind === "track-players" && (
-            <TrackPlayersScreen
-              enabled={trackPlayers}
-              onEnabledChange={setTrackPlayers}
-              roster={trackRoster}
-              onRosterChange={setTrackRoster}
-            />
-          )}
-          {screenError && <p className={styles.error}>{screenError}</p>}
-        </section>
-
-        <footer className={styles.actions}>
-          <div className={styles.actionsLeft}>
-            {onClose && (
+          <footer className={styles.actions}>
+            <div className={styles.actionsLeft}>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={styles.secondary}
+                >
+                  <X size={16} aria-hidden /> Cancel
+                </button>
+              )}
+            </div>
+            <div className={styles.actionsRight}>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={back}
+                disabled={isFirst}
                 className={styles.secondary}
               >
-                <X size={16} aria-hidden /> Cancel
+                <ArrowLeft size={16} aria-hidden /> Back
               </button>
-            )}
-          </div>
-          <div className={styles.actionsRight}>
-            <button
-              type="button"
-              onClick={back}
-              disabled={isFirst}
-              className={styles.secondary}
-            >
-              <ArrowLeft size={16} aria-hidden /> Back
-            </button>
-            <button
-              type="submit"
-              className={styles.primary}
-              disabled={screenError != null}
-            >
-              {isLast ? (
-                <>
-                  <Play size={16} aria-hidden /> Start Game
-                </>
-              ) : (
-                <>
-                  Next <ArrowRight size={16} aria-hidden />
-                </>
-              )}
-            </button>
-          </div>
-        </footer>
-      </form>
+              <button
+                type="submit"
+                className={styles.primary}
+                disabled={screenError != null}
+              >
+                {isLast ? (
+                  <>
+                    <Play size={16} aria-hidden /> Start Game
+                  </>
+                ) : (
+                  <>
+                    Next <ArrowRight size={16} aria-hidden />
+                  </>
+                )}
+              </button>
+            </div>
+          </footer>
+        </form>
       </div>
     </dialog>
   );
@@ -1622,9 +1621,7 @@ function DealRandomScreen({
                       {isDemoted && demoLabel ? demoLabel : o.label}
                     </span>
                     {isDemoted && (
-                      <span className={styles.dealtDemotedTag}>
-                        demoted
-                      </span>
+                      <span className={styles.dealtDemotedTag}>demoted</span>
                     )}
                     {o.module && (
                       <span className={styles.dealtModule}>{o.module}</span>
@@ -1977,14 +1974,12 @@ function PlayerPickScreen({
   // for turn-based player-pick steps (Root). Other modes (host-only)
   // keep the compact panel further below.
   if (mode === "turn-based") {
-    const seatName =
-      seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`;
+    const seatName = seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`;
     // Full-screen preview takes over when the active seat has
     // clicked a card. Shows the chosen option's full setup steps
     // and gates the pick behind an explicit Confirm.
     if (previewCardId != null) {
-      const previewOption =
-        options.find((o) => o.id === previewCardId) ?? null;
+      const previewOption = options.find((o) => o.id === previewCardId) ?? null;
       const previewAdset = previewOption
         ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
         : undefined;
@@ -2035,9 +2030,7 @@ function PlayerPickScreen({
               <ol className={styles.heroPreviewSteps}>
                 {previewAdset.map((s, i) => (
                   <li key={i}>
-                    <span className={styles.heroCardStepsIndex}>
-                      {i + 1}.
-                    </span>
+                    <span className={styles.heroCardStepsIndex}>{i + 1}.</span>
                     <span>{s}</span>
                   </li>
                 ))}
@@ -2159,9 +2152,7 @@ function PlayerPickScreen({
                 {characters[o.id] && characters[o.id].length > 0 && (
                   <div className={styles.heroCardCharacters}>
                     Dealt{" "}
-                    {characters[o.id].length === 1
-                      ? "character"
-                      : "captains"}
+                    {characters[o.id].length === 1 ? "character" : "captains"}
                     <ul className={styles.heroCardCharactersList}>
                       {characters[o.id].map((charId) => (
                         <li key={charId}>{labelForCharacter(o, charId)}</li>
@@ -2520,8 +2511,7 @@ function DealtResolveScreen({
   const activeSeatIndex = confirmedIds.length;
   const activePlayer = seats[activeSeatIndex];
   const remainingIds = dealtIds.filter((id) => !confirmedIds.includes(id));
-  const allDone =
-    remainingIds.length === 0 || activeSeatIndex >= seats.length;
+  const allDone = remainingIds.length === 0 || activeSeatIndex >= seats.length;
 
   // Broadcast the active seat's choice list to companions via the
   // SETUP_TURN message. The synthetic definition wraps this step
