@@ -39,7 +39,7 @@ const stateLog = createLogger("companion-state");
 const playersLog = createLogger("companion-players");
 
 // Locate the player-pick SetupStep in the active definition. Companion
-// reads its options to populate its own faction-style picker.
+// reads its options to populate its own picker grid.
 const findPlayerPickStep = (
   definition: GameDefinition | undefined,
 ):
@@ -142,10 +142,10 @@ function CompanionScreen() {
   const definition = pendingTurn?.definition ?? lastState?.definition;
 
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
-  // When true, the faction-swap modal is open. Lets the claimant pick
-  // a new option from the definition's player-pick step without
-  // re-running setup.
-  const [changingFaction, setChangingFaction] = useState(false);
+  // When true, the player-option swap modal is open. Lets the
+  // claimant pick a new option from the definition's player-pick
+  // step without re-running setup.
+  const [changingPlayerOption, setChangingPlayerOption] = useState(false);
   // Two-step preview inside the swap modal — same pattern as the
   // wizard's PlayerPickScreen. Tap card → confirm screen → Confirm.
   const [changePreviewId, setChangePreviewId] = useState<string | null>(null);
@@ -348,11 +348,11 @@ function CompanionScreen() {
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
 
-  // Escape-hatch faction swap — lets a player whose seat is wired to
-  // the wrong (or no) faction fix it mid-game without re-setting up.
-  // Same wire format as a mid-game change-of-mind: SET_PLAYER_OPTION
-  // is routed by the host's claim-map, so the swap lands on the
-  // seat that THIS companion has claimed.
+  // Escape-hatch player-option swap — lets a player whose seat is
+  // wired to the wrong (or no) option fix it mid-game without
+  // re-setting up. Same wire format as a mid-game change-of-mind:
+  // SET_PLAYER_OPTION is routed by the host's claim-map, so the
+  // swap lands on the seat that THIS companion has claimed.
   const sendSetPlayerOption = (stepId: string, optionId: string) =>
     send({
       type: "SET_PLAYER_OPTION",
@@ -517,21 +517,29 @@ function CompanionScreen() {
               >
                 change seat
               </button>
-              {/* Only show the faction-swap link when the active
-                  definition actually has a player-pick step
-                  (Generic doesn't, so the swap would be a no-op). */}
-              {definition && findPlayerPickStep(definition) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChangePreviewId(null);
-                    setChangingFaction(true);
-                  }}
-                  className={styles.changeButton}
-                >
-                  change faction
-                </button>
-              )}
+              {/* Only show the swap link when the active definition
+                  actually has a player-pick step (Generic doesn't,
+                  so the swap would be a no-op). The button label
+                  pulls from the step's own label so the wording
+                  matches the game's vocabulary — no game-specific
+                  noun in app code. */}
+              {definition &&
+                (() => {
+                  const pickInfo = findPlayerPickStep(definition);
+                  if (!pickInfo) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChangePreviewId(null);
+                        setChangingPlayerOption(true);
+                      }}
+                      className={styles.changeButton}
+                    >
+                      change {pickInfo.step.label.toLowerCase()}
+                    </button>
+                  );
+                })()}
             </span>
           )}
         </div>
@@ -773,8 +781,8 @@ function CompanionScreen() {
           </>
         )}
       </div>
-      {changingFaction && definition && claimedSlot !== null && (
-        <ChangeFactionModal
+      {changingPlayerOption && definition && claimedSlot !== null && (
+        <ChangePlayerOptionModal
           definition={definition}
           claimedSlot={claimedSlot}
           players={state?.players ?? []}
@@ -782,11 +790,11 @@ function CompanionScreen() {
           onPreviewChange={setChangePreviewId}
           onConfirm={(stepId, optionId) => {
             sendSetPlayerOption(stepId, optionId);
-            setChangingFaction(false);
+            setChangingPlayerOption(false);
             setChangePreviewId(null);
           }}
           onClose={() => {
-            setChangingFaction(false);
+            setChangingPlayerOption(false);
             setChangePreviewId(null);
           }}
         />
@@ -1024,13 +1032,13 @@ function SetupTurnPanel({
   );
 }
 
-// Escape-hatch faction swap modal — fullscreen, mirrors the wizard's
-// PlayerPickScreen UX (tap card → preview → Confirm). Excludes
-// options already claimed by other seats so the SET_PLAYER_OPTION
-// peer message doesn't get rejected on the host. The host's mutex
-// constraints still apply server-side — we only filter the obvious
-// taken-by-someone-else case in the picker.
-function ChangeFactionModal({
+// Escape-hatch player-option swap modal — fullscreen, mirrors the
+// wizard's PlayerPickScreen UX (tap card → preview → Confirm).
+// Excludes options already claimed by other seats so the
+// SET_PLAYER_OPTION peer message doesn't get rejected on the host.
+// The host's mutex constraints still apply server-side — we only
+// filter the obvious taken-by-someone-else case in the picker.
+function ChangePlayerOptionModal({
   definition,
   claimedSlot,
   players,
@@ -1049,6 +1057,11 @@ function ChangeFactionModal({
 }) {
   const pick = findPlayerPickStep(definition);
   if (!pick) return null;
+  // The step's own `label` is the game-vocab noun ("Faction" for
+  // Root, "Class" for a hypothetical class-based game). All
+  // user-visible swap strings derive from it so this component
+  // stays game-agnostic.
+  const stepLabel = pick.step.label;
   const visualKey = definition.playerVisualFrom;
   // Build the set of optionIds taken by *other* claimed seats so we
   // can grey them out in the grid (the host would reject them too).
@@ -1089,7 +1102,7 @@ function ChangeFactionModal({
         className={styles.swapOverlay}
         role="dialog"
         aria-modal="true"
-        aria-label="Confirm faction swap"
+        aria-label={`Confirm ${stepLabel.toLowerCase()} swap`}
       >
         <div
           className={styles.heroPreview}
@@ -1097,7 +1110,7 @@ function ChangeFactionModal({
         >
           <div className={styles.heroPreviewInstruction}>
             <span className={styles.heroPreviewSubtle}>
-              Confirm faction swap
+              Confirm {stepLabel.toLowerCase()} swap
             </span>
             <span className={styles.heroPreviewTitle}>{option.label}</span>
           </div>
@@ -1161,11 +1174,11 @@ function ChangeFactionModal({
       className={styles.swapOverlay}
       role="dialog"
       aria-modal="true"
-      aria-label="Change faction"
+      aria-label={`Change ${stepLabel.toLowerCase()}`}
     >
       <div className={styles.swapPanel}>
         <header className={styles.swapHeader}>
-          <span className={styles.swapTitle}>Change faction</span>
+          <span className={styles.swapTitle}>Change {stepLabel.toLowerCase()}</span>
           <button
             type="button"
             onClick={onClose}

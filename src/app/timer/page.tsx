@@ -241,7 +241,7 @@ export default function Home() {
         // Pull asset paths through the same passthrough route the
         // wizard uses at submit time, so the new metadata carries
         // iconSrc / headIconSrc and the renderer keeps showing the
-        // faction's meeple + head crop after the swap.
+        // option's meeple + head crop after the swap.
         const assets = (
           option as unknown as {
             assets?: {
@@ -254,8 +254,8 @@ export default function Home() {
         const head = assets?.headIcon?.[0]?.appPath;
         // Preserve the existing seat name. Earlier code overwrote
         // player.name with the option's label, which clobbered the
-        // human's display name ("Joel") with the faction label
-        // ("Underground Duchy") every time anyone switched.
+        // human's display name with the option label every time
+        // anyone switched.
         const existing = state.players?.[claimed];
         const preservedName = existing?.name ?? option.label;
         setPlayer(claimed, {
@@ -430,8 +430,8 @@ export default function Home() {
   // Player-metadata diagnostic — emit a snapshot whenever the roster
   // identity changes (names + metadata), gated on a content hash so
   // turn ticks don't fire it. Lets the debug overlay confirm whether
-  // factions like Duchy actually carry their color + asset paths into
-  // the live player array.
+  // each player carries the expected color + asset paths on the
+  // live player array.
   const lastPlayersSigRef = useRef<string>("");
   useEffect(() => {
     if (!state.players || state.players.length === 0) return;
