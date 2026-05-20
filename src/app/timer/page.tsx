@@ -248,10 +248,11 @@ export default function Home() {
         return;
       }
       case "SETUP_PICK": {
-        // Wizard-time picker pick from a seated companion. Player-pick
-        // is identity-bound: a peer can only pick for the seat they've
-        // claimed. The host enforces this against claimMap before
-        // forwarding to the wizard.
+        // Wizard-time picker pick from a seated companion. Both
+        // `player-pick` and `dealt-resolve` use this message —
+        // routed by looking up the named step's kind on the
+        // active definition. Identity-bound: a peer can only
+        // pick for the seat they've claimed.
         const handle = wizardHandleRef.current;
         if (!handle) {
           peerLog.warn("SETUP_PICK dropped — wizard not mounted", { peerId });
@@ -272,7 +273,14 @@ export default function Home() {
           });
           return;
         }
-        handle.applyPick(msg.stepId, msg.seatIndex, msg.optionId);
+        // Route by the WIZARD's current step kind, not the timer
+        // page's `definitionId` — the wizard's selection isn't
+        // committed to the timer state until submit.
+        if (handle.getStepKind(msg.stepId) === "dealt-resolve") {
+          handle.applyResolve(msg.stepId, msg.seatIndex, msg.optionId);
+        } else {
+          handle.applyPick(msg.stepId, msg.seatIndex, msg.optionId);
+        }
         return;
       }
       case "SEATING_REQUEST": {

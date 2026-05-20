@@ -77,6 +77,16 @@ export interface GameConfig {
 // Currently a single method — adds more if more peer-driven steps land.
 export interface GameSetupWizardHandle {
   applyPick: (stepId: string, seatIndex: number, optionId: string) => void;
+  // Apply a peer-driven dealt-resolve pick — the seated companion
+  // chose `optionId` from the remaining dealt items on the step.
+  // Validates active-seat + not-already-confirmed under the hood.
+  applyResolve: (stepId: string, seatIndex: number, optionId: string) => void;
+  // Look up the kind of a setup step on the wizard's CURRENTLY
+  // selected definition (which may differ from the timer page's
+  // `definitionId`, since that's only set on submit). Used by the
+  // host to route an incoming SETUP_PICK message to applyPick vs
+  // applyResolve.
+  getStepKind: (stepId: string) => string | undefined;
   // Apply a peer-driven seating change (claim/rename/add/remove)
   // to the wizard's setup-context. Bounds against the step's
   // min/max enforced inside; out-of-bounds requests are no-ops.
@@ -463,6 +473,37 @@ export const GameSetupWizard = forwardRef<
     [],
   );
 
+  // Imperative dealt-resolve pick (driven by peer SETUP_PICK
+  // messages on a `dealt-resolve` step). Validates active-seat
+  // and not-already-confirmed under the hood — out-of-order or
+  // duplicate requests are no-ops.
+  const applyResolve = useCallback(
+    (stepId: string, seatIndex: number, optionId: string) => {
+      setContext((prev) => {
+        const current =
+          prev[stepId]?.kind === "dealt-resolve"
+            ? (prev[stepId] as Extract<
+                SetupChoice,
+                { kind: "dealt-resolve" }
+              >)
+            : { kind: "dealt-resolve" as const, confirmedIds: [] };
+        // Only the seat whose turn it is (= confirmedIds.length)
+        // may confirm; ignore everyone else.
+        if (current.confirmedIds.length !== seatIndex) return prev;
+        // Refuse duplicates.
+        if (current.confirmedIds.includes(optionId)) return prev;
+        return {
+          ...prev,
+          [stepId]: {
+            ...current,
+            confirmedIds: [...current.confirmedIds, optionId],
+          },
+        };
+      });
+    },
+    [],
+  );
+
   // Bounds for the seating step (used by applySeatingChange below).
   const seatingStep = useMemo(
     () => definition.setupSteps?.find((s) => s.kind.type === "seat-players"),
@@ -548,10 +589,28 @@ export const GameSetupWizard = forwardRef<
 
   const hasSeatingStep = useCallback(() => seatingStep != null, [seatingStep]);
 
+  const getStepKind = useCallback(
+    (stepId: string) =>
+      definition.setupSteps?.find((s) => s.id === stepId)?.kind.type,
+    [definition],
+  );
+
   useImperativeHandle(
     ref,
-    () => ({ applyPick, applySeatingChange, hasSeatingStep }),
-    [applyPick, applySeatingChange, hasSeatingStep],
+    () => ({
+      applyPick,
+      applyResolve,
+      applySeatingChange,
+      hasSeatingStep,
+      getStepKind,
+    }),
+    [
+      applyPick,
+      applyResolve,
+      applySeatingChange,
+      hasSeatingStep,
+      getStepKind,
+    ],
   );
 
   // Broadcast seating updates so every connected companion can render
@@ -1152,6 +1211,7 @@ function StepScreen({
           sourceStepId={kind.sourceStepId}
           sourceOptions={sourceOptions}
           context={context}
+          peerHooks={peerHooks}
           onChange={(updater) =>
             setContext((prev) => {
               const current =
@@ -2419,6 +2479,7 @@ function DealtResolveScreen({
   sourceOptions,
   context,
   onChange,
+  peerHooks,
 }: {
   step: SetupStep;
   sourceStepId: string;
@@ -2429,6 +2490,11 @@ function DealtResolveScreen({
       current: Extract<SetupChoice, { kind: "dealt-resolve" }>,
     ) => Extract<SetupChoice, { kind: "dealt-resolve" }>,
   ) => void;
+  // Same hooks as PlayerPickScreen — when the active seat changes
+  // we broadcast SETUP_TURN with a synthetic player-pick step
+  // containing the remaining dealt items, so the seated companion
+  // can pick on its own device via the same SETUP_PICK round-trip.
+  peerHooks?: WizardPeerHooks;
 }) {
   // Resolve the upstream deal-random step + the seat list.
   const sourceChoice = context[sourceStepId];
@@ -2456,6 +2522,55 @@ function DealtResolveScreen({
   const remainingIds = dealtIds.filter((id) => !confirmedIds.includes(id));
   const allDone =
     remainingIds.length === 0 || activeSeatIndex >= seats.length;
+
+  // Broadcast the active seat's choice list to companions via the
+  // SETUP_TURN message. The synthetic definition wraps this step
+  // in a `player-pick` shell so the companion's existing
+  // SetupTurnPanel can render the dealt items without any
+  // dealt-resolve-specific code on its side.
+  useEffect(() => {
+    if (!peerHooks?.onTurnStart) return;
+    if (allDone) {
+      peerHooks.onTurnEnd?.({ stepId: step.id });
+      return;
+    }
+    if (activeSeatIndex < 0 || activeSeatIndex >= seats.length) return;
+    const visibleOptions = remainingIds
+      .map((id) => sourceOptions.find((o) => o.id === id))
+      .filter((x): x is SetupOption => !!x);
+    peerHooks.onTurnStart({
+      stepId: step.id,
+      seatIndex: activeSeatIndex,
+      seatName: seats[activeSeatIndex]?.name ?? `Seat ${activeSeatIndex + 1}`,
+      optionIds: remainingIds,
+      excludedOptionIds: [],
+      // Synthetic single-step definition: presents the dealt-resolve
+      // step as a `player-pick` with options = remaining items.
+      definition: {
+        schemaVersion: 1,
+        id: "__wizard-snapshot",
+        name: "Setup",
+        defaultExpectedTurns: 0,
+        defaultAverageSeconds: 0,
+        setupSteps: [
+          {
+            id: step.id,
+            label: step.label,
+            description: step.description,
+            kind: {
+              type: "player-pick",
+              options: visibleOptions,
+              mode: "turn-based",
+            },
+          },
+        ],
+      } as unknown as GameDefinition,
+    });
+    // peerHooks intentionally excluded from deps — the parent keeps
+    // a stable identity for it; including would re-fire on every
+    // render and re-broadcast unnecessarily.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSeatIndex, allDone, dealtIds.length, sourceOptions, step.id]);
 
   if (dealtIds.length === 0) {
     return (

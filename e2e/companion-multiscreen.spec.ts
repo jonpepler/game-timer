@@ -268,6 +268,50 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     await installTestPeer(context);
   });
 
+  test("companion at the active dealt-resolve seat picks a hireling and the host registers it", async ({
+    context,
+  }) => {
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+    const companion = await openCompanion(context, code);
+
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+
+    // Companion claims seat 1 (the first to resolve a hireling
+    // under dealt-resolve's player-order rule).
+    await companion.getByRole("button", { name: /^Claim seat 1$/ }).click();
+    await expect(
+      companion.getByRole("textbox", { name: /Rename seat 1/i }),
+    ).toBeVisible({ timeout: 3000 });
+
+    // Walk host to the upstream "hirelings" screen (deal-random,
+    // optional + starts skipped) and shuffle to actually deal
+    // some hirelings, then continue to "set up hirelings".
+    await navigateToScreen(host, /^Hirelings$/);
+    await host.getByRole("button", { name: /^Shuffle$/i }).click();
+    await navigateToScreen(host, /set up hirelings/i);
+
+    // Companion's picker overlay should render with the dealt
+    // items. Same SetupTurnPanel as the faction pick — the host
+    // sends a synthetic player-pick step from the dealt-resolve
+    // screen so the companion's existing code renders it.
+    const pickerPanel = companion.getByRole("region", {
+      name: /Your turn to pick a set up hirelings/i,
+    });
+    await expect(pickerPanel).toBeVisible({ timeout: 5000 });
+    const firstCard = pickerPanel.getByRole("button").first();
+    const pickedLabel = (await firstCard.getAttribute("aria-label")) ?? "";
+    if (!pickedLabel) throw new Error("expected dealt card to have aria-label");
+    await firstCard.click();
+
+    // Host's dealt-resolve progress tile for seat 1 should now
+    // show that seat picked the named hireling.
+    await expect(
+      host.getByTitle(new RegExp(`Player 1 — picked ${pickedLabel}`)),
+    ).toBeVisible({ timeout: 3000 });
+  });
+
   test("companion claimed at the active picker seat gets SETUP_TURN and can pick its faction", async ({
     context,
   }) => {
