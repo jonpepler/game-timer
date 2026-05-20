@@ -1,11 +1,21 @@
 .container {
   display: flex;
   flex-direction: column;
+  /* `100dvh` follows the visible viewport on mobile Chrome / Safari
+     as the URL bar shows or hides, so the End-Turn button at the
+     bottom isn't covered by an address bar that the static `100vh`
+     would have allowed for. `100vh` stays as a fallback for older
+     browsers that don't support dvh. */
   min-height: 100vh;
+  min-height: 100dvh;
   font-family:
     "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans",
     Arial, sans-serif;
+  /* Pad the bottom to clear the home indicator / gesture bar on
+     phones (safe-area-inset-bottom) plus a baseline 24px. The
+     same pattern protects the End-Turn button from the URL bar. */
   padding: 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
   gap: 24px;
 }
 
