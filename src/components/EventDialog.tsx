@@ -1,17 +1,17 @@
 "use client";
 
 /*
- * Fullscreen modal that appears whenever a player's score crosses a
- * configured milestone (see ScoreConfig.milestones). Blocks the rest
- * of the UI — taps anywhere outside the Acknowledge button are
- * ignored — so a quick double-tap on the score control can't dismiss
- * it before the active player notices.
+ * Fullscreen, dismiss-required event modal. The score subsystem uses
+ * it to announce milestone crossings, but the component is generic —
+ * it just renders an avatar / headline / body and an Acknowledge
+ * button. Anything that wants to interrupt the game with a "you must
+ * see this" prompt can render an EventDialog.
  */
 import { useEffect } from "react";
 import type { PendingMilestone } from "@/state/gameSession";
-import styles from "./MilestoneDialog.module.css";
+import styles from "./EventDialog.module.css";
 
-interface MilestoneDialogProps {
+interface EventDialogProps {
   milestone: PendingMilestone;
   playerName: string;
   playerColor: string;
@@ -20,14 +20,14 @@ interface MilestoneDialogProps {
   onDismiss: () => void;
 }
 
-export function MilestoneDialog({
+export function EventDialog({
   milestone,
   playerName,
   playerColor,
   playerHeadIconSrc,
   playerIconSrc,
   onDismiss,
-}: MilestoneDialogProps) {
+}: EventDialogProps) {
   // Allow Enter / Space to acknowledge — common keyboard shortcuts
   // for "accept this dialog". Escape is intentionally NOT wired so
   // the player can't dismiss without thinking.

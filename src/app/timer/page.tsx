@@ -19,7 +19,7 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
-import { MilestoneDialog } from "@/components/MilestoneDialog";
+import { EventDialog } from "@/components/EventDialog";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
@@ -861,7 +861,7 @@ export default function Home() {
           const name = pv?.name ?? `Player ${m.playerIndex + 1}`;
           const color = pv?.color ?? "var(--color-border)";
           return (
-            <MilestoneDialog
+            <EventDialog
               milestone={m}
               playerName={name}
               playerColor={color}

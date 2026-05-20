@@ -13,7 +13,7 @@ import {
 import { ScorePanel } from "@/components/ScorePanel";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { VictoryBanner } from "@/components/VictoryBanner";
-import { MilestoneDialog } from "@/components/MilestoneDialog";
+import { EventDialog } from "@/components/EventDialog";
 import { FullScreen } from "@/components/FullScreen";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
@@ -29,6 +29,7 @@ import {
 import { createLogger } from "@/lib/logger";
 
 const stateLog = createLogger("companion-state");
+const playersLog = createLogger("companion-players");
 import type {
   GameDefinition,
   SetupConstraint,
@@ -92,6 +93,9 @@ function CompanionScreen() {
   // Refs (not state) so the diagnostic doesn't itself trigger a
   // re-render on every message.
   const lastMsgArrivedAtRef = useRef<number>(0);
+  // Hash so we only log the roster snapshot when player identity
+  // changes (name/metadata) — turn ticks shouldn't spam.
+  const lastPlayersSigRef = useRef<string>("");
   useEffect(() => {
     if (!lastMessage) return;
     if (lastMessage.type === "STATE") {
@@ -109,6 +113,24 @@ function CompanionScreen() {
         transitMs,
         turns: lastMessage.state.turns.length,
       });
+      // Roster snapshot — fires when the players[] identity changes
+      // (so we can confirm whether the inbound STATE carries the
+      // expected color + iconSrc + headIconSrc on each player). Same
+      // shape as the host-players logger so the two are easy to
+      // cross-reference.
+      const players = lastMessage.state.players ?? [];
+      if (players.length > 0) {
+        const slim = players.map((p, i) => ({
+          i,
+          name: p.name,
+          metadata: p.metadata,
+        }));
+        const sig = JSON.stringify(slim);
+        if (sig !== lastPlayersSigRef.current) {
+          lastPlayersSigRef.current = sig;
+          playersLog.info("roster", { players: slim });
+        }
+      }
     } else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
     else if (lastMessage.type === "SETUP_DONE") setPendingTurn(null);
     else if (lastMessage.type === "SETUP_SEATING")
@@ -716,7 +738,7 @@ function CompanionScreen() {
         )}
       </div>
       {state?.pendingMilestones && state.pendingMilestones.length > 0 && (
-        <MilestoneDialog
+        <EventDialog
           milestone={state.pendingMilestones[0]}
           playerName={
             playerViews[state.pendingMilestones[0].playerIndex]?.name ??
