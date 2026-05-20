@@ -17,9 +17,24 @@
     "increment": 1,
     "victory": { "type": "firstToMax" },
     "milestones": [
-      { "atScore": 4, "label": "Trigger your hireling effect." },
-      { "atScore": 8, "label": "Trigger your hireling effect." },
-      { "atScore": 12, "label": "Trigger your hireling effect." }
+      {
+        "atScore": 4,
+        "label": "Trigger your hireling effect.",
+        "fireOnce": true,
+        "marker": { "display": "H" }
+      },
+      {
+        "atScore": 8,
+        "label": "Trigger your hireling effect.",
+        "fireOnce": true,
+        "marker": { "display": "H" }
+      },
+      {
+        "atScore": 12,
+        "label": "Trigger your hireling effect.",
+        "fireOnce": true,
+        "marker": { "display": "H" }
+      }
     ]
   },
   "setupSteps": [

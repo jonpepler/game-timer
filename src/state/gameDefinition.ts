@@ -39,6 +39,22 @@ export type ScoreVictoryType = z.infer<typeof ScoreVictoryTypeSchema>;
 const ScoreMilestoneSchema = z.object({
   atScore: z.number(),
   label: z.string(),
+  // When true, fires at most ONCE per game across all players —
+  // the first player to cross the threshold gets the dialog and no
+  // one else does, even if they cross the same threshold later.
+  // Useful for "warning bell" rules (Root's hireling triggers).
+  // Default (omitted / false) is per-player firing.
+  fireOnce: z.boolean().optional(),
+  // Optional visual marker rendered on the score track at this
+  // milestone's position. `display` is a short text glyph (1-3
+  // chars, e.g. "★" or "H"); `icon` is an appPath to an SVG/PNG.
+  // Renderer prefers the icon when both are set.
+  marker: z
+    .object({
+      display: z.string().optional(),
+      icon: z.string().optional(),
+    })
+    .optional(),
 });
 export type ScoreMilestone = z.infer<typeof ScoreMilestoneSchema>;
 

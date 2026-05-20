@@ -524,4 +524,80 @@ describe("score milestones", () => {
     expect(state.pendingMilestones).toEqual([]);
     expect(state.firedMilestones).toEqual({});
   });
+
+  it("fireOnce milestones fire for the first crosser only", () => {
+    const fireOnceConfig = {
+      displayStyle: "linearTrack" as const,
+      min: 0,
+      max: 30,
+      increment: 1,
+      milestones: [
+        { atScore: 4, label: "Trigger", fireOnce: true },
+      ],
+    };
+    const state = gameSessionReducer(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: [
+          { name: "A", color: "#fff" },
+          { name: "B", color: "#000" },
+        ],
+        scoreConfig: fireOnceConfig,
+      }),
+      { type: "START", at: 0 },
+    );
+    // Player 0 crosses first — they get the dialog.
+    const afterA = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    expect(afterA.pendingMilestones).toEqual([
+      { playerIndex: 0, atScore: 4, label: "Trigger" },
+    ]);
+    // Player 1 crosses next — dialog stays silent.
+    const afterB = gameSessionReducer(afterA, {
+      type: "SET_SCORE",
+      playerIndex: 1,
+      value: 4,
+    });
+    expect(afterB.pendingMilestones).toEqual(afterA.pendingMilestones);
+    expect(afterB.firedMilestones[1] ?? []).toEqual([]);
+  });
+
+  it("non-fireOnce milestones still fire for every player as before", () => {
+    // Same shape as the existing per-player tests but explicit
+    // about the default semantics so the contract is clear.
+    const cfg = {
+      displayStyle: "linearTrack" as const,
+      min: 0,
+      max: 30,
+      increment: 1,
+      milestones: [{ atScore: 4, label: "Trigger" }],
+    };
+    const state = gameSessionReducer(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: [
+          { name: "A", color: "#fff" },
+          { name: "B", color: "#000" },
+        ],
+        scoreConfig: cfg,
+      }),
+      { type: "START", at: 0 },
+    );
+    let next = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    next = gameSessionReducer(next, {
+      type: "SET_SCORE",
+      playerIndex: 1,
+      value: 4,
+    });
+    expect(next.pendingMilestones).toHaveLength(2);
+  });
 });

@@ -132,6 +132,40 @@ export function ScorePanel({
         <>
           <div className={styles.track}>
             <div className={styles.trackBar} aria-hidden />
+            {/* Milestone markers — small ticks at each configured
+                atScore, rendered above the player markers so the
+                player heads still occlude them slightly. Display
+                glyph (`marker.display`) or icon (`marker.icon`)
+                comes from the milestone config; aria-hidden because
+                the dialog itself is the canonical announcement. */}
+            {(scoreConfig.milestones ?? []).map((m, i) => {
+              const range = max! - min;
+              const pct = range === 0 ? 0 : ((m.atScore - min) / range) * 100;
+              return (
+                <span
+                  key={`milestone-${m.atScore}-${i}`}
+                  className={styles.trackMilestone}
+                  style={{
+                    left: `${Math.max(0, Math.min(100, pct))}%`,
+                  }}
+                  aria-hidden
+                  title={`${m.atScore}: ${m.label}`}
+                >
+                  {m.marker?.icon ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={m.marker.icon}
+                      alt=""
+                      className={styles.trackMilestoneIcon}
+                    />
+                  ) : (
+                    <span className={styles.trackMilestoneLabel}>
+                      {m.marker?.display ?? "★"}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
             {players.map((player, index) => {
               const score = scores[index] ?? min;
               const range = max! - min;

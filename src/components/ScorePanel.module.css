@@ -35,6 +35,41 @@
   border-radius: 999px;
 }
 
+/* Milestone tick — small disc/glyph sitting at a configured
+   `atScore` position. Lives below the player markers (z-index)
+   so a player camped on the milestone still reads. Centered on
+   the track bar's midline. */
+.trackMilestone {
+  position: absolute;
+  top: 39px;
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  margin-left: -11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong, var(--color-border));
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.trackMilestoneLabel {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.trackMilestoneIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
 /* Score labels under the track — anchors (0, max) plus every
    player's actual score. Positioned absolutely so each label
    sits directly under its marker's x-coordinate. */

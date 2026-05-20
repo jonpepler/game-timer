@@ -194,12 +194,25 @@ const applyScore = (
   let pendingMilestones = state.pendingMilestones;
   const milestones = cfg?.milestones ?? [];
   if (milestones.length > 0 && clamped > previous) {
-    const alreadyFired = new Set(firedMilestones[playerIndex] ?? []);
+    const alreadyFiredByMe = new Set(firedMilestones[playerIndex] ?? []);
+    // Pre-compute the set of atScores any player has fired so far,
+    // for fire-once milestones that need game-level dedup instead
+    // of the default per-player tracking.
+    const firedByAnyone = new Set<number>();
+    for (const arr of Object.values(firedMilestones)) {
+      for (const v of arr) firedByAnyone.add(v);
+    }
     const newlyFired: number[] = [];
     const newlyPending: PendingMilestone[] = [];
     for (const m of milestones) {
       if (m.atScore <= previous || m.atScore > clamped) continue;
-      if (alreadyFired.has(m.atScore)) continue;
+      // fireOnce: any player crossing first locks the dialog out
+      // for everyone else. Default (per-player) only blocks re-
+      // fires for this specific player.
+      const blocked = m.fireOnce
+        ? firedByAnyone.has(m.atScore)
+        : alreadyFiredByMe.has(m.atScore);
+      if (blocked) continue;
       newlyFired.push(m.atScore);
       newlyPending.push({
         playerIndex,
