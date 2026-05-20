@@ -1,7 +1,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  /* Tight gap so the label + track + selected-row pack together
+     without a visual gulf between them. */
+  gap: 4px;
   pointer-events: auto;
 }
 
@@ -17,24 +19,25 @@
 .track {
   position: relative;
   /* Stacks markers diagonally when they share a score. The cluster
-     offset (16px in JS) needs the marker (24px) to peek above the one
-     below — so the height has to accommodate (markerHeight + N*offset)
-     for N clustered markers. Sized for Root's max of 6 players at the
-     same score: 24 + 5*16 = 104. */
-  height: 112px;
-  /* Outer margin clears the screen edge; inner padding leaves room for
-     the marker's translateX(-50%) at the 0% and 100% positions so end
-     markers stay tangent to the bar instead of half-off it. */
-  margin: 4px 24px;
+     offset (14px in JS) needs the marker (24px) to peek above the
+     one below — so the height has to accommodate
+     (markerHeight + (N-1)*offset) for N clustered markers. Sized
+     for Root's max of 6 players at the same score:
+     24 + 5*14 = 94, rounded up to 96. */
+  height: 96px;
+  /* Tight outer margin clears the screen edge; inner padding leaves
+     room for the marker's translateX(-50%) at the 0% and 100%
+     positions so end markers stay tangent to the bar instead of
+     half-off it. */
+  margin: 2px 24px;
   padding: 0 12px;
 }
 
 .trackBar {
   position: absolute;
-  /* Bar sits at the vertical centre of the track. The cluster pushes
-     half above / half below the bar so the centre marker visually aligns. */
-  top: 54px;
-  bottom: 54px;
+  /* Bar sits at the vertical centre of the track. */
+  top: 46px;
+  bottom: 46px;
   left: 0;
   right: 0;
   background: var(--color-surface-muted);

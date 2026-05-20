@@ -1,7 +1,12 @@
 .main {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Lift the timer ring slightly above pure-vertical-center so the
+     player overlay (score panel + time share) can sit closer below
+     without crowding the ring. Pulls the ring up by ~14% of free
+     space. */
+  justify-content: flex-start;
+  padding-top: 6vh;
   align-items: center;
   flex: 1;
   gap: 24px;
@@ -27,19 +32,25 @@
 
 .playerOverlay {
   position: absolute;
-  bottom: 96px;
+  /* Sit just above the footer (~88px tall) — the previous 96px
+     gap left enough vertical room between the score panel and
+     the time share that they read as separate islands and the
+     time share clipped on shorter viewports. Tighter spacing
+     packs them as one bottom strip. */
+  bottom: 80px;
   left: 24px;
   right: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* Tight gap pulls the score panel and time-share together. */
+  gap: 4px;
   align-items: stretch;
   pointer-events: none;
   /* Cap the overlay's height so when the score panel + time-share
      would otherwise grow taller than the available space above the
      footer, the column scrolls internally instead of pushing the
      bottom segment off-screen. */
-  max-height: calc(100% - 112px);
+  max-height: calc(100% - 96px);
   overflow-y: auto;
 }
 

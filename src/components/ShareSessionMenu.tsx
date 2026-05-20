@@ -25,10 +25,13 @@ export function ShareSessionMenu({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-open the popover when the session goes from opening → open
-  // (the user just clicked Share; they want to see the QR).
+  // Collapse the popover whenever the session drops to idle (user
+  // hit Stop sharing). The popover no longer auto-opens on
+  // status → open: with the wizard's side-pane SharePanel showing
+  // the QR on first mount, auto-popping the chrome popover stacked
+  // two copies of the same UI. Users open the chrome popover
+  // explicitly by clicking the chip.
   useEffect(() => {
-    if (status === "open") setPopoverOpen(true);
     if (status === "idle") setPopoverOpen(false);
   }, [status]);
 

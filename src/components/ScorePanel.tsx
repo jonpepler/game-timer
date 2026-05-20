@@ -94,8 +94,8 @@ export function ScorePanel({
                 .filter((i) => (scores[i] ?? min) === score);
               const clusterIndex = sameScoreSiblings.indexOf(index);
               const clusterSize = sameScoreSiblings.length;
-              const offset = 16;
-              const trackCentreY = 56; // matches CSS .track height/2 - marker/2
+              const offset = 14;
+              const trackCentreY = 48; // matches CSS .track height/2 - marker/2
               const top =
                 trackCentreY +
                 (clusterIndex - (clusterSize - 1) / 2) * offset -
