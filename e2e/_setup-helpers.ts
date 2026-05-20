@@ -109,11 +109,15 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
     if (options.factions) {
       // Picking goes counterclockwise from the LAST seat (ADSET
       // A.8.3) — click in reverse so factions[i] lands on seat i.
-      // exact: true so the substring match doesn't catch the
-      // "Show setup for X" toggle that shares the faction's label.
+      // Each pick is now two-step (open preview, Confirm setup).
+      // `exact: true` keeps the role-name match off the
+      // "Confirm setup" / nested buttons that share the cards.
       for (let i = options.factions.length - 1; i >= 0; i--) {
         await page
           .getByRole("button", { name: options.factions[i], exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: /^Confirm setup$/ })
           .click();
       }
     }
@@ -135,5 +139,11 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
       }
     }
   }
-  await page.getByRole("button", { name: /start game/i }).click();
+  // The picker auto-submits after the last confirmed pick when
+  // it sits on the final wizard screen — in that case the Start
+  // Game button is already gone. Otherwise click it.
+  const startBtn = page.getByRole("button", { name: /start game/i });
+  if (await startBtn.isVisible().catch(() => false)) {
+    await startBtn.click();
+  }
 }

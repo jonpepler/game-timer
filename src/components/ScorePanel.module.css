@@ -1,48 +1,57 @@
 .container {
   display: flex;
   flex-direction: column;
-  /* Tight gap so the label + track + selected-row pack together
-     without a visual gulf between them. */
-  gap: 4px;
+  /* Tight gap so the adder + track pack as one strip. No heading
+     row — the adder pill carries the panel's identity. */
+  gap: 2px;
   pointer-events: auto;
-}
-
-.label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
 }
 
 /* ── Linear track ─────────────────────────────────────────────────── */
 
 .track {
   position: relative;
-  /* Stacks markers diagonally when they share a score. The cluster
-     offset (14px in JS) needs the marker (24px) to peek above the
-     one below — so the height has to accommodate
-     (markerHeight + (N-1)*offset) for N clustered markers. Sized
-     for Root's max of 6 players at the same score:
-     24 + 5*14 = 94, rounded up to 96. */
-  height: 96px;
-  /* Tight outer margin clears the screen edge; inner padding leaves
-     room for the marker's translateX(-50%) at the 0% and 100%
-     positions so end markers stay tangent to the bar instead of
-     half-off it. */
-  margin: 2px 24px;
-  padding: 0 12px;
+  /* Compact track height: ~78px of marker zone + ~22px label
+     row. Cluster fans of 3+ players at the same score will
+     gracefully overflow vertically — the track doesn't clip. */
+  height: 100px;
+  /* Margins clear screen edge; padding leaves room for the
+     marker's translateX(-50%) at the 0% and 100% positions so end
+     markers stay tangent to the bar instead of half-off it. */
+  margin: 2px 28px;
+  padding: 0 20px;
 }
 
 .trackBar {
   position: absolute;
-  /* Bar sits at the vertical centre of the track. */
-  top: 46px;
-  bottom: 46px;
+  /* Thin bar at the centre of the marker zone (~y=37..41 in a
+     100px track with 22px label zone below). */
+  top: 37px;
+  bottom: 59px;
   left: 0;
   right: 0;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: 999px;
+}
+
+/* Score labels under the track — anchors (0, max) plus every
+   player's actual score. Positioned absolutely so each label
+   sits directly under its marker's x-coordinate. */
+.scoreLabel {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+  /* No background — the label sits on the surface as a plain
+     number so it reads as part of the scale, not a chip. */
+  padding: 0 4px;
+  pointer-events: none;
 }
 
 .trackTicks {
@@ -55,23 +64,36 @@
 }
 
 .marker {
-  /* Override the global button reset */
-  width: 24px;
-  height: 24px;
+  /* Override the global button reset. Markers with head icons
+     drop the circular container — the head image itself is the
+     marker. Without a head icon (Generic flow), a small coloured
+     dot stands in. */
+  width: 40px;
+  height: 40px;
   padding: 0;
   position: absolute;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--color-surface);
-  border-radius: 999px;
+  background: transparent !important;
+  border: none;
   font-family: inherit;
   font-size: 11px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.7);
+  color: rgba(0, 0, 0, 0.85);
   cursor: pointer;
   transform: translateX(-50%);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+/* When the marker is just an initial (no icon), give it a small
+   coloured chip so it still reads on the track. */
+.marker:not(:has(img)) {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--marker-fallback-bg, currentColor) !important;
+  border: 2px solid var(--color-surface);
 }
 
 .marker:hover {
@@ -80,8 +102,46 @@
 }
 
 .markerSelected {
-  box-shadow: 0 0 0 3px var(--color-text);
+  /* Subtle dropshadow only — was too punchy with the earlier
+     duplicated drop-shadow stack. */
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-text) 40%, transparent));
   z-index: 4;
+}
+
+.markerSelected:not(:has(img)) {
+  filter: none;
+  box-shadow: 0 0 0 3px var(--color-text);
+}
+
+/* The active player's marker is 50% larger and gently sways —
+   reuses the victory hero's "alive" treatment so the current
+   turn-taker reads at a glance. transform-origin: center bottom
+   so the sway pivots from the foot of the head icon. */
+.markerActive {
+  z-index: 5;
+}
+.markerActive .markerHead {
+  transform-origin: center bottom;
+  /* Faster sway than the victory hero's idle — reads as alert /
+     "your turn" rather than the slower victorious bob. */
+  animation: markerSway 1.6s ease-in-out infinite alternate;
+  scale: 1.5;
+}
+
+@keyframes markerSway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markerActive .markerHead {
+    animation: none;
+    /* Keep the upsize so the active turn still stands out. */
+  }
 }
 
 /* Silhouette overlay used inside markers + chip swatches when the
@@ -100,16 +160,15 @@
   mask-position: center;
 }
 
-/* Raster head-icon variant — when the player has a portrait crop
-   (e.g. Root's batmaster faction heads), we render it as a real
-   image so the artwork's colours come through. The marker's own
-   border crops it into the circle. */
+/* Raster head-icon variant — the head PNG fills the marker box,
+   no circular crop. The artwork itself provides the silhouette so
+   it reads as the player's face on the score track. */
 .markerHead {
   width: 100%;
   height: 100%;
-  border-radius: inherit;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* ── Selected-player controls (shared by track + leaderboard) ─────── */

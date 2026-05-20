@@ -102,19 +102,23 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   await expect(page.getByText("Place your Keep").first()).toBeVisible();
   await save(page, "11-faction-picker-with-adset");
 
-  // Pick factions for all four seats. Picking counts down from the
-  // last seat (ADSET A.8.3), so click in reverse. `exact: true` so
-  // the substring match doesn't trip on "Show setup for X" toggles.
+  // Pick factions for all four seats. Each pick is two-step now
+  // (click card → preview opens → press Confirm). Picking counts
+  // down from the last seat (ADSET A.8.3), so click in reverse.
   const factionCard = (name: string) =>
     page.getByRole("button", { name, exact: true });
+  const confirmButton = page.getByRole("button", { name: /^Confirm setup$/ });
   await factionCard("Riverfolk Company").click();
+  await confirmButton.click();
   await factionCard("Woodland Alliance").click();
+  await confirmButton.click();
   await factionCard("Eyrie Dynasties").click();
+  await confirmButton.click();
   await factionCard("Marquise de Cat").click();
-  await save(page, "12-faction-picker-all-picked");
-
-  // Start the timer.
-  await page.getByRole("button", { name: /start game/i }).click();
+  await confirmButton.click();
+  // The fourth Confirm auto-submits the wizard, so the game
+  // setup heading should be gone without a separate Start Game
+  // click.
   await expect(
     page.getByRole("heading", { name: /game setup/i }),
   ).toHaveCount(0);

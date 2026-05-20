@@ -576,7 +576,11 @@
 .heroCardRow {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  /* `safe center` so the row is centred when the hand fits in the
+     viewport but falls back to start-alignment when it overflows
+     (otherwise the leading cards get clipped and unreachable via
+     horizontal scroll). */
+  justify-content: safe center;
   gap: clamp(12px, 1.6vw, 28px);
   flex: 1;
   width: 100%;
@@ -779,6 +783,104 @@
     animation: none;
     opacity: 0;
   }
+}
+
+/* ── Hero preview — single chosen card filling the viewport ── */
+.heroPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 18px;
+  padding: 8px 4vw 0;
+}
+
+.heroPreviewInstruction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  animation: heroInstructionEnter 0.4s ease-out backwards;
+}
+
+.heroPreviewTitle {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+/* Tall card filling most of the available height. Border tinted
+   to the chosen option's colour; the meeple silhouette + setup
+   steps fill the inside. */
+.heroPreviewCard {
+  flex: 1;
+  width: min(720px, 96vw);
+  border: 2px solid var(--color-border);
+  border-radius: 16px;
+  padding: clamp(20px, 3vw, 36px);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(16px, 2vw, 28px);
+  align-items: start;
+  overflow: hidden;
+  animation: heroPreviewEnter 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+@keyframes heroPreviewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .heroPreviewCard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heroPreviewMeeple {
+  width: clamp(120px, 18vmin, 220px);
+  aspect-ratio: 1;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
+}
+
+.heroPreviewSteps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: clamp(14px, 1.6vw, 17px);
+  line-height: 1.5;
+  color: var(--color-text);
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.heroPreviewSteps li {
+  display: flex;
+  gap: 10px;
+}
+
+.heroPreviewActions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  padding-bottom: 8px;
 }
 
 .heroPickerFootnote {

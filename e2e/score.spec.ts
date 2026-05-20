@@ -121,10 +121,14 @@ test.describe("score layer", () => {
     page,
   }) => {
     await startRoot(page, 2);
-    await page.locator("main").click();
+    // The wizard auto-starts the timer after the last faction
+    // confirm — state.started is true before the first user tap.
+    // One tap = one recorded turn → 15 left, currentPlayer rotates
+    // from Marquise (0) to Eyrie (1).
     await page.locator("main").click();
     await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
-    // After the turn rotation, Eyrie is the active player → auto-selected.
+    // Eyrie is the active player now → auto-selected. Clicking the
+    // score adder must NOT bubble into the tap-to-advance handler.
     await incButton(page, "Eyrie Dynasties").click();
     await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
   });

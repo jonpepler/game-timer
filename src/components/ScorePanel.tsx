@@ -72,9 +72,61 @@ export function ScorePanel({
   const atMin = selectedScore <= min;
   const atMax = max !== undefined ? selectedScore >= max : false;
 
+  // The +/- score adder for the selected player. Hoisted out of the
+  // render so we can place it above the track (per user feedback)
+  // OR keep it next to the leaderboard variant below.
+  const adderNode = !readOnly && onIncrement && selectedPlayer && (
+    <div className={styles.selectedRow}>
+      <button
+        type="button"
+        onClick={stopProp(() => onIncrement(selected!, -step))}
+        disabled={atMin}
+        className={styles.scoreButton}
+        aria-label={`Decrease score for ${selectedPlayer.name}`}
+      >
+        <Minus aria-hidden />
+      </button>
+      <span
+        className={styles.selectedName}
+        style={{ color: selectedPlayer.color }}
+      >
+        <span
+          className={styles.selectedSwatch}
+          style={{ background: selectedPlayer.color }}
+          aria-hidden
+        />
+        {selectedPlayer.name}
+      </span>
+      <span className={styles.selectedScore}>{selectedScore}</span>
+      <button
+        type="button"
+        onClick={stopProp(() => onIncrement(selected!, step))}
+        disabled={atMax}
+        className={styles.scoreButton}
+        aria-label={`Increase score for ${selectedPlayer.name}`}
+      >
+        <Plus aria-hidden />
+      </button>
+    </div>
+  );
+
+  // Unique score positions on the track — the 0 and max anchors
+  // plus each player's actual score. Drives the bottom row of
+  // labels so the track reads as a sparse 0-to-max scale with
+  // only the meaningful numbers shown.
+  const uniqueScoreSet = new Set<number>([min]);
+  if (max !== undefined) uniqueScoreSet.add(max);
+  for (let i = 0; i < players.length; i++) {
+    uniqueScoreSet.add(scores[i] ?? min);
+  }
+  const uniqueScores = Array.from(uniqueScoreSet).sort((a, b) => a - b);
+
   return (
     <div className={styles.container} aria-label="Scores">
-      <span className={styles.label}>Scores</span>
+      {/* Adder sits above the track. With the SCORES heading
+          dropped, the adder pill IS the panel's chrome label —
+          its name + score effectively title the strip. */}
+      {adderNode}
 
       {isTrack ? (
         <>
@@ -96,12 +148,32 @@ export function ScorePanel({
                 .filter((i) => (scores[i] ?? min) === score);
               const clusterIndex = sameScoreSiblings.indexOf(index);
               const clusterSize = sameScoreSiblings.length;
-              const offset = 14;
-              const trackCentreY = 48; // matches CSS .track height/2 - marker/2
-              const top =
-                trackCentreY +
-                (clusterIndex - (clusterSize - 1) / 2) * offset -
-                12; /* half-marker so `top` aligns the marker centre */
+              // Pair-wise cluster math: normal neighbours sit 20px
+              // apart, but a gap involving the active player gets
+              // stretched to 38px so the 1.5×-scaled head icon
+              // doesn't crowd them out. Walk the sibling list,
+              // sum per-pair gaps to get each member's offset, then
+              // centre the whole cluster on `trackCentreY`.
+              const NORMAL_GAP = 20;
+              const ACTIVE_GAP = 38;
+              const isActiveAt = (i: number) =>
+                sameScoreSiblings[i] === activePlayerIndex;
+              const positions: number[] = [0];
+              for (let i = 1; i < clusterSize; i++) {
+                positions.push(
+                  positions[i - 1] +
+                    (isActiveAt(i - 1) || isActiveAt(i)
+                      ? ACTIVE_GAP
+                      : NORMAL_GAP),
+                );
+              }
+              const mean =
+                positions.reduce((a, b) => a + b, 0) / clusterSize;
+              const yOffset = positions[clusterIndex] - mean;
+              const markerSize = 40;
+              const trackCentreY = 39;
+              const top = trackCentreY + yOffset - markerSize / 2;
+              const isActive = activePlayerIndex === index;
               return (
                 <button
                   key={index}
@@ -109,7 +181,7 @@ export function ScorePanel({
                   onClick={stopProp(() => setSelected(index))}
                   className={`${styles.marker} ${
                     selected === index ? styles.markerSelected : ""
-                  }`}
+                  } ${isActive ? styles.markerActive : ""}`}
                   style={{
                     left: `${Math.max(0, Math.min(100, pct))}%`,
                     top: `${top}px`,
@@ -119,10 +191,9 @@ export function ScorePanel({
                   title={`${player.name}: ${score}`}
                 >
                   {player.headIconSrc ? (
-                    // Head-icon PNG (portrait crop) — render as a
+                    // Head-icon PNG (portrait crop). Rendered as a
                     // raster image so the artwork's own colours
-                    // come through. The marker's circular border
-                    // crops it into the chip shape.
+                    // come through — no circular crop.
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={player.headIconSrc}
@@ -147,10 +218,27 @@ export function ScorePanel({
                 </button>
               );
             })}
-          </div>
-          <div className={styles.trackTicks} aria-hidden>
-            <span>{min}</span>
-            <span>{max}</span>
+            {/* Score labels under the track — reads as a sparse
+                scale where only the meaningful numbers are shown
+                (anchors + each player's actual score). Positioned
+                absolutely against the same track box as the
+                markers so labels sit directly below their icons. */}
+            {uniqueScores.map((s) => {
+              const range = (max ?? min) - min;
+              const pct = range === 0 ? 0 : ((s - min) / range) * 100;
+              return (
+                <span
+                  key={s}
+                  className={styles.scoreLabel}
+                  style={{
+                    left: `${Math.max(0, Math.min(100, pct))}%`,
+                  }}
+                  aria-hidden
+                >
+                  {s}
+                </span>
+              );
+            })}
           </div>
         </>
       ) : (
@@ -197,41 +285,6 @@ export function ScorePanel({
                 <span className={styles.chipScore}>{score}</span>
               </button>
             ))}
-        </div>
-      )}
-
-      {!readOnly && onIncrement && selectedPlayer && (
-        <div className={styles.selectedRow}>
-          <button
-            type="button"
-            onClick={stopProp(() => onIncrement(selected!, -step))}
-            disabled={atMin}
-            className={styles.scoreButton}
-            aria-label={`Decrease score for ${selectedPlayer.name}`}
-          >
-            <Minus aria-hidden />
-          </button>
-          <span
-            className={styles.selectedName}
-            style={{ color: selectedPlayer.color }}
-          >
-            <span
-              className={styles.selectedSwatch}
-              style={{ background: selectedPlayer.color }}
-              aria-hidden
-            />
-            {selectedPlayer.name}
-          </span>
-          <span className={styles.selectedScore}>{selectedScore}</span>
-          <button
-            type="button"
-            onClick={stopProp(() => onIncrement(selected!, step))}
-            disabled={atMax}
-            className={styles.scoreButton}
-            aria-label={`Increase score for ${selectedPlayer.name}`}
-          >
-            <Plus aria-hidden />
-          </button>
         </div>
       )}
     </div>

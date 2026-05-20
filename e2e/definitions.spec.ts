@@ -93,11 +93,14 @@ test.describe("Root setup wizard surface", () => {
     // Switch to free-choice so all 13 factions are visible (default
     // draft mode only deals n+1).
     await page.getByRole("button", { name: /^Skip draft$/ }).click();
-    // First seat picks Vagabond.
+    // First seat picks Vagabond — two-step now (preview, then
+    // Confirm setup commits the pick).
     await page
       .getByRole("button", { name: "Vagabond", exact: true })
       .click();
-    // The Knaves card should now be visually disabled (aria-disabled).
+    await page.getByRole("button", { name: /^Confirm setup$/ }).click();
+    // The Knaves card should now be visually disabled (aria-disabled)
+    // for the next seat — mutex-excluded by Vagabond's pick.
     await expect(
       page.getByRole("button", {
         name: "Knaves of the Deepwood",

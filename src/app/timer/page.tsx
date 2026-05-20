@@ -380,6 +380,15 @@ export default function Home() {
     // Score is only meaningful when player tracking is on — clear the
     // subsystem otherwise so victories can't fire against an empty roster.
     setScoreConfig(incoming.players ? definition?.score : undefined);
+    // When the wizard sets autoStart (last seat just confirmed
+    // their faction pick), kick the timer running immediately so
+    // the table doesn't have to tap the screen to begin.
+    // resetTimer() on the un-started state == start the timer.
+    if (incoming.autoStart) {
+      // Defer one frame so the reset above has flushed before we
+      // call resetTimer, which itself reads state.
+      queueMicrotask(() => resetTimer());
+    }
   };
 
   // Peer hooks: forward the wizard's turn-based picker events to the

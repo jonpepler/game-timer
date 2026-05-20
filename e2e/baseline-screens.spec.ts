@@ -55,11 +55,16 @@ test("timer view baseline (Root, scores in play)", async ({ page }) => {
   // Counterclockwise pick order — click in reverse so seat 1 = Marquise.
   const factionCard = (name: string) =>
     page.getByRole("button", { name, exact: true });
+  const confirmButton = page.getByRole("button", { name: /^Confirm setup$/ });
   await factionCard("Vagabond").click();
+  await confirmButton.click();
   await factionCard("Woodland Alliance").click();
+  await confirmButton.click();
   await factionCard("Eyrie Dynasties").click();
+  await confirmButton.click();
   await factionCard("Marquise de Cat").click();
-  await page.getByRole("button", { name: /start game/i }).click();
+  await confirmButton.click();
+  // The fourth Confirm auto-submits + auto-starts the timer.
 
   const selectMarker = (name: string) =>
     page.evaluate((n) => {

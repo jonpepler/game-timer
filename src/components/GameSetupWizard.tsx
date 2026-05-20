@@ -65,6 +65,11 @@ export interface GameConfig {
   players?: Player[];
   definitionId: string;
   setupContext?: SetupContext;
+  // When true, the timer page starts the clock immediately on
+  // applyConfig instead of waiting for the user's first tap. Set
+  // by the wizard when the last seat has just confirmed its
+  // faction pick — the natural "start the game now" moment.
+  autoStart?: boolean;
 }
 
 // Imperative handle exposed to parents (the timer page) so peer
@@ -606,7 +611,7 @@ export const GameSetupWizard = forwardRef<
   };
   const back = () => setScreenIndex((i) => Math.max(0, i - 1));
 
-  const submit = () => {
+  const submit = (autoStart = false) => {
     const players = collectPlayers(
       definition,
       context,
@@ -626,6 +631,7 @@ export const GameSetupWizard = forwardRef<
       players,
       definitionId: definition.id,
       setupContext: definition.setupSteps?.length ? context : undefined,
+      ...(autoStart ? { autoStart: true } : {}),
     });
   };
 
@@ -722,6 +728,14 @@ export const GameSetupWizard = forwardRef<
               context={context}
               setContext={setContext}
               peerHooks={peerHooks}
+              onAllConfirmed={() => {
+                // Last seat just confirmed its pick — auto-advance
+                // the wizard. If we're already on the final
+                // screen, this submits and (via GameConfig.autoStart)
+                // also starts the timer immediately.
+                if (isLast) submit(/* autoStart */ true);
+                else next();
+              }}
             />
           )}
           {currentScreen.kind === "track-players" && (
@@ -966,6 +980,7 @@ function StepScreen({
   context,
   setContext,
   peerHooks,
+  onAllConfirmed,
 }: {
   step: SetupStep;
   // Sibling steps — used by `dealt-resolve` to look up option
@@ -974,6 +989,9 @@ function StepScreen({
   context: SetupContext;
   setContext: (updater: (prev: SetupContext) => SetupContext) => void;
   peerHooks?: WizardPeerHooks;
+  // Forwarded to PlayerPickScreen — fires when the last seat
+  // confirms its pick so the wizard can auto-advance.
+  onAllConfirmed?: () => void;
 }) {
   switch (step.kind.type) {
     case "multi-toggle":
@@ -1117,6 +1135,7 @@ function StepScreen({
               return { ...prev, [step.id]: updater(current) };
             })
           }
+          onAllConfirmed={onAllConfirmed}
         />
       );
     case "dealt-resolve": {
@@ -1603,6 +1622,7 @@ function PlayerPickScreen({
   context,
   peerHooks,
   onChange,
+  onAllConfirmed,
 }: {
   step: SetupStep;
   options: SetupOption[];
@@ -1615,6 +1635,10 @@ function PlayerPickScreen({
       current: Extract<SetupChoice, { kind: "player-pick" }>,
     ) => Extract<SetupChoice, { kind: "player-pick" }>,
   ) => void;
+  // Fired once the last seat confirms its pick. The wizard
+  // responds by auto-submitting (and the timer page auto-starts
+  // the clock — see GameConfig.autoStart).
+  onAllConfirmed?: () => void;
 }) {
   const seatChoice = Object.values(context).find(
     (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
@@ -1633,6 +1657,10 @@ function PlayerPickScreen({
   // Draft is on by default; the picker exposes a local toggle to
   // fall back to the full pool when the table wants free choice.
   const [draftEnabled, setDraftEnabled] = useState(true);
+  // Two-step pick: clicking a card opens a full-screen preview
+  // (showing the ADSET steps) instead of immediately committing.
+  // A Confirm button accepts the pick; Back returns to the draft.
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
   const dealtHirelings = findDealtHirelingIds(context);
 
   // Faction ids excluded by any dealt hireling (via faction.matchingHireling).
@@ -1775,8 +1803,30 @@ function PlayerPickScreen({
   // Knaves), we also deal characters here so the picker can render
   // them even outside of draft mode (draft-mode dealing happens up
   // front via the deal effect).
+  // Confirming the preview commits the pick AND, if this is the
+  // last seat to fill, fires the all-confirmed callback so the
+  // wizard can auto-advance and start the timer.
+  const confirmPreview = (optionId: string) => {
+    pick(optionId);
+    setPreviewCardId(null);
+    // Was this the LAST remaining seat to pick? Count present picks
+    // (excluding the one we're about to write) — if N-1 are already
+    // filled and we just covered the Nth, fire onAllConfirmed.
+    const filledAfter =
+      Object.keys(picks).filter((k) => k !== String(activeSeat)).length + 1;
+    if (filledAfter >= seats.length) onAllConfirmed?.();
+  };
+
   const pick = (optionId: string) => {
     const seatIdx = activeSeat;
+    // Defensive: refuse to pick a faction that another seat already
+    // claims. The card UI marks claimed cards as `blocked`, but the
+    // last-seat case has surfaced edge bugs (e.g. draft animation
+    // race) — this short-circuits any stale path.
+    const takenBy = Object.entries(picks).find(
+      ([s, id]) => Number(s) !== seatIdx && id === optionId,
+    );
+    if (takenBy) return;
     const characterDeal = CHARACTER_DRAWS[optionId]
       ? dealCharactersFor([optionId], options)
       : null;
@@ -1869,6 +1919,107 @@ function PlayerPickScreen({
   if (mode === "turn-based") {
     const seatName =
       seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`;
+    // Full-screen preview takes over when the active seat has
+    // clicked a card. Shows the chosen option's full setup steps
+    // and gates the pick behind an explicit Confirm.
+    if (previewCardId != null) {
+      const previewOption =
+        options.find((o) => o.id === previewCardId) ?? null;
+      const previewAdset = previewOption
+        ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
+        : undefined;
+      const previewMeeple = previewOption
+        ? (
+            previewOption as unknown as {
+              assets?: { meepleSvg?: { appPath?: string } };
+            }
+          ).assets?.meepleSvg?.appPath
+        : undefined;
+      const previewColor = previewOption?.color ?? "var(--color-border)";
+      const previewLabel = previewOption?.label ?? previewCardId;
+      return (
+        <div className={styles.heroPreview}>
+          <h3 className={styles.heroPickerSrOnly} id="screen-title">
+            {step.label}
+          </h3>
+          <div className={styles.heroPreviewInstruction}>
+            <span className={styles.heroPickerInstructionSubtle}>
+              {seatName} — confirm your pick
+            </span>
+            <span className={styles.heroPreviewTitle}>{previewLabel}</span>
+          </div>
+          <div
+            className={styles.heroPreviewCard}
+            style={
+              {
+                background: `color-mix(in srgb, ${previewColor} 18%, var(--color-surface))`,
+                borderColor: previewColor,
+              } as React.CSSProperties
+            }
+          >
+            {previewMeeple && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={previewMeeple}
+                alt=""
+                aria-hidden
+                className={styles.heroPreviewMeeple}
+                style={{
+                  background: previewColor,
+                  WebkitMaskImage: `url(${previewMeeple})`,
+                  maskImage: `url(${previewMeeple})`,
+                }}
+              />
+            )}
+            {previewAdset && previewAdset.length > 0 && (
+              <ol className={styles.heroPreviewSteps}>
+                {previewAdset.map((s, i) => (
+                  <li key={i}>
+                    <span className={styles.heroCardStepsIndex}>
+                      {i + 1}.
+                    </span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {previewOption &&
+              characters[previewOption.id] &&
+              characters[previewOption.id].length > 0 && (
+                <div className={styles.heroCardCharacters}>
+                  Dealt{" "}
+                  {characters[previewOption.id].length === 1
+                    ? "character"
+                    : "captains"}
+                  <ul className={styles.heroCardCharactersList}>
+                    {characters[previewOption.id].map((charId) => (
+                      <li key={charId}>
+                        {labelForCharacter(previewOption, charId)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+          </div>
+          <div className={styles.heroPreviewActions}>
+            <button
+              type="button"
+              onClick={() => setPreviewCardId(null)}
+              className={styles.secondary}
+            >
+              <ArrowLeft size={16} aria-hidden /> Back
+            </button>
+            <button
+              type="button"
+              onClick={() => confirmPreview(previewCardId)}
+              className={styles.primary}
+            >
+              Confirm setup
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className={styles.heroPicker}>
         {/* Visually-hidden heading keeps screen reader + Playwright
@@ -1900,7 +2051,10 @@ function PlayerPickScreen({
             ).assets?.meepleSvg?.appPath;
             const onActivate = () => {
               if (blocked || leaving) return;
-              pick(o.id);
+              // Two-step: clicking a card opens a full-screen
+              // preview with the ADSET instructions; user must
+              // press Confirm to commit the pick.
+              setPreviewCardId(o.id);
             };
             return (
               <div
