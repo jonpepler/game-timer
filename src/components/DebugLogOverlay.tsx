@@ -88,7 +88,14 @@ function probeBroker() {
 // its network is blocking WSS entirely; if it opens but the broker
 // probe fails, the broker is rejecting this client specifically.
 function probeEcho() {
-  probeWss("echo", "wss://echo.websocket.events");
+  probeWss("echo-lob", "wss://echo.websocket.events");
+}
+
+// Second known-good WSS — Postman's public echo. Lives on different
+// infrastructure (AWS) from the Lob echo (Cloudflare), so if one fails
+// and the other opens it's a network policy targeting a specific CDN.
+function probeEchoPostman() {
+  probeWss("echo-postman", "wss://ws.postman-echo.com/raw");
 }
 
 // One-shot environment snapshot — UA, screen, connection quality —
@@ -255,11 +262,21 @@ export function DebugLogOverlay() {
             type="button"
             onClick={probeEcho}
             className={styles.actionButton}
-            aria-label="Probe known-good WebSocket echo"
-            title="Open a raw WSS to a known-good echo server. If this fails too, the device is blocking WSS; if it opens but Broker fails, the broker is rejecting this client."
+            aria-label="Probe Lob WebSocket echo"
+            title="Open a raw WSS to echo.websocket.events (Lob). If it opens but Broker fails, the broker is rejecting this client."
           >
             <Wifi size={14} aria-hidden />
-            Echo
+            Lob
+          </button>
+          <button
+            type="button"
+            onClick={probeEchoPostman}
+            className={styles.actionButton}
+            aria-label="Probe Postman WebSocket echo"
+            title="Open a raw WSS to ws.postman-echo.com (AWS-hosted). Different infra from Lob — useful for ruling out CDN-specific blocks."
+          >
+            <Wifi size={14} aria-hidden />
+            Postman
           </button>
           <button
             type="button"

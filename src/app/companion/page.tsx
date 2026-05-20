@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
@@ -20,6 +20,9 @@ import {
   selectRemainingTurns,
 } from "@/state/gameSession";
 import { playerColor, playerSubheading } from "@/lib/playerVisual";
+import { createLogger } from "@/lib/logger";
+
+const stateLog = createLogger("companion-state");
 import type {
   GameDefinition,
   SetupConstraint,
@@ -78,10 +81,29 @@ function CompanionScreen() {
     HostToCompanionMessage,
     { type: "SETUP_SEATING" }
   > | null>(null);
+  // Trail the inter-arrival time of host messages so we can correlate
+  // companion sluggishness with the rate of inbound STATE updates.
+  // Refs (not state) so the diagnostic doesn't itself trigger a
+  // re-render on every message.
+  const lastMsgArrivedAtRef = useRef<number>(0);
   useEffect(() => {
     if (!lastMessage) return;
-    if (lastMessage.type === "STATE") setLastState(lastMessage);
-    else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
+    if (lastMessage.type === "STATE") {
+      setLastState(lastMessage);
+      const now = Date.now();
+      const dt = lastMsgArrivedAtRef.current
+        ? now - lastMsgArrivedAtRef.current
+        : null;
+      lastMsgArrivedAtRef.current = now;
+      const bytes = JSON.stringify(lastMessage).length;
+      const transitMs = lastMessage.sentAt ? now - lastMessage.sentAt : null;
+      stateLog.debug("STATE received", {
+        bytes,
+        intervalMs: dt,
+        transitMs,
+        turns: lastMessage.state.turns.length,
+      });
+    } else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
     else if (lastMessage.type === "SETUP_DONE") setPendingTurn(null);
     else if (lastMessage.type === "SETUP_SEATING")
       setPendingSeating(lastMessage);

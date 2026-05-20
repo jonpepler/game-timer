@@ -38,6 +38,8 @@ import {
 import { createLogger } from "@/lib/logger";
 
 const peerLog = createLogger("host-protocol");
+const playersLog = createLogger("host-players");
+const stateLog = createLogger("host-state");
 
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
@@ -361,18 +363,54 @@ export default function Home() {
   // Broadcast the latest reducer state to every connected companion
   // whenever it changes OR a new device joins.
   const peerCount = sessionHost.connectedPeers.length;
+  const lastStateSentAtRef = useRef<number>(0);
   useEffect(() => {
     if (sessionHost.status !== "open") return;
     const def = definitionId ? findDefinition(definitionId) : undefined;
+    const now = Date.now();
     const message: HostToCompanionMessage = {
       type: "STATE",
       protocolVersion: PEER_PROTOCOL_VERSION,
       state,
       definition: def,
-      sentAt: Date.now(),
+      sentAt: now,
     };
     sessionHost.send(message);
-  }, [state, peerCount, sessionHost.status, sessionHost.send]);
+    // Diagnostic — log size and inter-broadcast interval at debug
+    // level so we can spot STATE flooding without spamming the
+    // default info+ filter. Serialize cost is small (one extra
+    // JSON.stringify per emission); reads in the overlay.
+    const bytes = JSON.stringify(message).length;
+    const dt = lastStateSentAtRef.current
+      ? now - lastStateSentAtRef.current
+      : null;
+    lastStateSentAtRef.current = now;
+    stateLog.debug("broadcast", {
+      bytes,
+      intervalMs: dt,
+      peers: peerCount,
+      turns: state.turns.length,
+    });
+  }, [state, peerCount, sessionHost.status, sessionHost.send, definitionId]);
+
+  // Player-metadata diagnostic — emit a snapshot whenever the roster
+  // identity changes (names + metadata), gated on a content hash so
+  // turn ticks don't fire it. Lets the debug overlay confirm whether
+  // factions like Duchy actually carry their color + asset paths into
+  // the live player array.
+  const lastPlayersSigRef = useRef<string>("");
+  useEffect(() => {
+    if (!state.players || state.players.length === 0) return;
+    const slim = state.players.map((p, i) => ({
+      i,
+      name: p.name,
+      metadata: p.metadata,
+    }));
+    const sig = JSON.stringify(slim);
+    if (sig === lastPlayersSigRef.current) return;
+    lastPlayersSigRef.current = sig;
+    playersLog.info("roster", { players: slim });
+  }, [state.players]);
 
   const [preventClickCapture, setPreventClickCapture] = useState(false);
 
