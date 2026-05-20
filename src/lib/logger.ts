@@ -58,6 +58,9 @@ const consoleSink: LogSink = {
 
 const sinks: LogSink[] = [consoleSink];
 let minLevel: LogLevel = "debug";
+// Live-update subscribers (e.g. the on-screen DebugLogOverlay).
+// Separate from `sinks` so subscribers can re-render on tick.
+const listeners = new Set<(entry: LogEntry) => void>();
 
 function emit(
   level: LogLevel,
@@ -75,6 +78,7 @@ function emit(
   };
   ringBuffer.push(entry);
   for (const sink of sinks) sink.write(entry);
+  listeners.forEach((fn) => fn(entry));
 }
 
 export interface Logger {
@@ -107,4 +111,14 @@ export function getLogBuffer(): LogEntry[] {
 
 export function clearLogBuffer() {
   ringBuffer.clear();
+}
+
+// Subscribe to live log events. Returns an unsubscribe function.
+export function subscribeLogs(
+  listener: (entry: LogEntry) => void,
+): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }

@@ -6,6 +6,7 @@ import { Maximize, Minimize } from "lucide-react";
 
 import styles from "./FullScreen.module.css";
 import type { ReactNode } from "react";
+import { DebugLogOverlay } from "./DebugLogOverlay";
 
 interface FullScreenProps {
   children: ReactNode;
@@ -42,6 +43,12 @@ export const FullScreen = ({ children, menuExtras }: FullScreenProps) => {
         )}
         {menuExtras}
       </div>
+      {/* Debug log overlay — small bug-icon launcher in the
+          bottom-right corner. Expands into a panel showing live
+          log entries with copy / clear / level-filter affordances.
+          Available on every page that wraps with FullScreen
+          (timer + companion). */}
+      <DebugLogOverlay />
     </InternalFullScreen>
   );
 };
