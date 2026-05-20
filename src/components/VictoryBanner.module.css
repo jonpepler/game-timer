@@ -1,44 +1,154 @@
-.banner {
-  display: inline-flex;
+.hero {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
-  padding: 18px 32px;
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-  border: 2px solid currentColor;
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  /* Pulse so the banner reads as a celebratory moment instead of a
-     quiet status line. */
-  animation: victoryPulse 1.4s ease-in-out infinite alternate;
+  gap: 24px;
+  /* Soft pulse so the victory moment reads as celebratory. */
+  animation: victoryEnter 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+@keyframes victoryEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.wreath {
+  position: relative;
+  width: clamp(220px, 38vmin, 380px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: victoryPulse 2.4s ease-in-out infinite alternate;
 }
 
 @keyframes victoryPulse {
   from {
-    transform: scale(1);
-    filter: brightness(1);
+    filter: drop-shadow(0 0 0 transparent);
   }
   to {
-    transform: scale(1.04);
-    filter: brightness(1.15);
+    filter: drop-shadow(
+      0 0 32px color-mix(in srgb, var(--victor-color) 60%, transparent)
+    );
   }
 }
 
-.swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-block;
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .wreath {
+    animation: none;
+  }
 }
 
-.crown {
-  color: currentColor;
+.laurelImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Tinted to the victor's colour using the same mask trick used
+     elsewhere — keeps the laurel readable across factions. The
+     fallback (display: block) wins on browsers without mask-image. */
+  background: var(--victor-color);
+  -webkit-mask-image: var(--laurel-mask, none);
+  mask-image: var(--laurel-mask, none);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Fallback "ring + crown" composition used until a real laurel
+   PNG/SVG lands in /public/factions/root/. The ring is hollow with
+   a faction-coloured border; the crown floats at the top. */
+.laurelFallbackRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 6px solid var(--victor-color);
+  /* Subtle inner glow so the empty-center reads as celebratory
+     rather than just an outline. */
+  box-shadow:
+    inset 0 0 0 2px
+      color-mix(in srgb, var(--victor-color) 40%, transparent),
+    0 0 24px color-mix(in srgb, var(--victor-color) 25%, transparent);
+}
+
+.laurelFallbackCrown {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  color: var(--victor-color);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 4px solid var(--victor-color);
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.headInner {
+  position: relative;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--victor-color) 18%, var(--color-surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.headIcon {
+  width: 80%;
+  height: 80%;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.headInitial {
+  font-size: clamp(36px, 9vmin, 80px);
+  font-weight: 800;
+  color: var(--victor-color);
+  font-family: inherit;
+  line-height: 1;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.victorName {
+  font-size: clamp(28px, 5vmin, 56px);
+  font-weight: 800;
+  color: var(--victor-color);
+  letter-spacing: 0.01em;
+  line-height: 1.1;
 }
 
 .suffix {
+  font-size: clamp(18px, 3vmin, 30px);
   color: var(--color-text-muted);
   font-weight: 500;
-  font-size: 28px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }

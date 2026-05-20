@@ -661,89 +661,98 @@ export default function Home() {
         {modal}
         <main className={styles.main}>
           {victorPlayer ? (
+            // Victory hero takes over the centre of the page — the
+            // timer ring is hidden and the wreath + head icon +
+            // "X wins" replace it. The footer (turns left / play /
+            // undo / eta) is also hidden below; only the score
+            // panel + time share stay at the bottom.
             <VictoryBanner victor={victorPlayer} />
           ) : (
-            activePlayer && (
-              <div
-                className={styles.activePlayer}
-                style={{ color: activePlayer.color }}
-              >
-                {activePlayer.iconSrc && (
-                  // Faction meeple, tinted to the faction colour via
-                  // mask-image. When there's no icon (Generic / no
-                  // setup), the player's name itself carries the
-                  // colour — no swatch needed.
-                  <span
-                    className={styles.activePlayerMeeple}
-                    style={{
-                      background: activePlayer.color,
-                      WebkitMaskImage: `url(${activePlayer.iconSrc})`,
-                      maskImage: `url(${activePlayer.iconSrc})`,
-                    }}
-                    aria-hidden
+            <>
+              {activePlayer && (
+                <div
+                  className={styles.activePlayer}
+                  style={{ color: activePlayer.color }}
+                >
+                  {activePlayer.iconSrc && (
+                    // Faction meeple, tinted to the faction colour
+                    // via mask-image. When there's no icon
+                    // (Generic / no setup), the player's name
+                    // itself carries the colour — no swatch needed.
+                    <span
+                      className={styles.activePlayerMeeple}
+                      style={{
+                        background: activePlayer.color,
+                        WebkitMaskImage: `url(${activePlayer.iconSrc})`,
+                        maskImage: `url(${activePlayer.iconSrc})`,
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                  <span className={styles.activePlayerText}>
+                    {/* eslint-disable-next-line prettier/prettier */}
+                    <span>
+                      {activePlayer.name}
+                      <span className={styles.activePlayerSuffix}>
+                        {"’s turn"}
+                      </span>
+                    </span>
+                    {activeSubheading && (
+                      <span className={styles.activePlayerSubheading}>
+                        {activeSubheading}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              <div style={{ width: size, height: size, position: "relative" }}>
+                {playerViews && currentPlayerIndex !== null && (
+                  <PlayerArcs
+                    players={playerViews}
+                    activeIndex={currentPlayerIndex}
+                    containerSize={size}
+                    internalSizeOffset={40}
                   />
                 )}
-                <span className={styles.activePlayerText}>
-                  {/* eslint-disable-next-line prettier/prettier */}
-                  <span>
-                    {activePlayer.name}
-                    <span className={styles.activePlayerSuffix}>
-                      {"’s turn"}
-                    </span>
-                  </span>
-                  {activeSubheading && (
-                    <span className={styles.activePlayerSubheading}>
-                      {activeSubheading}
-                    </span>
-                  )}
-                </span>
+                <CircularProgressbar
+                  value={(timerTotalSeconds / averageTime) * 100}
+                  background
+                  styles={{
+                    path: {
+                      stroke: paused
+                        ? "var(--color-timer-paused)"
+                        : "var(--color-timer-active)",
+                      strokeLinecap: "butt",
+                      strokeWidth: "2",
+                      strokeDasharray: "10, 5",
+                    },
+                    trail: {
+                      strokeWidth: "0.2",
+                    },
+                    text: {
+                      fontFamily: "monospace",
+                      fill: paused
+                        ? "var(--color-timer-paused)"
+                        : "var(--color-timer-active)",
+                    },
+                    background: {
+                      fill: "var(--color-timer-overtime)",
+                      fillOpacity: timerFinished
+                        ? stopwatchTotalSeconds / averageTime
+                        : 0,
+                      transitionProperty: "fill-opacity",
+                      transitionDuration: "2s",
+                    },
+                  }}
+                  text={
+                    timerFinished
+                      ? "+" + getStopwatchString()
+                      : getTimerString()
+                  }
+                />
               </div>
-            )
+            </>
           )}
-          <div style={{ width: size, height: size, position: "relative" }}>
-            {playerViews && currentPlayerIndex !== null && (
-              <PlayerArcs
-                players={playerViews}
-                activeIndex={currentPlayerIndex}
-                containerSize={size}
-                internalSizeOffset={40}
-              />
-            )}
-            <CircularProgressbar
-              value={(timerTotalSeconds / averageTime) * 100}
-              background
-              styles={{
-                path: {
-                  stroke: paused
-                    ? "var(--color-timer-paused)"
-                    : "var(--color-timer-active)",
-                  strokeLinecap: "butt",
-                  strokeWidth: "2",
-                  strokeDasharray: "10, 5",
-                },
-                trail: {
-                  strokeWidth: "0.2",
-                },
-                text: {
-                  fontFamily: "monospace",
-                  fill: paused
-                    ? "var(--color-timer-paused)"
-                    : "var(--color-timer-active)",
-                },
-                background: {
-                  fill: "var(--color-timer-overtime)",
-                  fillOpacity: timerFinished
-                    ? stopwatchTotalSeconds / averageTime
-                    : 0,
-                  transitionProperty: "fill-opacity",
-                  transitionDuration: "2s",
-                },
-              }}
-              text={
-                timerFinished ? "+" + getStopwatchString() : getTimerString()
-              }
-            />
-          </div>
         </main>
       </div>
       {(scoresVisible || playerStats.length > 0) && (
@@ -762,19 +771,21 @@ export default function Home() {
           )}
         </div>
       )}
-      <Footer
-        {...{
-          remainingTurns,
-          setExpectedTurns,
-          setPreventClickCapture,
-          paused,
-          pause,
-          unpause,
-          averageTime,
-          undo,
-          canUndo,
-        }}
-      />
+      {!victorPlayer && (
+        <Footer
+          {...{
+            remainingTurns,
+            setExpectedTurns,
+            setPreventClickCapture,
+            paused,
+            pause,
+            unpause,
+            averageTime,
+            undo,
+            canUndo,
+          }}
+        />
+      )}
     </FullScreen>
   );
 }
