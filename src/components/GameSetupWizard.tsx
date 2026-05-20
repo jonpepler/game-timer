@@ -113,8 +113,18 @@ type WizardScreen =
 const buildScreens = (definition: GameDefinition): WizardScreen[] => {
   const screens: WizardScreen[] = [
     { kind: "game", id: "game", label: "Game" },
-    { kind: "expected-turns", id: "expected-turns", label: "Turns" },
   ];
+  // Definitions with turnsPerPlayer derive expectedTurns from the
+  // seat count at submit time — no need to ask. Generic and similar
+  // definitions without that field still get the Expected-turns
+  // screen.
+  if (definition.turnsPerPlayer == null) {
+    screens.push({
+      kind: "expected-turns",
+      id: "expected-turns",
+      label: "Turns",
+    });
+  }
   const steps = definition.setupSteps ?? [];
   let hasSeating = false;
   for (const step of steps) {
@@ -350,13 +360,21 @@ export const GameSetupWizard = forwardRef<
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (isOpen && !dialog.open) {
-      // Fresh open: rewind to the first screen so the user doesn't
-      // resume in the middle of an old in-progress wizard.
+      // Fresh open: reset everything to the definition's defaults so
+      // the user starts from a clean wizard, not mid-stream from an
+      // old in-progress run.
       setScreenIndex(0);
+      setContext(defaultContext(definition));
+      setExpectedTurns(definition.defaultExpectedTurns);
+      setTrackPlayers(false);
+      setTrackRoster([
+        { name: "Player 1", color: GENERIC_PALETTE[0] },
+        { name: "Player 2", color: GENERIC_PALETTE[1] },
+      ]);
       dialog.showModal();
     }
     if (!isOpen && dialog.open) dialog.close();
-  }, [isOpen]);
+  }, [isOpen, definition]);
 
   const currentScreen = screens[screenIndex];
   const isLast = screenIndex === screens.length - 1;
@@ -422,8 +440,16 @@ export const GameSetupWizard = forwardRef<
 
   const submit = () => {
     const players = collectPlayers(definition, context, trackPlayers, trackRoster);
+    // When the definition declares turnsPerPlayer, derive
+    // expectedTurns at submit time from the seat count. Saves the
+    // user from a redundant screen and keeps Root's "8 turns each"
+    // rule applied automatically.
+    const resolvedExpectedTurns =
+      definition.turnsPerPlayer != null && players && players.length > 0
+        ? definition.turnsPerPlayer * players.length
+        : expectedTurns;
     onSubmit({
-      expectedTurns,
+      expectedTurns: resolvedExpectedTurns,
       players,
       definitionId: definition.id,
       setupContext: definition.setupSteps?.length ? context : undefined,
@@ -960,6 +986,7 @@ function SelectOneScreen({
             }`}
             onClick={() => onChange(o.id)}
             aria-pressed={o.id === selectedId}
+            aria-label={o.label}
           >
             <span className={styles.chipLabel}>{o.label}</span>
             {o.module && (
@@ -1025,11 +1052,6 @@ function CountScreen({
           <Plus size={16} aria-hidden />
         </button>
       </div>
-      <span className={styles.help}>
-        {min === max
-          ? `Fixed at ${min}.`
-          : `Range ${min}–${max}.`}
-      </span>
     </>
   );
 }
@@ -1302,21 +1324,11 @@ function DealRandomScreen({
   );
 }
 
-// Convention helper: find a kind="toggle" choice in context whose id
-// starts with "draft" (case-insensitive). Lets the player-pick step
-// react to a sibling Draft toggle without taking a hard dep on its id.
-const findDraftToggle = (context: SetupContext): boolean => {
-  for (const [id, choice] of Object.entries(context)) {
-    if (
-      choice.kind === "toggle" &&
-      id.toLowerCase().startsWith("draft") &&
-      choice.value
-    ) {
-      return true;
-    }
-  }
-  return false;
-};
+// Draft mode is the default for the player-pick screen — players
+// receive a dealt hand of n+1 cards. The picker offers a local
+// toggle to fall back to "show every legal option" when needed.
+// The setup-context-driven toggle convention is gone; this is now
+// purely picker-local state.
 
 // Find the dealt hireling ids (if any). Walks every deal-random in
 // the context — pragmatic for now; if a definition has more than one
@@ -1366,7 +1378,9 @@ function PlayerPickScreen({
   const dealtIds = playerPick.dealtIds;
   const characters = playerPick.characters ?? {};
 
-  const draftEnabled = findDraftToggle(context);
+  // Draft is on by default; the picker exposes a local toggle to
+  // fall back to the full pool when the table wants free choice.
+  const [draftEnabled, setDraftEnabled] = useState(true);
   const dealtHirelings = findDealtHirelingIds(context);
 
   // Faction ids excluded by any dealt hireling (via faction.matchingHireling).
@@ -1496,11 +1510,24 @@ function PlayerPickScreen({
   // pick() writes via the updater so it composes correctly even when
   // multiple clicks land before React re-renders. Auto-advance happens
   // in an effect below — keeping pick() pure on the choice.
+  //
+  // For options that have a character/captain pool (Vagabond /
+  // Knaves), we also deal characters here so the picker can render
+  // them even outside of draft mode (draft-mode dealing happens up
+  // front via the deal effect).
   const pick = (optionId: string) => {
     const seatIdx = activeSeat;
+    const characterDeal = CHARACTER_DRAWS[optionId]
+      ? dealCharactersFor([optionId], options)
+      : null;
     onChange((curr) => ({
       ...curr,
       picks: { ...curr.picks, [seatIdx]: optionId },
+      ...(characterDeal
+        ? {
+            characters: { ...(curr.characters ?? {}), ...characterDeal },
+          }
+        : {}),
     }));
     if (draftEnabled) {
       setLeavingIds((curr) => [...curr, optionId]);
@@ -1592,12 +1619,35 @@ function PlayerPickScreen({
               : ""}
             .
           </span>
+          <div className={styles.draftBarButtons}>
+            <button
+              type="button"
+              onClick={reshuffle}
+              className={styles.secondary}
+            >
+              <RefreshCw size={14} aria-hidden /> Shuffle again
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftEnabled(false)}
+              className={styles.ghost}
+            >
+              Skip draft
+            </button>
+          </div>
+        </div>
+      )}
+      {!draftEnabled && (
+        <div className={styles.draftBar}>
+          <span className={styles.help}>
+            Free pick — every legal option visible.
+          </span>
           <button
             type="button"
-            onClick={reshuffle}
+            onClick={() => setDraftEnabled(true)}
             className={styles.secondary}
           >
-            <RefreshCw size={14} aria-hidden /> Shuffle again
+            <RefreshCw size={14} aria-hidden /> Back to draft
           </button>
         </div>
       )}
@@ -1628,7 +1678,11 @@ function PlayerPickScreen({
               role="button"
               aria-pressed={active}
               aria-disabled={blocked || leaving}
-              data-testid={`faction-card-${o.id}`}
+              // Explicit aria-label so the card's accessible name is
+              // just the faction label, not "faction-name description
+              // Show setup for ..." (which is what the computed name
+              // would include from the nested button + description).
+              aria-label={o.label}
               tabIndex={blocked || leaving ? -1 : 0}
               className={`${styles.factionCard} ${
                 active ? styles.factionCardActive : ""
@@ -1673,7 +1727,6 @@ function PlayerPickScreen({
                   <button
                     type="button"
                     className={styles.factionAdsetToggle}
-                    data-testid={`faction-adset-toggle-${o.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setAdsetOpen(open ? null : o.id);

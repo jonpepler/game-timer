@@ -17,7 +17,7 @@ const startRoot = (page: Page, playerCount = 2) =>
   startGame(page, {
     game: "root",
     playerCount,
-    factions: ROOT_FACTIONS.slice(0, playerCount).map((f) => f.id),
+    factions: ROOT_FACTIONS.slice(0, playerCount).map((f) => f.label),
     seatNames: ROOT_FACTIONS.slice(0, playerCount).map((f) => f.label),
   });
 
@@ -124,10 +124,10 @@ test.describe("score layer", () => {
     await startRoot(page, 2);
     await page.locator("main").click();
     await page.locator("main").click();
-    await expect(page.getByText(/39\s*turns left/i)).toBeVisible();
+    await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
     // After the turn rotation, Eyrie is the active player → auto-selected.
     await incButton(page, "Eyrie Dynasties").click();
-    await expect(page.getByText(/39\s*turns left/i)).toBeVisible();
+    await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
   });
 
   test("hitting Root's max (30) fires a victory banner and stops the active-player banner", async ({

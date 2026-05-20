@@ -157,6 +157,12 @@ export const GameDefinitionSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   defaultExpectedTurns: z.number(),
+  // When set, the wizard hides the Expected-turns screen and computes
+  // expectedTurns = seatCount * turnsPerPlayer at submit time. Useful
+  // for games where turn budget scales linearly with player count
+  // (e.g. Root ≈ 8 turns/player). The Expected-turns screen still
+  // appears for definitions without this set.
+  turnsPerPlayer: z.number().optional(),
   defaultAverageSeconds: z.number(),
   score: ScoreConfigSchema.optional(),
   maxPlayers: z.number().optional(),
@@ -258,6 +264,7 @@ export const GameDefinitionStructureSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   defaultExpectedTurns: z.number(),
+  turnsPerPlayer: z.number().optional(),
   defaultAverageSeconds: z.number(),
   score: ScoreConfigSchema.optional(),
   maxPlayers: z.number().optional(),

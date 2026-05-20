@@ -4,7 +4,8 @@
   "name": "Root",
   "description": "Asymmetric woodland strategy by Leder Games. First faction to 30 wins.",
   "contentSource": "./modules.json",
-  "defaultExpectedTurns": 40,
+  "defaultExpectedTurns": 32,
+  "turnsPerPlayer": 8,
   "defaultAverageSeconds": 240,
   "maxPlayers": 6,
   "playerVisualFrom": "faction",
@@ -20,18 +21,22 @@
     {
       "id": "expansions",
       "label": "Expansions in this game",
-      "description": "Toggle the modules you have at the table. Downstream steps hide any options that belong to an unchecked module.",
       "kind": {
         "type": "multi-toggle",
         "optionCategory": "expansion",
-        "defaultSelectedIds": ["base"],
+        "defaultSelectedIds": [
+          "base",
+          "riverfolk",
+          "underworld",
+          "marauders",
+          "homeland"
+        ],
         "optionIds": ["base", "riverfolk", "underworld", "marauders", "homeland"]
       }
     },
     {
       "id": "map",
       "label": "Map",
-      "description": "Each map changes how clearings link and a few global rules.",
       "kind": {
         "type": "select-one",
         "optionCategory": "map",
@@ -43,7 +48,6 @@
     {
       "id": "deck",
       "label": "Deck",
-      "description": "Swap the card mix for variety.",
       "kind": {
         "type": "select-one",
         "optionCategory": "deck",
@@ -55,7 +59,6 @@
     {
       "id": "landmarks",
       "label": "Landmarks",
-      "description": "Map-side scoring perks. Place 0–2 landmark cards.",
       "kind": {
         "type": "select-count",
         "min": 0,
@@ -67,7 +70,6 @@
     {
       "id": "seating",
       "label": "Seat players",
-      "description": "Enter player names and drag to reorder. Seating is the turn order for the faction picker.",
       "kind": {
         "type": "seat-players",
         "minPlayers": 1,
@@ -78,7 +80,6 @@
     {
       "id": "hirelings",
       "label": "Hirelings",
-      "description": "Bot-driven allies. Shuffle all hirelings, deal three (or skip to play without).",
       "kind": {
         "type": "deal-random",
         "optionCategory": "hireling",
@@ -91,15 +92,6 @@
           "flameBearers", "vaultKeepers", "band",
           "advocates", "roamers", "farmers"
         ]
-      }
-    },
-    {
-      "id": "draft",
-      "label": "Draft factions",
-      "description": "Players choose factions from a shared pool in counterclockwise order.",
-      "kind": {
-        "type": "toggle",
-        "defaultValue": false
       }
     },
     {

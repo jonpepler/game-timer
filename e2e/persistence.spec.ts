@@ -13,20 +13,20 @@ const startGenericPlayers = (
     playerCount,
   });
 
-// Root with N seats — faction picks default to the first N option ids.
-const ROOT_FACTION_IDS = [
-  "marquise",
-  "eyrie",
-  "alliance",
-  "vagabond",
-  "lizards",
-  "riverfolk",
+// Root with N seats — first N factions in the canonical order.
+const ROOT_FACTION_LABELS = [
+  "Marquise de Cat",
+  "Eyrie Dynasties",
+  "Woodland Alliance",
+  "Vagabond",
+  "Lizard Cult",
+  "Riverfolk Company",
 ];
 const startRoot = (page: Page, playerCount: number) =>
   startGame(page, {
     game: "root",
     playerCount,
-    factions: ROOT_FACTION_IDS.slice(0, playerCount),
+    factions: ROOT_FACTION_LABELS.slice(0, playerCount),
   });
 
 const tapToAdvance = (page: Page) => page.locator("main").click();

@@ -53,7 +53,7 @@
   flex: 1;
   height: 3px;
   border-radius: 2px;
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
   min-width: 18px;
 }
 
@@ -62,8 +62,9 @@
 }
 
 .progressTickDone {
-  background: var(--color-accent-soft, var(--color-accent));
-  opacity: 0.55;
+  /* Completed steps stay visible — half-strength accent so the
+     progress bar reads as a fill, not a moving spotlight. */
+  background: color-mix(in srgb, var(--color-accent) 55%, transparent);
 }
 
 .body {
@@ -176,6 +177,10 @@
 }
 
 .chip {
+  /* Override the global button { width: 50px; height: 40px } reset
+     so the chip can grow to fit its label + module + description. */
+  width: auto;
+  height: auto;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -279,11 +284,12 @@
 }
 
 .seatIndex {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--color-accent);
-  color: var(--color-surface);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-text);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -493,6 +499,9 @@
 }
 
 .factionAdsetToggle {
+  /* Override the global button reset (50x40). */
+  width: auto;
+  height: auto;
   background: transparent;
   border: none;
   color: var(--color-text-dim);
@@ -540,6 +549,12 @@
   border: 1px dashed var(--color-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+}
+
+.draftBarButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .characterDeal {

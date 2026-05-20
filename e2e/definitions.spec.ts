@@ -1,36 +1,38 @@
 import { test, expect } from "@playwright/test";
+import { navigateToScreen } from "./_setup-helpers";
 
 // Dev server runs under basePath "/game-timer" (see next.config.js).
 const BASE = "/game-timer";
-
-const advance = (page: import("@playwright/test").Page) =>
-  page.getByRole("button", { name: /^Next/ }).click();
 
 test.describe("game definitions (wizard)", () => {
   test("Generic is preselected, seeds 90 expected turns", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await expect(page.getByLabel(/^Game$/)).toHaveValue("generic");
-    await advance(page);
+    await navigateToScreen(page, /how long is this game/i);
     await expect(page.getByLabel(/expected turns/i)).toHaveValue("90");
   });
 
-  test("picking Root reseeds expected turns", async ({ page }) => {
+  test("picking Root skips the Expected-turns screen (turnsPerPlayer rules)", async ({
+    page,
+  }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    await advance(page);
-    // Root's default is 40 (post-2026-05 tune).
-    await expect(page.getByLabel(/expected turns/i)).toHaveValue("40");
+    await page.getByRole("button", { name: /^Next/ }).click();
+    // Root's turnsPerPlayer = 8 derives expectedTurns from seats at
+    // submit; no Expected-turns screen — Next from Game lands at
+    // Expansions.
+    await expect(
+      page.getByRole("heading", { name: /expansions in this game/i }),
+    ).toBeVisible();
   });
 
   test("Root caps the seat count at maxPlayers (6)", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    // Game → Turns → Expansions → Map → Deck → Landmarks → Seating
-    for (let i = 0; i < 6; i++) await advance(page);
+    await navigateToScreen(page, /seat players/i);
     // Default seat count is 4; max is 6 → 2 add-seat clicks fills it.
-    for (let i = 0; i < 2; i++) {
-      await page.getByRole("button", { name: /add seat/i }).click();
-    }
+    await page.getByRole("button", { name: /add seat/i }).click();
+    await page.getByRole("button", { name: /add seat/i }).click();
     const addBtn = page.getByRole("button", { name: /add seat/i });
     await expect(addBtn).toBeDisabled();
     const seatRows = page.locator(
@@ -44,16 +46,9 @@ test.describe("Root setup wizard surface", () => {
   test("Map screen lists every map, defaulting to Autumn", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    // Game → Turns → Expansions → Map.
-    await advance(page);
-    await advance(page);
-    // Default expansions: just "base"; turn the rest on so all maps show.
-    await page.getByLabel(/Riverfolk Expansion/).check();
-    await page.getByLabel(/Underworld Expansion/).check();
-    await page.getByLabel(/Marauder Expansion/).check();
-    await page.getByLabel(/Homeland Expansion/).check();
-    await advance(page);
-    await expect(page.getByRole("heading", { name: /^Map$/ })).toBeVisible();
+    // Expansions default-on, so every map should be visible on the
+    // Map screen.
+    await navigateToScreen(page, /^Map$/);
     for (const name of [
       "Autumn",
       "Winter",
@@ -71,16 +66,8 @@ test.describe("Root setup wizard surface", () => {
   }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    await advance(page);
-    await advance(page);
-    await page.getByLabel(/Riverfolk Expansion/).check();
-    await page.getByLabel(/Marauder Expansion/).check();
-    await advance(page); // map screen
-    await advance(page); // deck screen
-    await expect(page.getByRole("heading", { name: /^Deck$/ })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Base deck/ }),
-    ).toBeVisible();
+    await navigateToScreen(page, /^Deck$/);
+    await expect(page.getByRole("button", { name: /Base deck/ })).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Exiles and Partisans/ }),
     ).toBeVisible();
@@ -91,13 +78,7 @@ test.describe("Root setup wizard surface", () => {
 
   test("Generic shows no setup-step screens", async ({ page }) => {
     await page.goto(`${BASE}/timer`);
-    // Generic only has Game + Turns + Players. The next button on the
-    // Players screen reads "Start Game" not "Next".
-    await advance(page);
-    await advance(page);
-    await expect(
-      page.getByRole("heading", { name: /Players \(optional\)/i }),
-    ).toBeVisible();
+    await navigateToScreen(page, /Players \(optional\)/i);
     await expect(
       page.getByRole("button", { name: /start game/i }),
     ).toBeVisible();
@@ -108,18 +89,20 @@ test.describe("Root setup wizard surface", () => {
   }) => {
     await page.goto(`${BASE}/timer`);
     await page.getByLabel(/^Game$/).selectOption("root");
-    // Walk to the faction picker: Game→Turns→Expansions→Map→Deck→Landmarks→Seating→Hirelings→Draft→Faction
-    // = 9 Next clicks. We also need Homeland on to surface Knaves.
-    await advance(page);
-    await advance(page);
-    await page.getByLabel(/Homeland Expansion/).check();
-    for (let i = 0; i < 7; i++) await advance(page);
+    await navigateToScreen(page, /^Faction$/);
+    // Switch to free-choice so all 13 factions are visible (default
+    // draft mode only deals n+1).
+    await page.getByRole("button", { name: /^Skip draft$/ }).click();
     // First seat picks Vagabond.
-    await page.getByTestId("faction-card-vagabond").click();
+    await page
+      .getByRole("button", { name: "Vagabond", exact: true })
+      .click();
     // The Knaves card should now be visually disabled (aria-disabled).
-    await expect(page.getByTestId("faction-card-knaves")).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    await expect(
+      page.getByRole("button", {
+        name: "Knaves of the Deepwood",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 });

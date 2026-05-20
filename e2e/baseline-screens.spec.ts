@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import path from "node:path";
+import { navigateToScreen } from "./_setup-helpers";
 
 // Visual baselines for the landing page + key timer states.
 // Output goes to local_docs/screenshots/ (gitignored). The wizard
@@ -24,9 +25,7 @@ test("landing screen baseline", async ({ page }) => {
 // Walk the wizard to default (Generic, no tracking) and screenshot the timer.
 test("timer view baseline (no players, mid-session)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
-  // Click Next through the three Generic wizard screens (Game → Turns → Players)
-  await page.getByRole("button", { name: /^Next/ }).click();
-  await page.getByRole("button", { name: /^Next/ }).click();
+  await navigateToScreen(page, /Players \(optional\)/i);
   await page.getByRole("button", { name: /start game/i }).click();
   await page.locator("main").click();
   await page.waitForTimeout(1500);
@@ -35,8 +34,7 @@ test("timer view baseline (no players, mid-session)", async ({ page }) => {
 
 test("timer view baseline (with players, Generic)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
-  await page.getByRole("button", { name: /^Next/ }).click();
-  await page.getByRole("button", { name: /^Next/ }).click();
+  await navigateToScreen(page, /Players \(optional\)/i);
   await page.getByLabel(/track individual players/i).check();
   await page.getByLabel(/^Player 1 colour$/).waitFor();
   await page.getByRole("button", { name: /start game/i }).click();
@@ -51,30 +49,16 @@ test("timer view baseline (with players, Generic)", async ({ page }) => {
 
 test("timer view baseline (Root, scores in play)", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
-  // Game: switch to Root.
   await page.getByLabel(/^Game$/).selectOption("root");
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Expected turns
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Expansions (defaults to base only — leave as-is)
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Map (default Autumn)
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Deck (default Base)
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Landmarks
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Seating — leave defaults
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Hirelings (skipped by default)
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Draft
-  await page.getByRole("button", { name: /^Next/ }).click();
-  // Faction picker — last screen; pick 4 in turn order then Start.
-  await page.getByTestId("faction-card-marquise").click();
-  await page.getByTestId("faction-card-eyrie").click();
-  await page.getByTestId("faction-card-alliance").click();
-  await page.getByTestId("faction-card-vagabond").click();
+  await navigateToScreen(page, /^Faction$/);
+  await page.getByRole("button", { name: /^Skip draft$/ }).click();
+  // Counterclockwise pick order — click in reverse so seat 1 = Marquise.
+  const factionCard = (name: string) =>
+    page.getByRole("button", { name, exact: true });
+  await factionCard("Vagabond").click();
+  await factionCard("Woodland Alliance").click();
+  await factionCard("Eyrie Dynasties").click();
+  await factionCard("Marquise de Cat").click();
   await page.getByRole("button", { name: /start game/i }).click();
 
   const selectMarker = (name: string) =>

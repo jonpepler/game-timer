@@ -24,7 +24,9 @@ export interface StartGameOptions {
   trackPlayers?: boolean;
   /** Generic: number of players when tracking on. Root: seats. */
   playerCount?: number;
-  /** Root: faction option ids per seat, in seating order. */
+  /** Root: faction option *labels* per seat, in seating order
+   * (e.g. "Marquise de Cat"). Labels not ids because tests query
+   * the cards by their visible role + name. */
   factions?: string[];
   /** Root: rename seats before advancing. Lets tests assert on
    * meaningful player names instead of the default Player 1..N. */
@@ -33,6 +35,27 @@ export interface StartGameOptions {
 
 const next = (page: Page) =>
   page.getByRole("button", { name: /^Next/ }).click();
+
+/**
+ * Advance through Next clicks until the named screen heading is
+ * visible. Encodes the user's mental model — "I keep clicking Next
+ * until I see X" — and decouples tests from wizard step ordering or
+ * count.
+ */
+export async function navigateToScreen(
+  page: Page,
+  heading: RegExp,
+  { maxClicks = 12 } = {},
+): Promise<void> {
+  for (let i = 0; i < maxClicks; i++) {
+    const h = page.getByRole("heading", { name: heading });
+    if (await h.isVisible().catch(() => false)) return;
+    await next(page);
+  }
+  // Final assertion — fail loudly with a useful message if the
+  // screen never showed.
+  await page.getByRole("heading", { name: heading }).waitFor({ timeout: 2000 });
+}
 
 const setSeatCount = async (page: Page, target: number) => {
   // Each seat row exposes its index in the labelled input. Count by
@@ -60,27 +83,14 @@ const setSeatCount = async (page: Page, target: number) => {
 export async function startGame(page: Page, options: StartGameOptions = {}) {
   await page.goto(`${BASE}/timer`);
 
-  // Screen 1: Game.
+  // Game screen (always first).
   if (options.game) {
     await page.getByLabel(/^Game$/).selectOption(options.game);
   }
-  await next(page);
-
-  // Screen 2: Expected turns.
-  if (options.expectedTurns !== undefined) {
-    await page
-      .getByLabel(/expected turns/i)
-      .fill(String(options.expectedTurns));
-  }
-  await next(page);
 
   if (options.game === "root") {
-    // Screens 3-6: expansions / map / deck / landmarks — accept defaults.
-    await next(page); // expansions
-    await next(page); // map
-    await next(page); // deck
-    await next(page); // landmarks
-    // Screen 7: seat players.
+    // Seating.
+    await navigateToScreen(page, /seat players/i);
     if (options.playerCount !== undefined) {
       await setSeatCount(page, options.playerCount);
     }
@@ -91,22 +101,31 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
           .fill(options.seatNames[i]);
       }
     }
-    await next(page);
-    // Screen 8: hirelings — default skipped.
-    await next(page);
-    // Screen 9: draft — default off.
-    await next(page);
-    // Screen 10 (LAST): faction picker. The footer button reads
-    // "Start Game" here, not "Next". Picking goes counterclockwise
-    // starting from the LAST seat (ADSET A.8.3), so to land
-    // factions[i] on seat i the helper clicks in reverse.
+    // Faction picker (last screen).
+    await navigateToScreen(page, /^Faction$/);
+    // The picker defaults to draft mode (dealt hand of n+1) — skip
+    // it so the helper can land specific factions.
+    await page.getByRole("button", { name: /^Skip draft$/ }).click();
     if (options.factions) {
+      // Picking goes counterclockwise from the LAST seat (ADSET
+      // A.8.3) — click in reverse so factions[i] lands on seat i.
+      // exact: true so the substring match doesn't catch the
+      // "Show setup for X" toggle that shares the faction's label.
       for (let i = options.factions.length - 1; i >= 0; i--) {
-        await page.getByTestId(`faction-card-${options.factions[i]}`).click();
+        await page
+          .getByRole("button", { name: options.factions[i], exact: true })
+          .click();
       }
     }
   } else {
-    // Generic: Players screen.
+    // Generic flow — Expected turns then Players.
+    await navigateToScreen(page, /how long is this game/i);
+    if (options.expectedTurns !== undefined) {
+      await page
+        .getByLabel(/expected turns/i)
+        .fill(String(options.expectedTurns));
+    }
+    await navigateToScreen(page, /Players \(optional\)/i);
     if (options.trackPlayers) {
       await page.getByLabel(/track individual players/i).check();
       if (options.playerCount !== undefined) {
