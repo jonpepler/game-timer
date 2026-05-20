@@ -97,7 +97,6 @@
     {
       "id": "faction",
       "label": "Faction",
-      "description": "Each seated player claims one faction. The Vagabond and Knaves of the Deepwood cannot both be in the same game.",
       "kind": {
         "type": "player-pick",
         "mode": "host-only",

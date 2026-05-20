@@ -398,17 +398,10 @@
 }
 
 /* ── Faction picker ───────────────────────────────────────── */
-.factionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
-  /* Make sibling cards equal-height even when one expands its ADSET. */
-  align-items: start;
-}
-
-/* Draft mode: cards lay out in a single row of dealt-hand sized
-   chips, scrolling horizontally if the deal exceeds visible width.
-   Each card pinned at 200px so the row reads as a "hand". */
+/* Single horizontal row of cards, scrolling horizontally when the
+   hand exceeds the viewport. Used for both draft mode (n+1 dealt)
+   and free-choice mode (all legal options). Each card pins at a
+   fixed width so the row reads as a hand of cards. */
 .factionDraftRow {
   display: flex;
   flex-direction: row;
@@ -420,7 +413,7 @@
 }
 
 .factionDraftRow > * {
-  flex: 0 0 220px;
+  flex: 0 0 200px;
   scroll-snap-align: start;
 }
 
@@ -449,6 +442,11 @@
 }
 
 .factionCard {
+  position: relative;
+  /* Tall enough for label + ADSET steps when expanded; the meeple
+     sits absolutely positioned at the bottom-left and doesn't push
+     the layout. */
+  min-height: 200px;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -460,7 +458,28 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Reserve bottom-left for the meeple silhouette so card content
+     doesn't overlap it. */
+  padding-bottom: 80px;
   transition: border-color 0.15s, background 0.15s;
+}
+
+/* Faction silhouette pinned to the card's bottom-left corner. Tinted
+   via mask-image so the meeple takes the faction colour. */
+.factionCardMeeple {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  width: 72px;
+  height: 72px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 .factionCard:hover:not(:disabled) {

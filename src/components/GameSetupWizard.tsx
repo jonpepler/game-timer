@@ -1652,11 +1652,7 @@ function PlayerPickScreen({
         </div>
       )}
 
-      <div
-        className={
-          draftEnabled ? styles.factionDraftRow : styles.factionGrid
-        }
-      >
+      <div className={styles.factionDraftRow}>
         {visible.map((o) => {
           const blocked = blockedForActive.has(o.id);
           const active = picks[activeSeat] === o.id;
@@ -1665,6 +1661,11 @@ function PlayerPickScreen({
           const adsetSteps = (
             o as unknown as { adsetSteps?: string[] }
           ).adsetSteps;
+          const meepleSrc = (
+            o as unknown as {
+              assets?: { meepleSvg?: { appPath?: string } };
+            }
+          ).assets?.meepleSvg?.appPath;
           // Card is a div, not a button, so it can host the inner
           // "Show setup" button. role="button" + tabIndex keeps it
           // keyboard- and AT-accessible.
@@ -1679,9 +1680,8 @@ function PlayerPickScreen({
               aria-pressed={active}
               aria-disabled={blocked || leaving}
               // Explicit aria-label so the card's accessible name is
-              // just the faction label, not "faction-name description
-              // Show setup for ..." (which is what the computed name
-              // would include from the nested button + description).
+              // just the faction label, not the computed text of all
+              // its children (which would include the nested toggle).
               aria-label={o.label}
               tabIndex={blocked || leaving ? -1 : 0}
               className={`${styles.factionCard} ${
@@ -1689,6 +1689,14 @@ function PlayerPickScreen({
               } ${blocked ? styles.factionCardDisabled : ""} ${
                 leaving ? styles.factionCardLeaving : ""
               }`}
+              style={{
+                // Faint faction-coloured wash on the card so each one
+                // reads as belonging to its faction even at a glance.
+                background: o.color
+                  ? `color-mix(in srgb, ${o.color} 14%, transparent)`
+                  : undefined,
+                borderColor: o.color ?? undefined,
+              }}
               onClick={onActivate}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -1698,20 +1706,13 @@ function PlayerPickScreen({
               }}
             >
               <div className={styles.factionHeader}>
-                <span
-                  className={styles.factionSwatch}
-                  style={{ background: o.color ?? "var(--color-text-dim)" }}
-                  aria-hidden
-                />
                 <span className={styles.factionLabel}>{o.label}</span>
               </div>
-              {o.description && (
-                <span className={styles.chipDesc}>{o.description}</span>
-              )}
               {characters[o.id] && characters[o.id].length > 0 && (
                 <div className={styles.characterDeal}>
                   <span className={styles.characterDealHeader}>
-                    Dealt {characters[o.id].length === 1 ? "character" : "captains"}:
+                    Dealt{" "}
+                    {characters[o.id].length === 1 ? "character" : "captains"}
                   </span>
                   <ul className={styles.characterList}>
                     {characters[o.id].map((charId) => (
@@ -1748,6 +1749,24 @@ function PlayerPickScreen({
                     </ol>
                   )}
                 </>
+              )}
+              {meepleSrc && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={meepleSrc}
+                  alt=""
+                  aria-hidden
+                  className={styles.factionCardMeeple}
+                  style={{
+                    // Tint the silhouette via background + mask so the
+                    // meeple takes the faction colour. Browsers without
+                    // mask-image support fall back to the native black
+                    // SVG over the card wash — still readable.
+                    background: o.color ?? "var(--color-text)",
+                    WebkitMaskImage: `url(${meepleSrc})`,
+                    maskImage: `url(${meepleSrc})`,
+                  }}
+                />
               )}
             </div>
           );
