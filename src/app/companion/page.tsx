@@ -361,6 +361,18 @@ function CompanionScreen() {
       optionId,
     } satisfies CompanionToHostMessage);
 
+  // Mid-game rename — needed because (a) the old SET_PLAYER_OPTION
+  // bug wrote the option label over the player's display name, so
+  // sessions in the wild need a repair path, and (b) renaming on the
+  // fly is just nice to have. Host routes by the claiming peer's
+  // seat so a companion can only rename its own player.
+  const sendRenamePlayer = (name: string) =>
+    send({
+      type: "RENAME_PLAYER",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      name,
+    } satisfies CompanionToHostMessage);
+
   const stats = useMemo(
     () =>
       state
@@ -793,6 +805,7 @@ function CompanionScreen() {
             setChangingPlayerOption(false);
             setChangePreviewId(null);
           }}
+          onRename={sendRenamePlayer}
           onClose={() => {
             setChangingPlayerOption(false);
             setChangePreviewId(null);
@@ -1045,6 +1058,7 @@ function ChangePlayerOptionModal({
   previewId,
   onPreviewChange,
   onConfirm,
+  onRename,
   onClose,
 }: {
   definition: GameDefinition;
@@ -1053,8 +1067,19 @@ function ChangePlayerOptionModal({
   previewId: string | null;
   onPreviewChange: (id: string | null) => void;
   onConfirm: (stepId: string, optionId: string) => void;
+  onRename: (name: string) => void;
   onClose: () => void;
 }) {
+  // Seed the rename input with the current host-side name so the
+  // user can edit it as text. Tracks edits locally; "Save" fires
+  // the peer message. NOT debounced — explicit Save matches the
+  // explicit-action vibe of the rest of the modal.
+  const currentName = players[claimedSlot]?.name ?? "";
+  const [nameDraft, setNameDraft] = useState(currentName);
+  useEffect(() => {
+    setNameDraft(currentName);
+  }, [currentName]);
+  const renameDirty = nameDraft.trim().length > 0 && nameDraft !== currentName;
   const pick = findPlayerPickStep(definition);
   if (!pick) return null;
   // The step's own `label` is the game-vocab noun ("Faction" for
@@ -1188,6 +1213,34 @@ function ChangePlayerOptionModal({
             ×
           </button>
         </header>
+        {/* Rename row — repairs sessions where the old buggy
+            SET_PLAYER_OPTION wrote the option label over the
+            human's display name. Independent of the option pick:
+            Save fires only the rename. */}
+        <div className={styles.renameRow}>
+          <label className={styles.renameLabel} htmlFor="swap-rename">
+            Player name
+          </label>
+          <input
+            id="swap-rename"
+            type="text"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            className={styles.renameInput}
+            placeholder="Player name"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            disabled={!renameDirty}
+            onClick={() => {
+              onRename(nameDraft.trim());
+            }}
+            className={styles.renameSave}
+          >
+            Save
+          </button>
+        </div>
         <div className={styles.heroCardColumn}>
           {pick.options.map((option) => {
             const blocked = takenIds.has(option.id);

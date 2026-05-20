@@ -143,4 +143,13 @@ export type CompanionToHostMessage =
   | {
       type: "DISMISS_MILESTONE";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
+  // Mid-game rename of the player attached to the claiming
+  // companion's seat. The host applies it via setPlayer, preserving
+  // metadata. Identity-bound (companion can only rename the seat
+  // they claimed), so no playerIndex on the wire.
+  | {
+      type: "RENAME_PLAYER";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      name: string;
     };

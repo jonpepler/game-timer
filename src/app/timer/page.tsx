@@ -377,6 +377,30 @@ export default function Home() {
         dismissMilestone();
         return;
       }
+      case "RENAME_PLAYER": {
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("RENAME_PLAYER rejected — no claim", { peerId });
+          return;
+        }
+        const existing = state.players?.[claimed];
+        if (!existing) {
+          peerLog.warn("RENAME_PLAYER rejected — no such player", {
+            peerId,
+            claimed,
+          });
+          return;
+        }
+        // Empty / whitespace-only names rejected — every other place
+        // assumes player.name is something humans can show.
+        const trimmed = msg.name.trim();
+        if (trimmed.length === 0) {
+          peerLog.warn("RENAME_PLAYER rejected — empty name", { peerId });
+          return;
+        }
+        setPlayer(claimed, { ...existing, name: trimmed });
+        return;
+      }
     }
   };
 
