@@ -7,16 +7,74 @@
  * (filtered by level, with copy / clear actions). Hidden behind a
  * single chrome button so it doesn't intrude on normal use.
  */
-import { Bug, Copy, Trash2, X } from "lucide-react";
+import { Bug, Copy, Trash2, Wifi, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import styles from "./DebugLogOverlay.module.css";
 import {
   type LogEntry,
   type LogLevel,
   clearLogBuffer,
+  createLogger,
   getLogBuffer,
   subscribeLogs,
 } from "@/lib/logger";
+
+// Build-time SHA from the GH Actions workflow; falls back to a
+// readable placeholder for local dev builds.
+const COMMIT_SHA =
+  (process.env.NEXT_PUBLIC_COMMIT_SHA ?? "").slice(0, 7) || "dev";
+
+const probeLog = createLogger("ws-probe");
+
+// Open a RAW WebSocket to the public PeerJS broker and log every
+// event with timing. Used by the diagnostic button to tell us
+// whether the WSS handshake itself fails on this device (vs
+// something PeerJS-specific in the handshake frames).
+function probeBroker() {
+  const url =
+    "wss://0.peerjs.com:443/peerjs?key=peerjs&id=probe-" +
+    Math.random().toString(36).slice(2, 10) +
+    "&token=probe&version=1.5.4";
+  probeLog.info("probe opening", { url });
+  const start = Date.now();
+  let ws: WebSocket;
+  try {
+    ws = new WebSocket(url);
+  } catch (err) {
+    probeLog.error("probe constructor threw", { error: String(err) });
+    return;
+  }
+  const elapsed = () => `${Date.now() - start}ms`;
+  ws.onopen = () => probeLog.info("probe onopen", { elapsed: elapsed() });
+  ws.onmessage = (e) =>
+    probeLog.info("probe onmessage", {
+      elapsed: elapsed(),
+      data: typeof e.data === "string" ? e.data.slice(0, 200) : "(binary)",
+    });
+  ws.onerror = (e) =>
+    probeLog.error("probe onerror", {
+      elapsed: elapsed(),
+      // ErrorEvent on WS is almost always opaque (no detail); we
+      // log it anyway in case a future spec exposes more.
+      type: e.type,
+    });
+  ws.onclose = (e) =>
+    probeLog.warn("probe onclose", {
+      elapsed: elapsed(),
+      code: e.code,
+      reason: e.reason || "(empty)",
+      wasClean: e.wasClean,
+    });
+  // Cap the probe lifetime so it doesn't leak — 10s is plenty for
+  // either success or any of the failure codes (1006 abnormal,
+  // 1015 TLS, etc.).
+  setTimeout(() => {
+    if (ws.readyState <= 1) {
+      probeLog.warn("probe forced close", { elapsed: elapsed() });
+      ws.close();
+    }
+  }, 10_000);
+}
 
 const LEVEL_RANK: Record<LogLevel, number> = {
   debug: 10,
@@ -112,7 +170,9 @@ export function DebugLogOverlay() {
   return (
     <div className={styles.panel} role="dialog" aria-label="Debug log">
       <div className={styles.header}>
-        <span className={styles.title}>Debug log</span>
+        <span className={styles.title}>
+          Debug log <span className={styles.sha}>· {COMMIT_SHA}</span>
+        </span>
         <div className={styles.headerActions}>
           <select
             value={minLevel}
@@ -125,6 +185,16 @@ export function DebugLogOverlay() {
             <option value="warn">warn+</option>
             <option value="error">error only</option>
           </select>
+          <button
+            type="button"
+            onClick={probeBroker}
+            className={styles.actionButton}
+            aria-label="Probe broker WebSocket"
+            title="Open a raw WSS to 0.peerjs.com and log the result"
+          >
+            <Wifi size={14} aria-hidden />
+            Probe
+          </button>
           <button
             type="button"
             onClick={copyAll}

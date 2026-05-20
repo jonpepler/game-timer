@@ -70,6 +70,15 @@
   font-family: inherit;
 }
 
+.sha {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-subtle);
+  margin-left: 4px;
+}
+
 .headerActions {
   display: inline-flex;
   align-items: center;

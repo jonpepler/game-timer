@@ -30,6 +30,10 @@ jobs:
           static_site_generator: next
 
       - name: Build Next
+        env:
+          # Surfaced in the in-app debug overlay so bug reports can
+          # name the exact build they were testing against.
+          NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}
         run: npx next build
 
       - name: debug
