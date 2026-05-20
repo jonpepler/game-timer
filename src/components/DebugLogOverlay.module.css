@@ -60,6 +60,12 @@
   padding: 10px 14px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+  /* On narrow viewports the action row (filter + probes + Copy +
+     Clear + close) overflows past the right edge, so the close
+     button became unreachable. Allowing wrap would push everything
+     to two rows and shove the log list down; horizontal scrolling
+     in the actions area keeps the header single-line. */
+  flex-wrap: nowrap;
 }
 
 .title {
@@ -83,6 +89,24 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* Horizontal scroll on narrow viewports so the close (X) and
+     Clear / Copy buttons stay reachable when the probe button row
+     overflows. min-width: 0 lets the flex item shrink below its
+     content size. */
+  min-width: 0;
+  overflow-x: auto;
+  /* Stop scroll-chaining into the parent so the page underneath
+     doesn't move while the user pans this strip. */
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  /* Buttons should keep their own width — they were collapsing under
+     the parent's flex when the row got tight. */
+  flex-shrink: 1;
+}
+
+.headerActions > * {
+  flex-shrink: 0;
 }
 
 .select {
