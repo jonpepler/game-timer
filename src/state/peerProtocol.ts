@@ -60,7 +60,10 @@ export type HostToCompanionMessage =
       type: "SETUP_SEATING";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       stepId: string;
-      seats: Array<{ name: string }>;
+      // `id` is host-internal — used to track the seat across
+      // host-driven reorders. Companions key by index; the id is
+      // safe to ignore but useful for richer companion UI later.
+      seats: Array<{ id?: string; name: string }>;
       claimedBy: Array<string | null>;
       minPlayers: number;
       maxPlayers: number;

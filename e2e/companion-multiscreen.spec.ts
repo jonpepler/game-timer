@@ -211,6 +211,56 @@ test.describe("companion multi-screen — setup-time seating", () => {
       companion.getByRole("button", { name: /^Claim seat 5$/ }),
     ).toBeVisible({ timeout: 3000 });
   });
+
+  test("companion's claim follows its seat when the host reorders seating", async ({
+    context,
+  }) => {
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+    const companion = await openCompanion(context, code);
+
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+
+    // Companion claims seat 3 and renames it so we can identify the
+    // claim by the seat's name after the host shuffles.
+    await companion.getByRole("button", { name: /^Claim seat 3$/ }).click();
+    await companion
+      .getByRole("textbox", { name: /Rename seat 3/i })
+      .fill("Alice");
+    await expect(host).toHaveURL(/timer/); // sanity
+
+    // Host walks to the seat-players screen so the move-up/down
+    // arrows are reachable. The seating step is the screen labelled
+    // "seat players" in the wizard ordering.
+    await navigateToScreen(host, /seat players/i);
+    await expect(host.getByLabel(/^Seat 3 name$/)).toHaveValue("Alice", {
+      timeout: 3000,
+    });
+
+    // Host moves the claimed seat from index 3 up to index 1.
+    // Seat 3 → 2 then 2 → 1 (two arrow presses on the moving row).
+    await host.getByRole("button", { name: /Move seat 3 up/ }).click();
+    await host.getByRole("button", { name: /Move seat 2 up/ }).click();
+    await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue("Alice", {
+      timeout: 3000,
+    });
+
+    // Back on the companion: the rename input now binds to seat 1
+    // (the new index of the claimed seat). Re-typing into it should
+    // change "Alice" — proof the claim followed the seat across the
+    // reorder.
+    await expect(
+      companion.getByRole("textbox", { name: /Rename seat 1/i }),
+    ).toBeVisible({ timeout: 3000 });
+    await companion
+      .getByRole("textbox", { name: /Rename seat 1/i })
+      .fill("Alice 2");
+    await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue(
+      "Alice 2",
+      { timeout: 3000 },
+    );
+  });
 });
 
 test.describe("companion multi-screen — identity-bound picks", () => {

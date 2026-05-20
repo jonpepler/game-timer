@@ -109,12 +109,13 @@ export interface WizardPeerHooks {
   // advances past the step, or wizard closes).
   onTurnEnd?: (info: { stepId: string }) => void;
   // Called whenever the seating list changes (initial mount + every
-  // seat add/rename/remove, by host or peer). The parent broadcasts
-  // a SETUP_SEATING message so connected companions can see + edit
-  // the seat list from the very start of setup.
+  // seat add/rename/remove/move, by host or peer). Includes stable
+  // seat ids so the parent can rewrite its claim map when seats are
+  // reordered. The wire-format SETUP_SEATING drops the ids before
+  // broadcasting (companions key by index).
   onSeatingChange?: (info: {
     stepId: string;
-    seats: Array<{ name: string }>;
+    seats: Array<{ id: string; name: string }>;
     minPlayers: number;
     maxPlayers: number;
   }) => void;
@@ -244,6 +245,7 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
         ctx[step.id] = {
           kind: "seat-players",
           seats: Array.from({ length: count }, (_, i) => ({
+            id: makeSeatId(),
             name: `Player ${i + 1}`,
           })),
         };
@@ -256,6 +258,17 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
     }
   }
   return ctx;
+};
+
+// Stable per-seat identifier. The host's claim map tracks a peer's
+// claim against this id so it follows the seat if the host reorders
+// seating. Falls back to a random-suffixed string when `crypto`
+// isn't available (tests, older environments).
+const makeSeatId = (): string => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `seat-${Math.random().toString(36).slice(2, 11)}`;
 };
 
 const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
@@ -479,6 +492,7 @@ export const GameSetupWizard = forwardRef<
             nextSeats = [
               ...current.seats,
               {
+                id: makeSeatId(),
                 name:
                   action.name.trim() || `Player ${current.seats.length + 1}`,
               },
@@ -1278,11 +1292,11 @@ function SeatPlayersScreen({
   const min = step.kind.minPlayers ?? 1;
   const max = step.kind.maxPlayers ?? 99;
   const seats = choice.seats;
-  const update = (seats: Array<{ name: string }>) =>
+  const update = (seats: Array<{ id: string; name: string }>) =>
     onChange({ kind: "seat-players", seats });
 
   const setName = (i: number, name: string) =>
-    update(seats.map((s, j) => (i === j ? { name } : s)));
+    update(seats.map((s, j) => (i === j ? { ...s, name } : s)));
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
@@ -1299,7 +1313,10 @@ function SeatPlayersScreen({
 
   const add = () => {
     if (seats.length >= max) return;
-    update([...seats, { name: `Player ${seats.length + 1}` }]);
+    update([
+      ...seats,
+      { id: makeSeatId(), name: `Player ${seats.length + 1}` },
+    ]);
   };
 
   return (

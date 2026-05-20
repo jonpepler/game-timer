@@ -117,6 +117,7 @@ export const PEER_TEST_INIT_SCRIPT = `
 
       return {
         hostCode,
+        peerId: myId,
         send: (data) => {
           channel.postMessage({ from: myId, to: "host", type: "data", data });
         },

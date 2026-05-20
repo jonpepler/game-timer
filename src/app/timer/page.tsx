@@ -388,10 +388,11 @@ export default function Home() {
   // Latest seating snapshot from the wizard — kept here so we can
   // re-broadcast SETUP_SEATING when the claim map changes (peers
   // joining/leaving a claimed seat) without waiting for the wizard
-  // to re-emit.
+  // to re-emit. `seats` carries stable per-seat ids so we can
+  // detect reorders and rewrite `claimMap` accordingly.
   const seatingSnapshotRef = useRef<{
     stepId: string;
-    seats: Array<{ name: string }>;
+    seats: Array<{ id: string; name: string }>;
     minPlayers: number;
     maxPlayers: number;
   } | null>(null);
@@ -465,10 +466,44 @@ export default function Home() {
       },
       onSeatingChange: (info: {
         stepId: string;
-        seats: Array<{ name: string }>;
+        seats: Array<{ id: string; name: string }>;
         minPlayers: number;
         maxPlayers: number;
       }) => {
+        // Detect seat-index permutation by comparing each new seat's
+        // id to its old index. When a peer's claim points at an
+        // index that no longer holds the same seat, rewrite the
+        // claim to follow the seat to its new position. Skipped
+        // when the previous snapshot is missing ids (first mount).
+        const prevSeats = seatingSnapshotRef.current?.seats;
+        if (prevSeats && prevSeats.length > 0 && info.seats.length > 0) {
+          const oldIndexById = new Map<string, number>();
+          prevSeats.forEach((s, i) => oldIndexById.set(s.id, i));
+          const newIndexById = new Map<string, number>();
+          info.seats.forEach((s, i) => newIndexById.set(s.id, i));
+          let needsRewrite = false;
+          for (const [, oldIdx] of Object.entries(claimMapRef.current)) {
+            const stillThere = prevSeats[oldIdx]
+              ? newIndexById.get(prevSeats[oldIdx].id)
+              : undefined;
+            if (stillThere !== oldIdx) {
+              needsRewrite = true;
+              break;
+            }
+          }
+          if (needsRewrite) {
+            setClaimMap((prev) => {
+              const next: Record<string, number> = {};
+              for (const [peerId, oldIdx] of Object.entries(prev)) {
+                const seatAtOldIdx = prevSeats[oldIdx];
+                if (!seatAtOldIdx) continue; // seat was removed
+                const newIdx = newIndexById.get(seatAtOldIdx.id);
+                if (newIdx !== undefined) next[peerId] = newIdx;
+              }
+              return next;
+            });
+          }
+        }
         seatingSnapshotRef.current = info;
         broadcastSeating();
       },

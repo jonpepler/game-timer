@@ -9,6 +9,9 @@ export interface UseSessionCompanionReturn<TMessage> {
   lastMessage: TMessage | null;
   error: Error | null;
   send: (data: unknown) => void;
+  // The companion's own broker peer id once connected. Used to
+  // identify itself in the host's per-seat claimedBy[] array.
+  peerId: string | null;
 }
 
 export function useSessionCompanion<TMessage>(
@@ -17,6 +20,7 @@ export function useSessionCompanion<TMessage>(
   const [status, setStatus] = useState<Status>("connecting");
   const [lastMessage, setLastMessage] = useState<TMessage | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [peerId, setPeerId] = useState<string | null>(null);
   const sessionRef = useRef<CompanionSession | null>(null);
 
   useEffect(() => {
@@ -37,6 +41,7 @@ export function useSessionCompanion<TMessage>(
         }
         sessionRef.current = session;
         setStatus("connected");
+        setPeerId(session.peerId);
         session.onMessage((data) => {
           setLastMessage(data as TMessage);
         });
@@ -61,5 +66,5 @@ export function useSessionCompanion<TMessage>(
     sessionRef.current?.send(data);
   };
 
-  return { status, lastMessage, error, send };
+  return { status, lastMessage, error, send, peerId };
 }

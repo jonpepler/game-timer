@@ -58,7 +58,7 @@ function CompanionScreen() {
   const params = useSearchParams();
   const code = params.get("code");
 
-  const { status, lastMessage, error, send } =
+  const { status, lastMessage, error, send, peerId } =
     useSessionCompanion<HostToCompanionMessage>(code);
 
   // Track the most recent message of each type. STATE arrives during
@@ -151,12 +151,28 @@ function CompanionScreen() {
     }
   }, [status, claimedSlot, send]);
 
+  // Follow our claim across host-driven seat reorders. Whenever a
+  // fresh SETUP_SEATING arrives, scan claimedBy[] for our own peer
+  // id; if we find ourselves at a different index than `claimedSlot`,
+  // sync local state to that index. This makes the companion's UI
+  // follow its seat when the host moves it up/down in the seating
+  // step.
+  useEffect(() => {
+    if (!pendingSeating || !peerId) return;
+    const mineAt = pendingSeating.claimedBy.indexOf(peerId);
+    if (mineAt !== -1 && mineAt !== claimedSlot) setClaimedSlot(mineAt);
+  }, [pendingSeating, peerId, claimedSlot]);
+
   // Auto-reclaim during setup: when SETUP_SEATING arrives and the
-  // companion already has a claimed slot from a previous session, ask
-  // the host to honour the claim again. Skipped if someone else has
-  // already grabbed that seat (the user can pick a different one).
+  // companion has a stored claim but the host hasn't yet recorded it
+  // (e.g. on first connect after a page refresh), ask the host to
+  // honour the claim again. Skipped if our peer id is already
+  // somewhere in claimedBy[] — the index-follow effect above
+  // handles syncing claimedSlot in that case, and re-issuing here
+  // would race against host-driven seat reorders.
   useEffect(() => {
     if (!pendingSeating || claimedSlot === null) return;
+    if (peerId && pendingSeating.claimedBy.includes(peerId)) return;
     if (claimedSlot < 0 || claimedSlot >= pendingSeating.seats.length) return;
     const currentClaim = pendingSeating.claimedBy[claimedSlot];
     if (currentClaim !== null) return;
@@ -166,7 +182,7 @@ function CompanionScreen() {
       stepId: pendingSeating.stepId,
       action: { kind: "claim", seatIndex: claimedSlot },
     } satisfies CompanionToHostMessage);
-  }, [pendingSeating, claimedSlot, send]);
+  }, [pendingSeating, claimedSlot, peerId, send]);
 
   const claim = (playerIndex: number) => {
     setClaimedSlot(playerIndex);

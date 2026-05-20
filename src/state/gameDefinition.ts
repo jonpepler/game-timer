@@ -387,7 +387,10 @@ export type SetupChoice =
     }
   // Per-seat name + order. Index in the array is the seat (turn order).
   // Later turn-based steps (player-pick) read this to drive the picker.
-  | { kind: "seat-players"; seats: Array<{ name: string }> }
+  // `id` is a stable per-seat identifier — host uses it to track a
+  // seat across reorders so a companion's claim follows the seat
+  // when the host shuffles seating.
+  | { kind: "seat-players"; seats: Array<{ id: string; name: string }> }
   // Per-player option ids, keyed by player index. The host modal
   // collects this from the faction-picker rows; the page projects it
   // onto player.metadata at apply time so renderers can read it

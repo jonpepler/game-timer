@@ -26,6 +26,10 @@ export interface HostSession {
 export interface CompanionSession {
   // The code of the host this companion is talking to.
   hostCode: string;
+  // The companion's own broker peer id — used by the companion to
+  // find itself in the host's per-seat `claimedBy[]` array so the
+  // claim can follow a seat reorder.
+  peerId: string;
   send: (data: unknown) => void;
   onMessage(handler: (data: unknown) => void): () => void;
   onClose(handler: () => void): () => void;
@@ -168,8 +172,8 @@ export function connectToHost(
     const closeHandlers = new Set<() => void>();
     let resolved = false;
 
-    peer.on("open", () => {
-      log.info("companion peer opened, dialing host", { hostCode });
+    peer.on("open", (id) => {
+      log.info("companion peer opened, dialing host", { hostCode, id });
       const conn = peer.connect(hostCode);
 
       conn.on("open", () => {
@@ -177,6 +181,7 @@ export function connectToHost(
         log.info("companion connected to host", { hostCode });
         resolve({
           hostCode,
+          peerId: id,
           send: (data) => {
             if (conn.open) conn.send(data);
           },
