@@ -258,6 +258,19 @@ export default function Home() {
         // anyone switched.
         const existing = state.players?.[claimed];
         const preservedName = existing?.name ?? option.label;
+        // Diagnostic — confirms what got written to the player's
+        // metadata after a swap. The deployed bundle in the wild
+        // dropped iconSrc / headIconSrc until very recently; this
+        // log lets us spot regressions without having to dig
+        // through STATE on the wire.
+        peerLog.info("SET_PLAYER_OPTION applied", {
+          claimed,
+          optionId: option.id,
+          color: option.color,
+          meeple,
+          head,
+          preservedName,
+        });
         setPlayer(claimed, {
           name: preservedName,
           metadata: {
