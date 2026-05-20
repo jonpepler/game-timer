@@ -1148,13 +1148,21 @@
       "source": "mrmirz-vp-laurels",
       "candidates": [
         {
+          "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF",
+          "originalName": "VPTrace-goblioc.png",
+          "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk",
+          "bytes": 32666,
+          "format": "png",
+          "note": "Traced/Lioc variant.",
+          "appPath": "games/root/vp/laurel.png"
+        },
+        {
           "fileId": "1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3",
           "originalName": "vp laurels.png",
           "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk",
           "bytes": 11804,
           "format": "png",
-          "note": "Primary laurel — wraps the leading-player head icon.",
-          "appPath": "games/root/vp/laurel.png"
+          "note": "Primary laurel — wraps the leading-player head icon."
         },
         {
           "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb",
@@ -1163,14 +1171,6 @@
           "bytes": 10758,
           "format": "png",
           "note": "Laurel + frills variant."
-        },
-        {
-          "fileId": "1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF",
-          "originalName": "VPTrace-goblioc.png",
-          "viewUrl": "https://drive.google.com/file/d/1Kwgnu8FovUPhwFWxfQbJ_6Tj5A7dSWzF/view?usp=drivesdk",
-          "bytes": 32666,
-          "format": "png",
-          "note": "Traced/Lioc variant."
         },
         {
           "fileId": "1FlFtkqWNAo_nfAtmMprwbYVUygxRt6kR",

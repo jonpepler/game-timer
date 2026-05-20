@@ -3,7 +3,6 @@
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  /* Soft pulse so the victory moment reads as celebratory. */
   animation: victoryEnter 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
 }
 
@@ -18,9 +17,13 @@
   }
 }
 
+/* The wreath is a square holding the laurel image + the head
+   portrait floating in front of it. Both fill the square — the
+   laurel as an overlay, the portrait as a centred image without
+   a circular clip so the full artwork reads. */
 .wreath {
   position: relative;
-  width: clamp(220px, 38vmin, 380px);
+  width: clamp(280px, 52vmin, 540px);
   aspect-ratio: 1;
   display: flex;
   align-items: center;
@@ -52,81 +55,23 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* Sits behind the headInner so the wreath frames the portrait. */
   z-index: 0;
-  /* Soft drop shadow keeps the laurel readable against the dark
-     surface. */
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
 }
 
-/* Fallback "ring + crown" composition used when the definition
-   doesn't ship a laurel asset. The ring is hollow with a
-   faction-coloured border; the crown floats at the top. Root ships
-   `games/root/vp/laurel.png` which slots into the .laurelImg slot
-   above instead. */
-.laurelFallbackRing {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 6px solid var(--victor-color);
-  /* Subtle inner glow so the empty-center reads as celebratory
-     rather than just an outline. */
-  box-shadow:
-    inset 0 0 0 2px
-      color-mix(in srgb, var(--victor-color) 40%, transparent),
-    0 0 24px color-mix(in srgb, var(--victor-color) 25%, transparent);
-}
-
-.laurelFallbackCrown {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-surface);
-  color: var(--victor-color);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 4px solid var(--victor-color);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.headInner {
-  /* Centered inside the wreath via the .wreath flexbox. Sized so
-     the portrait sits inside the wreath's empty middle without
-     overlapping the leaves. ~36% of the wreath square works
-     against the MrMirz laurel (108×89, U-shaped, empty top). If a
-     different laurel is swapped in this value can move. */
+/* Head portrait sits in front of the wreath. No circular clip —
+   the full PNG reads through. Sized roughly 70% of the wreath
+   square so it fills the laurel's open middle without overlapping
+   the leaves. Nudged up by 6% to align with the laurel's empty
+   top half. */
+.headPortrait {
   position: relative;
   z-index: 1;
-  width: 36%;
-  aspect-ratio: 1;
-  /* Nudge up so the head nestles into the wreath's open top
-     rather than sitting on the leaves at the bottom. */
-  margin-top: -8%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--victor-color) 22%, var(--color-surface));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.headPortrait {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.headInitial {
-  font-size: clamp(36px, 9vmin, 80px);
-  font-weight: 800;
-  color: var(--victor-color);
-  font-family: inherit;
-  line-height: 1;
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  margin-top: -6%;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
 }
 
 .label {
@@ -138,7 +83,7 @@
 }
 
 .victorName {
-  font-size: clamp(28px, 5vmin, 56px);
+  font-size: clamp(36px, 6vmin, 64px);
   font-weight: 800;
   color: var(--victor-color);
   letter-spacing: 0.01em;
@@ -146,7 +91,7 @@
 }
 
 .suffix {
-  font-size: clamp(18px, 3vmin, 30px);
+  font-size: clamp(20px, 3.4vmin, 32px);
   color: var(--color-text-muted);
   font-weight: 500;
   letter-spacing: 0.04em;

@@ -43,21 +43,21 @@ test("VictoryBanner with laurel + Marquise head", async ({ mount }) => {
   });
 });
 
-test("VictoryBanner with no laurel asset — fallback ring + crown", async ({
+test("VictoryBanner with no laurel asset — name-led layout", async ({
   mount,
 }) => {
   const component = await mount(
     wrap(
       <VictoryBanner
         victor={{
-          name: "Eyrie Dynasties",
-          color: "#2862A1",
+          name: "Jon",
+          color: "#7BE847",
         }}
       />,
     ),
   );
   await expect(component.getByRole("status")).toBeVisible();
-  await expect(component).toHaveScreenshot("victory-fallback-ring.png", {
+  await expect(component).toHaveScreenshot("victory-name-only.png", {
     maxDiffPixelRatio: 0.02,
   });
 });
