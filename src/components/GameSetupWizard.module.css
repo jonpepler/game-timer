@@ -602,32 +602,32 @@
 .heroCardRow {
   display: flex;
   align-items: center;
-  /* `safe center` so the row is centred when the hand fits in the
-     viewport but falls back to start-alignment when it overflows
-     (otherwise the leading cards get clipped and unreachable via
-     horizontal scroll). */
-  justify-content: safe center;
-  gap: clamp(12px, 1.6vw, 28px);
+  justify-content: center;
+  gap: clamp(6px, 1.2vw, 20px);
   flex: 1;
   width: 100%;
-  /* Allow the row to scroll horizontally when N+1 cards exceed the
-     viewport width — the cards stay at their aspect ratio rather
-     than getting squashed. */
-  overflow-x: auto;
+  /* No horizontal scroll — the cards shrink to fit the viewport
+     width (see `.heroCard` flex sizing). Was too eager to scroll
+     on phones where the dealt hand wouldn't fit at the previous
+     fixed card width. */
+  overflow-x: hidden;
   /* The meeples overhang the bottom of each card, so room is
      reserved here for them. */
   padding-bottom: 56px;
-  padding-left: clamp(12px, 4vw, 64px);
-  padding-right: clamp(12px, 4vw, 64px);
+  padding-left: clamp(8px, 2vw, 32px);
+  padding-right: clamp(8px, 2vw, 32px);
 }
 
 .heroCard {
   /* Standard playing-card aspect ratio (2.5 x 3.5"). */
   aspect-ratio: 5 / 7;
-  width: clamp(180px, 16vw, 260px);
-  /* The card itself is bounded by its width × aspect-ratio; meeples
-     overhang it via negative bottom positioning. */
-  flex-shrink: 0;
+  /* Share available row width — the row holds N cards plus gaps;
+     `flex: 1` lets them shrink down on phones rather than forcing
+     a horizontal scroll. min-width:0 is essential for the shrink
+     to bite; max-width keeps cards readable on wide screens. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 260px;
   position: relative;
   padding: 18px 16px 64px; /* extra bottom padding clears overhanging meeple */
   border-radius: 14px;

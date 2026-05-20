@@ -54,15 +54,18 @@
 }
 
 .dismissHint {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Sits as a regular flex child below the hero so it can never
+     overlap the victor name on tall viewports. The overlay's flex
+     column centres the hero + this hint together; gap keeps them
+     spaced. Was previously absolutely-positioned at bottom: 32px
+     which clipped under the victor name once it grew large enough
+     on phones. */
   font-size: 13px;
   color: var(--color-text-subtle);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   pointer-events: none;
+  margin-top: 8px;
 }
 
 .hero {

@@ -51,7 +51,6 @@ export default function Home() {
   const {
     getTimerString,
     getStopwatchString,
-    size,
     pause,
     unpause,
     resetTimer,
@@ -849,8 +848,6 @@ export default function Home() {
                 <PlayerArcs
                   players={playerViews}
                   activeIndex={currentPlayerIndex}
-                  containerSize={size}
-                  internalSizeOffset={40}
                 />
               )}
               <CircularProgressbar

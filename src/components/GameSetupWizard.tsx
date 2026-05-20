@@ -894,21 +894,12 @@ function validateScreen(
       if (choice.seats.some((s) => !s.name.trim()))
         return `Every seat needs a name.`;
     }
-    if (step.kind.type === "player-pick") {
-      const choice = context[step.id];
-      if (choice?.kind !== "player-pick") return null;
-      // Look up the seat count to check completeness.
-      const seatChoice = Object.values(context).find(
-        (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
-          c.kind === "seat-players",
-      );
-      const seatCount = seatChoice?.seats.length;
-      if (seatCount != null) {
-        const filled = Object.keys(choice.picks).length;
-        if (filled < seatCount)
-          return `Each of ${seatCount} player${seatCount === 1 ? "" : "s"} needs a faction.`;
-      }
-    }
+    // Note: player-pick used to gate Next with an "Each of N players
+    // needs a faction." message. Dropped — the picker auto-submits
+    // when the last seat confirms (see PlayerPickScreen's
+    // onAllConfirmed), so there's no in-practice scenario where a
+    // user reaches a complete-picker screen with the button enabled.
+    // Removing the gate means the awkward copy is gone too.
   }
   if (screen.kind === "track-players" && trackPlayers) {
     if (trackRoster.some((r) => !r.name.trim()))
