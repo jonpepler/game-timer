@@ -689,6 +689,25 @@ export const GameSetupWizard = forwardRef<
     });
   };
 
+  // Defer auto-submit by one commit so the just-applied pick reaches
+  // `context` before submit() reads it. Background: confirmPreview()
+  // calls applyPick (which schedules setContext) and onAllConfirmed
+  // synchronously in the same event handler — if we submitted there
+  // and then, submit() would close over the stale pre-pick context
+  // and emit a players[] missing the LAST seat's metadata. Flipping
+  // a flag lets React commit setContext first, then the effect runs
+  // with a fresh `context` in scope.
+  const [autoSubmitPending, setAutoSubmitPending] = useState(false);
+  useEffect(() => {
+    if (!autoSubmitPending) return;
+    submit(true);
+    setAutoSubmitPending(false);
+    // submit() intentionally excluded from deps — it reads `context`
+    // which IS a dep, and we don't want stale closures racing the
+    // flag flip. The effect fires exactly once per request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSubmitPending, context]);
+
   // ── Render ──────────────────────────────────────────────────────
 
   // Show the side panel only on the very first screen. On later
@@ -789,9 +808,12 @@ export const GameSetupWizard = forwardRef<
                 onAllConfirmed={() => {
                   // Last seat just confirmed its pick — auto-advance
                   // the wizard. If we're already on the final
-                  // screen, this submits and (via GameConfig.autoStart)
-                  // also starts the timer immediately.
-                  if (isLast) submit(/* autoStart */ true);
+                  // screen, we defer to a useEffect (see
+                  // autoSubmitPending) so React commits the
+                  // applyPick'd context before submit() reads it.
+                  // Without the defer, the last seat's metadata
+                  // races and lands empty on the player record.
+                  if (isLast) setAutoSubmitPending(true);
                   else next();
                 }}
               />

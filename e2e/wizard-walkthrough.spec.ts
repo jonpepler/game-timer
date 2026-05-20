@@ -175,3 +175,48 @@ test("Generic flow — collapses to Game / Turns / Players", async ({
   await navigateToScreen(page, /Players \(optional\)/i);
   await save(page, "generic-01-players");
 });
+
+// Regression: the LAST seat to confirm a pick used to lose its
+// metadata because submit() captured stale closure state before
+// React committed the applyPick setContext. The score-panel head
+// icon for the last-picked seat would render as the positional
+// fallback swatch instead of the faction's head-icon image.
+test("Root faction picker — last seat keeps its metadata", async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await navigateToScreen(page, /^Faction$/);
+  await page.getByRole("button", { name: /^Skip draft$/ }).click();
+  // Counterclockwise pick order — seat 4 first, seat 1 last.
+  const confirm = page.getByRole("button", { name: /^Confirm setup$/ });
+  await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+  await confirm.click();
+  await page
+    .getByRole("button", { name: "Woodland Alliance", exact: true })
+    .click();
+  await confirm.click();
+  await page
+    .getByRole("button", { name: "Eyrie Dynasties", exact: true })
+    .click();
+  await confirm.click();
+  // Marquise de Cat is seat 1 — the LAST to confirm, which is the
+  // case that broke previously.
+  await page
+    .getByRole("button", { name: "Marquise de Cat", exact: true })
+    .click();
+  await confirm.click();
+
+  // After auto-start the score panel renders per-player markers
+  // keyed by SEAT name (default "Player N"). The marker for the
+  // last-picked seat must surface the faction's head icon image —
+  // if the metadata was lost, ScorePanel falls back to a colored
+  // chip with no <img>. Player 1 = seat 1 = LAST to confirm (Root
+  // picks counterclockwise from the highest seat number), so it's
+  // the marker we have to check.
+  const marker = page.getByRole("button", {
+    name: /Player 1 score \d+/,
+  });
+  await expect(marker).toBeVisible();
+  await expect(marker.locator("img")).toBeVisible();
+});
