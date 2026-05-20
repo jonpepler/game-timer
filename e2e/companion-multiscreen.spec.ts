@@ -304,7 +304,11 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     });
     await expect(pickerPanel).toBeVisible({ timeout: 5000 });
     const firstCard = pickerPanel.getByRole("button").first();
-    const pickedLabel = (await firstCard.innerText()).trim();
+    // Pull the option label off the card's accessible name — the
+    // visible text includes the ADSET list which would otherwise
+    // pollute innerText.
+    const pickedLabel = (await firstCard.getAttribute("aria-label")) ?? "";
+    if (!pickedLabel) throw new Error("expected dealt card to have aria-label");
     await firstCard.click();
 
     // Host's wizard records the pick against seat 4. The picker's

@@ -362,6 +362,152 @@
   margin-bottom: 4px;
 }
 
+/* ── Hero picker — companion mobile parity with the host wizard ── */
+.heroPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heroPickerHeader {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.heroCardColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* Extra bottom padding so the last card's overhanging meeple
+     doesn't run off the bottom of the scrollable area. */
+  padding-bottom: 44px;
+}
+
+.heroCard {
+  /* Override the global button 50x40 reset. Wide card-shaped row
+     stacked vertically — one per faction. */
+  width: 100%;
+  height: auto;
+  min-height: 180px;
+  padding: 16px 16px 56px;
+  border-radius: 12px;
+  border: 2px solid var(--faction-color, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--faction-color, var(--color-surface-muted)) 18%,
+    var(--color-surface)
+  );
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.18s ease;
+  animation: heroCardEnter 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.heroCard:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.heroCard:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.heroCard:nth-child(3) {
+  animation-delay: 0.09s;
+}
+.heroCard:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.heroCard:nth-child(5) {
+  animation-delay: 0.15s;
+}
+.heroCard:nth-child(6) {
+  animation-delay: 0.18s;
+}
+.heroCard:nth-child(7) {
+  animation-delay: 0.21s;
+}
+
+@keyframes heroCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heroCard:active:not(:disabled) {
+  transform: scale(0.99);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.heroCard:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.heroCardLabel {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.heroCardAdset {
+  /* ADSET visible permanently on each card — no toggle. */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.heroCardAdset li {
+  display: flex;
+  gap: 6px;
+}
+
+.heroCardAdsetIndex {
+  color: var(--color-text);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.heroCardMeeple {
+  position: absolute;
+  bottom: -28px;
+  right: 14px;
+  width: 64px;
+  height: 64px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroCard {
+    animation: none;
+  }
+}
+
 /* Each dealt faction renders as a wide tappable row — override the
    global `button { width: 50px; height: 40px }` reset so the faction
    label has room to breathe on mobile. */

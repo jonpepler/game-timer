@@ -662,35 +662,73 @@ function SetupTurnPanel({
   const pickLabel = pick?.step.label.toLowerCase() ?? "card";
   return (
     <div
-      className={styles.factionPicker}
+      className={styles.heroPicker}
       role="region"
       aria-label={`Your turn to pick a ${pickLabel}`}
     >
-      <div className={styles.factionPickerHeader}>
+      <div className={styles.heroPickerHeader}>
         Your turn — choose a {pickLabel}
       </div>
-      {visible.map((option) => {
-        const isBlocked = excluded.has(option.id);
-        return (
-          <button
-            key={option.id}
-            type="button"
-            disabled={isBlocked}
-            onClick={() => onPick(option.id)}
-            className={styles.factionButton}
-            style={{
-              borderColor: option.color ?? "var(--color-border)",
-            }}
-          >
-            <span
-              className={styles.factionSwatch}
-              style={{ background: option.color ?? "var(--color-border)" }}
-              aria-hidden
-            />
-            <span>{option.label}</span>
-          </button>
-        );
-      })}
+      <div className={styles.heroCardColumn}>
+        {visible.map((option) => {
+          const isBlocked = excluded.has(option.id);
+          const adsetSteps = (option as unknown as { adsetSteps?: string[] })
+            .adsetSteps;
+          const meepleSrc = (
+            option as unknown as {
+              assets?: { meepleSvg?: { appPath?: string } };
+            }
+          ).assets?.meepleSvg?.appPath;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              disabled={isBlocked}
+              onClick={() => onPick(option.id)}
+              className={styles.heroCard}
+              // Accessible name is just the option label, not the
+              // computed text of all child nodes (which would
+              // include every ADSET step).
+              aria-label={option.label}
+              style={
+                {
+                  ["--faction-color" as string]:
+                    option.color ?? "var(--color-border)",
+                } as React.CSSProperties
+              }
+            >
+              <span className={styles.heroCardLabel}>{option.label}</span>
+              {adsetSteps && adsetSteps.length > 0 && (
+                <ol className={styles.heroCardAdset}>
+                  {adsetSteps.map((s, i) => (
+                    <li key={i}>
+                      <span className={styles.heroCardAdsetIndex}>
+                        {i + 1}.
+                      </span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {meepleSrc && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={meepleSrc}
+                  alt=""
+                  aria-hidden
+                  className={styles.heroCardMeeple}
+                  style={{
+                    background:
+                      option.color ?? "var(--color-text)",
+                    WebkitMaskImage: `url(${meepleSrc})`,
+                    maskImage: `url(${meepleSrc})`,
+                  }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
