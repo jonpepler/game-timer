@@ -1,9 +1,15 @@
 import { test, expect } from "@playwright/experimental-ct-react";
 import { VictoryBanner } from "@/components/VictoryBanner";
 
-// Visual smoke for the wreath + head-icon alignment. Useful while
-// dialling in the inner-circle ratio against a real laurel asset —
-// re-run with `npm run test:ct:update` to refresh the baseline.
+// Visual smoke for the wreath + head-icon alignment. The component
+// has a staged entry animation + an infinite sway loop — both are
+// suppressed for the screenshot via `prefers-reduced-motion: reduce`
+// (the CSS media query gates every animation rule on it) so the
+// baselines render the resting state deterministically.
+test.use({ colorScheme: "dark" });
+test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+});
 
 const wrap = (children: React.ReactNode) => (
   <div

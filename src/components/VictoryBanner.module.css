@@ -3,24 +3,15 @@
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  animation: victoryEnter 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
-}
-
-@keyframes victoryEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 /* The wreath is a square holding the laurel image + the head
    portrait floating in front of it. Both fill the square — the
    laurel as an overlay, the portrait as a centred image without
-   a circular clip so the full artwork reads. */
+   a circular clip so the full artwork reads. The wreath itself
+   doesn't animate on entry — its children do, separately. The
+   pulse glow kicks in after the entry completes (delay = entry
+   duration). */
 .wreath {
   position: relative;
   width: clamp(280px, 52vmin, 540px);
@@ -29,6 +20,7 @@
   align-items: center;
   justify-content: center;
   animation: victoryPulse 2.4s ease-in-out infinite alternate;
+  animation-delay: 1.1s;
 }
 
 @keyframes victoryPulse {
@@ -42,13 +34,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero,
-  .wreath {
-    animation: none;
-  }
-}
-
 .laurelImg {
   position: absolute;
   inset: 0;
@@ -57,13 +42,34 @@
   object-fit: contain;
   z-index: 0;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  /* Flies in from the front — starts huge + transparent, settles
+     into the final size as it fades in. cubic-bezier with a soft
+     overshoot at the end so it lands with a touch of weight. */
+  animation: laurelFlyIn 0.75s cubic-bezier(0.18, 0.78, 0.32, 1.06) backwards;
+}
+
+@keyframes laurelFlyIn {
+  from {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Head portrait sits in front of the wreath. No circular clip —
    the full PNG reads through. Sized roughly 70% of the wreath
    square so it fills the laurel's open middle without overlapping
    the leaves. Nudged up by 6% to align with the laurel's empty
-   top half. */
+   top half.
+
+   Two animations layered:
+   1. `headEmerge` — grows out from a tiny centre point once the
+      laurel has mostly settled.
+   2. `headSway` — once landed, a gentle infinite back-and-forth
+      rotate so the portrait reads as alive instead of static. */
 .headPortrait {
   position: relative;
   z-index: 1;
@@ -72,6 +78,33 @@
   object-fit: contain;
   margin-top: -6%;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+  transform-origin: center bottom;
+  animation:
+    headEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards,
+    headSway 3.6s ease-in-out 1.1s infinite alternate;
+}
+
+@keyframes headEmerge {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes headSway {
+  from {
+    transform: rotate(-3deg) translateY(0);
+  }
+  to {
+    transform: rotate(3deg) translateY(-2px);
+  }
 }
 
 .label {
@@ -80,6 +113,29 @@
   align-items: center;
   gap: 4px;
   text-align: center;
+  /* Name + WINS fade in after the head has emerged, completing
+     the staged entry. */
+  animation: labelFadeIn 0.45s ease-out 0.85s backwards;
+}
+
+@keyframes labelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wreath,
+  .laurelImg,
+  .headPortrait,
+  .label {
+    animation: none;
+  }
 }
 
 .victorName {
