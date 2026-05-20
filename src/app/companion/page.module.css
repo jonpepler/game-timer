@@ -91,6 +91,32 @@
   display: inline-block;
 }
 
+/* Head-icon preferred path — square PNG portrait at the same scale
+   as the swatch dot. Object-fit contain so non-square crops don't
+   stretch. */
+.activePlayerHead {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  flex-shrink: 0;
+}
+
+/* Fallback when a head crop isn't available but the meeple SVG is —
+   masked silhouette filled with the player's faction color. */
+.activePlayerMeeple {
+  width: 32px;
+  height: 32px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  flex-shrink: 0;
+}
+
 .activePlayerSuffix {
   color: var(--color-text-muted);
   font-weight: 400;
@@ -210,6 +236,30 @@
   height: 14px;
   border-radius: 999px;
   display: inline-block;
+}
+
+/* Head-icon variant used in the connection header next to "you are
+   <name>". Small portrait crop — sized to roughly match the height of
+   the surrounding text so the row stays single-line. */
+.claimHead {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.claimMeeple {
+  width: 20px;
+  height: 20px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  flex-shrink: 0;
 }
 
 .nameField {

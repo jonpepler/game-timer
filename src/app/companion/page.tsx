@@ -19,7 +19,12 @@ import {
   selectCurrentPlayerIndex,
   selectRemainingTurns,
 } from "@/state/gameSession";
-import { playerColor, playerSubheading } from "@/lib/playerVisual";
+import {
+  playerColor,
+  playerHeadIcon,
+  playerIcon,
+  playerSubheading,
+} from "@/lib/playerVisual";
 import { createLogger } from "@/lib/logger";
 
 const stateLog = createLogger("companion-state");
@@ -328,6 +333,8 @@ function CompanionScreen() {
     state?.players?.map((p, i) => ({
       name: p.name,
       color: playerColor(p, i, visualKey),
+      headIconSrc: playerHeadIcon(p, visualKey),
+      iconSrc: playerIcon(p, visualKey),
     })) ?? [];
   const activeSubheading =
     state?.players && activePlayerIndex !== null
@@ -427,11 +434,31 @@ function CompanionScreen() {
           </span>
           {claimedPlayer && (
             <span className={styles.claimedAs}>
-              <span
-                className={styles.claimSwatch}
-                style={{ background: claimedPlayer.color }}
-                aria-hidden
-              />
+              {claimedPlayer.headIconSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={claimedPlayer.headIconSrc}
+                  alt=""
+                  aria-hidden
+                  className={styles.claimHead}
+                />
+              ) : claimedPlayer.iconSrc ? (
+                <span
+                  className={styles.claimMeeple}
+                  aria-hidden
+                  style={{
+                    background: claimedPlayer.color,
+                    WebkitMaskImage: `url(${claimedPlayer.iconSrc})`,
+                    maskImage: `url(${claimedPlayer.iconSrc})`,
+                  }}
+                />
+              ) : (
+                <span
+                  className={styles.claimSwatch}
+                  style={{ background: claimedPlayer.color }}
+                  aria-hidden
+                />
+              )}
               {claimedPlayer.name}
               <button
                 type="button"
@@ -517,11 +544,31 @@ function CompanionScreen() {
                   className={styles.activePlayer}
                   style={{ color: activePlayer.color }}
                 >
-                  <span
-                    className={styles.activePlayerSwatch}
-                    style={{ background: activePlayer.color }}
-                    aria-hidden
-                  />
+                  {activePlayer.headIconSrc ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={activePlayer.headIconSrc}
+                      alt=""
+                      aria-hidden
+                      className={styles.activePlayerHead}
+                    />
+                  ) : activePlayer.iconSrc ? (
+                    <span
+                      className={styles.activePlayerMeeple}
+                      aria-hidden
+                      style={{
+                        background: activePlayer.color,
+                        WebkitMaskImage: `url(${activePlayer.iconSrc})`,
+                        maskImage: `url(${activePlayer.iconSrc})`,
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className={styles.activePlayerSwatch}
+                      style={{ background: activePlayer.color }}
+                      aria-hidden
+                    />
+                  )}
                   <span className={styles.activePlayerText}>
                     {/* eslint-disable-next-line prettier/prettier */}
                   <span>
