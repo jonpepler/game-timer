@@ -81,10 +81,26 @@
   z-index: 4;
 }
 
+/* Silhouette overlay used inside markers + chip swatches when the
+   player carries an iconSrc. Solid dark fill via mask so the icon
+   reads against any faction colour. */
+.markerIcon {
+  display: inline-block;
+  width: 80%;
+  height: 80%;
+  background: rgba(0, 0, 0, 0.75);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
 /* ── Selected-player controls (shared by track + leaderboard) ─────── */
 
 .selectedRow {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
@@ -93,6 +109,10 @@
   border: 1px solid var(--color-border);
   border-radius: 999px;
   font-size: 14px;
+  /* Don't take the full row width — sit on the right so it doesn't
+     compete with the timer for vertical real estate. */
+  align-self: flex-end;
+  max-width: max-content;
 }
 
 .selectedName {

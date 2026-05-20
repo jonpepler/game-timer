@@ -38,35 +38,26 @@
   align-items: center;
   gap: 12px;
   pointer-events: auto;
+  /* Sits above the timer ring; extra breathing room keeps the
+     name from crowding the circle. */
+  margin-bottom: 12px;
 }
 
-.activePlayerSwatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-/* Meeple silhouette wrapper. The chip carries the faction tint; the
-   inner <img> shows the SVG silhouette in its native black-on-
-   transparent. On dark-themed faction colours the silhouette is
-   hard to see, so we add a subtle inset shadow for definition. */
+/* Tinted faction meeple silhouette. The `background` (set inline)
+   carries the faction colour; `mask-image` cuts the silhouette out
+   of that colour. No wrapper chip — the meeple sits next to the
+   coloured player name. */
 .activePlayerMeeple {
-  width: 38px;
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: inline-block;
   flex-shrink: 0;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-text) 35%, transparent);
-}
-
-.activePlayerMeepleImg {
-  width: 30px;
-  height: 30px;
-  display: block;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 .activePlayerSuffix {
@@ -91,10 +82,12 @@
 }
 
 .newGameButton {
-  /* Override the global button reset */
+  /* Override the global button reset. Min-height matches the
+     FullScreen toggle + Share chip so the chrome row reads flat. */
   width: auto;
   height: auto;
-  padding: 8px 14px;
+  min-height: 36px;
+  padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;

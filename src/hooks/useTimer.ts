@@ -118,7 +118,10 @@ export const useTimer = ({
   const getTimerString = () => getTimeString(timer);
   const getStopwatchString = () => getTimeString(stopwatch);
 
-  const size = (Math.min(...[height, width]) / 3) * 2;
+  // 55% of the smaller window dimension, capped at 520px. Smaller
+   // than 2/3 was — leaves more vertical room below for the score
+   // panel + time-share + footer without crowding the timer.
+  const size = Math.min(Math.min(height, width) * 0.55, 520);
 
   const pause = () => {
     timer.pause();

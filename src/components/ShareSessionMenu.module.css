@@ -1,10 +1,12 @@
 /* ── Idle / opening / error states (chips in the top-left chrome) ─── */
 
 .button {
-  /* Override the global button reset */
+  /* Override the global button reset. Min-height matches the
+     sibling chrome buttons (FullScreen, New game). */
   width: auto;
   height: auto;
-  padding: 8px 14px;
+  min-height: 36px;
+  padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -30,7 +32,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  min-height: 36px;
+  padding: 0 14px;
   font-size: 13px;
   color: var(--color-text-muted);
   background: var(--color-surface-muted);
@@ -51,10 +54,12 @@
 }
 
 .openChip {
-  /* Override the global button reset */
+  /* Override the global button reset. Matches the other chrome
+     buttons' height so they line up flat. */
   width: auto;
   height: auto;
-  padding: 6px 12px;
+  min-height: 36px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;

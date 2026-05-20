@@ -19,7 +19,7 @@ export function VictoryBanner({ victor }: VictoryBannerProps) {
       style={{ color: victor.color }}
     >
       <span className={styles.crown}>
-        <Crown size={20} aria-hidden />
+        <Crown size={32} aria-hidden />
       </span>
       <span
         className={styles.swatch}

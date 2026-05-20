@@ -406,6 +406,12 @@ export default function Home() {
   const victorPlayer =
     victor !== null && playerViews ? playerViews[victor] : undefined;
 
+  // Stop the timer the moment a victor is declared so the banner
+  // doesn't sit over a still-running countdown.
+  useEffect(() => {
+    if (victor !== null) pause();
+  }, [victor, pause]);
+
   const scoresVisible = scoreConfig !== undefined && (players?.length ?? 0) > 0;
 
   return (
@@ -451,27 +457,18 @@ export default function Home() {
                 className={styles.activePlayer}
                 style={{ color: activePlayer.color }}
               >
-                {activePlayer.iconSrc ? (
+                {activePlayer.iconSrc && (
+                  // Faction meeple, tinted to the faction colour via
+                  // mask-image. When there's no icon (Generic / no
+                  // setup), the player's name itself carries the
+                  // colour — no swatch needed.
                   <span
                     className={styles.activePlayerMeeple}
-                    style={{ background: activePlayer.color }}
-                    aria-hidden
-                  >
-                    {/* The SVG is a black silhouette. Relative src
-                        resolves under the basePath via the current URL
-                        (matches the useSounds.ts convention). Tinting
-                        happens via CSS mask-image on the wrapper. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={activePlayer.iconSrc}
-                      alt=""
-                      className={styles.activePlayerMeepleImg}
-                    />
-                  </span>
-                ) : (
-                  <span
-                    className={styles.activePlayerSwatch}
-                    style={{ background: activePlayer.color }}
+                    style={{
+                      background: activePlayer.color,
+                      WebkitMaskImage: `url(${activePlayer.iconSrc})`,
+                      maskImage: `url(${activePlayer.iconSrc})`,
+                    }}
                     aria-hidden
                   />
                 )}

@@ -6,6 +6,10 @@ import type { ScoreConfig } from "@/state/gameDefinition";
 interface Player {
   name: string;
   color: string;
+  // Optional silhouette SVG path (relative to the deployment) — when
+  // present, markers and chips render the icon instead of the
+  // player's name initial.
+  iconSrc?: string;
 }
 
 interface ScorePanelProps {
@@ -112,7 +116,21 @@ export function ScorePanel({
                   aria-label={`${player.name} score ${score}`}
                   title={`${player.name}: ${score}`}
                 >
-                  {initial(player.name)}
+                  {player.iconSrc ? (
+                    // Silhouette overlaid on the coloured chip. Solid
+                    // dark fill via mask so the icon reads against the
+                    // faction tint regardless of how light/dark it is.
+                    <span
+                      className={styles.markerIcon}
+                      style={{
+                        WebkitMaskImage: `url(${player.iconSrc})`,
+                        maskImage: `url(${player.iconSrc})`,
+                      }}
+                      aria-hidden
+                    />
+                  ) : (
+                    initial(player.name)
+                  )}
                 </button>
               );
             })}
@@ -141,7 +159,18 @@ export function ScorePanel({
                   className={styles.chipSwatch}
                   style={{ background: player.color }}
                 >
-                  {initial(player.name)}
+                  {player.iconSrc ? (
+                    <span
+                      className={styles.markerIcon}
+                      style={{
+                        WebkitMaskImage: `url(${player.iconSrc})`,
+                        maskImage: `url(${player.iconSrc})`,
+                      }}
+                      aria-hidden
+                    />
+                  ) : (
+                    initial(player.name)
+                  )}
                 </span>
                 {player.name}
                 <span className={styles.chipScore}>{score}</span>
