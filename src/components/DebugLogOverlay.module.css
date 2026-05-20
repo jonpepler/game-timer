@@ -3,10 +3,11 @@
    UI because its hit area is small. */
 .toggle {
   position: fixed;
-  /* Tuck above the home-indicator / footer area. The companion
-     and timer pages handle their own bottom padding, but we add
-     a safe-area-aware bottom inset here too. */
-  bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  /* Top-right corner — clear of the timer page's "ends at"
+     footer and the companion page's End-my-turn button. The
+     existing chrome (FullScreen toggle, New game, Sharing chip)
+     all live in the top-LEFT, so the top-right is empty. */
+  top: max(16px, env(safe-area-inset-top, 16px));
   right: 16px;
   z-index: 90;
   width: 36px;
