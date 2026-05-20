@@ -139,6 +139,14 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     constraints: z.array(SetupConstraintSchema).optional(),
     allowRandom: z.boolean().optional(),
   }),
+  // Per-player resolution of items dealt by an upstream deal-random
+  // step — each seated player resolves one in alphabetical order.
+  // Root uses this for hirelings; same kind powers any game with a
+  // "walk the dealt deck" setup pattern.
+  z.object({
+    type: z.literal("dealt-resolve"),
+    sourceStepId: z.string(),
+  }),
 ]);
 export type SetupStepKind = z.infer<typeof SetupStepKindSchema>;
 
@@ -248,6 +256,15 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     mode: z.enum(["host-only", "turn-based"]),
     constraints: z.array(SetupConstraintSchema).optional(),
     allowRandom: z.boolean().optional(),
+  }),
+  // Per-player resolution of items dealt by an upstream deal-random
+  // step — each seated player takes turns setting up one of the
+  // dealt items at a time in alphabetical order (Root uses this
+  // for hirelings, per its ADSET A.7.3). `sourceStepId` names the
+  // deal-random step whose `dealtIds` provide the items.
+  z.object({
+    type: z.literal("dealt-resolve"),
+    sourceStepId: z.string(),
   }),
 ]);
 
@@ -391,6 +408,10 @@ export type SetupChoice =
   // seat across reorders so a companion's claim follows the seat
   // when the host shuffles seating.
   | { kind: "seat-players"; seats: Array<{ id: string; name: string }> }
+  // Resolved-hireling marker per item. `confirmedIds` lists the
+  // dealt items the player has confirmed setting up, in the order
+  // they were resolved. Empty until the first player taps Confirm.
+  | { kind: "dealt-resolve"; confirmedIds: string[] }
   // Per-player option ids, keyed by player index. The host modal
   // collects this from the faction-picker rows; the page projects it
   // onto player.metadata at apply time so renderers can read it

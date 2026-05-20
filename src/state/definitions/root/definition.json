@@ -95,6 +95,15 @@
       }
     },
     {
+      "id": "hireling-setup",
+      "label": "Set up hirelings",
+      "description": "Each player resolves one hireling in turn (alphabetical order).",
+      "kind": {
+        "type": "dealt-resolve",
+        "sourceStepId": "hirelings"
+      }
+    },
+    {
       "id": "faction",
       "label": "Faction",
       "kind": {

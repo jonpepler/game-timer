@@ -255,6 +255,9 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
         // Picks are built incrementally on the picker screen.
         ctx[step.id] = { kind: "player-pick", picks: {} };
         break;
+      case "dealt-resolve":
+        ctx[step.id] = { kind: "dealt-resolve", confirmedIds: [] };
+        break;
     }
   }
   return ctx;
@@ -715,6 +718,7 @@ export const GameSetupWizard = forwardRef<
           {currentScreen.kind === "setup-step" && (
             <StepScreen
               step={currentScreen.step}
+              steps={definition.setupSteps ?? []}
               context={context}
               setContext={setContext}
               peerHooks={peerHooks}
@@ -952,11 +956,15 @@ function ExpectedTurnsScreen({
 
 function StepScreen({
   step,
+  steps,
   context,
   setContext,
   peerHooks,
 }: {
   step: SetupStep;
+  // Sibling steps — used by `dealt-resolve` to look up option
+  // labels on its upstream `sourceStepId`.
+  steps: SetupStep[];
   context: SetupContext;
   setContext: (updater: (prev: SetupContext) => SetupContext) => void;
   peerHooks?: WizardPeerHooks;
@@ -1105,6 +1113,38 @@ function StepScreen({
           }
         />
       );
+    case "dealt-resolve": {
+      const kind = step.kind;
+      if (kind.type !== "dealt-resolve") return null;
+      const sourceStep = steps.find((s) => s.id === kind.sourceStepId);
+      const sourceOptions: SetupOption[] =
+        sourceStep && sourceStep.kind.type === "deal-random"
+          ? sourceStep.kind.options
+          : [];
+      return (
+        <DealtResolveScreen
+          step={step}
+          sourceStepId={kind.sourceStepId}
+          sourceOptions={sourceOptions}
+          context={context}
+          onChange={(updater) =>
+            setContext((prev) => {
+              const current =
+                prev[step.id]?.kind === "dealt-resolve"
+                  ? (prev[step.id] as Extract<
+                      SetupChoice,
+                      { kind: "dealt-resolve" }
+                    >)
+                  : {
+                      kind: "dealt-resolve" as const,
+                      confirmedIds: [],
+                    };
+              return { ...prev, [step.id]: updater(current) };
+            })
+          }
+        />
+      );
+    }
   }
 }
 
@@ -2204,6 +2244,144 @@ function PlayerPickScreen({
           );
         })}
       </div>
+    </>
+  );
+}
+
+// Per ADSET A.7.3: each seated player takes turns setting up one
+// hireling at a time, starting with the alphabetically earliest.
+// This screen walks the dealt hand (from `sourceStepId`) one card
+// at a time, names the seated player whose turn it is, and tracks
+// confirmed setups in setupContext so Back/Next behave sanely.
+function DealtResolveScreen({
+  step,
+  sourceStepId,
+  sourceOptions,
+  context,
+  onChange,
+}: {
+  step: SetupStep;
+  sourceStepId: string;
+  sourceOptions: SetupOption[];
+  context: SetupContext;
+  onChange: (
+    updater: (
+      current: Extract<SetupChoice, { kind: "dealt-resolve" }>,
+    ) => Extract<SetupChoice, { kind: "dealt-resolve" }>,
+  ) => void;
+}) {
+  // Resolve the upstream deal-random step + the seat list.
+  const sourceChoice = context[sourceStepId];
+  const dealtIds =
+    sourceChoice?.kind === "deal-random" && sourceChoice.skipped === false
+      ? sourceChoice.dealtIds
+      : [];
+  const seatChoice = Object.values(context).find(
+    (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
+      c.kind === "seat-players",
+  );
+  const seats = seatChoice?.seats ?? [];
+
+  // Sort dealt ids alphabetically for stable resolution order.
+  const ordered = [...dealtIds].sort((a, b) => a.localeCompare(b));
+  const current = context[step.id];
+  const confirmedIds =
+    current?.kind === "dealt-resolve" ? current.confirmedIds : [];
+
+  // The next unconfirmed dealt item (in alphabetical order) is the
+  // one currently up for setup.
+  const activeIndex = ordered.findIndex((id) => !confirmedIds.includes(id));
+  const activeId = activeIndex === -1 ? null : ordered[activeIndex];
+  const activeOption =
+    activeId != null
+      ? (sourceOptions.find((o) => o.id === activeId) ?? {
+          id: activeId,
+          label: activeId,
+        })
+      : null;
+  const activePlayer =
+    activeIndex === -1 || seats.length === 0
+      ? null
+      : seats[activeIndex % seats.length];
+
+  if (ordered.length === 0) {
+    return (
+      <>
+        <h3 className={styles.screenTitle} id="screen-title">
+          {step.label}
+        </h3>
+        <p className={styles.help}>
+          No hirelings dealt this game — continue to the next screen.
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h3 className={styles.screenTitle} id="screen-title">
+        {step.label}
+      </h3>
+      {step.description && (
+        <p className={styles.screenSubtitle}>{step.description}</p>
+      )}
+      <ol className={styles.hirelingProgress} aria-label="Hireling progress">
+        {ordered.map((id, i) => {
+          const done = confirmedIds.includes(id);
+          const isActive = i === activeIndex;
+          const seat = seats[i % seats.length];
+          return (
+            <li
+              key={id}
+              className={`${styles.hirelingProgressItem} ${
+                done
+                  ? styles.hirelingProgressItemDone
+                  : isActive
+                    ? styles.hirelingProgressItemActive
+                    : ""
+              }`}
+              aria-label={
+                done
+                  ? `${id} — set up by ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
+                  : `${id} — awaiting ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
+              }
+              title={
+                done
+                  ? `${id} — set up by ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
+                  : `${id} — awaiting ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
+              }
+            >
+              {i + 1}
+            </li>
+          );
+        })}
+      </ol>
+      {activeId != null && activeOption && (
+        <div className={styles.hirelingPrompt}>
+          <span className={styles.hirelingPromptSeat}>
+            {activePlayer?.name ?? `Seat ${(activeIndex % Math.max(1, seats.length)) + 1}`}
+            {" — set up "}
+            <strong>{activeOption.label}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              onChange((curr) => ({
+                ...curr,
+                confirmedIds: [...curr.confirmedIds, activeId],
+              }))
+            }
+            className={styles.primary}
+          >
+            Confirm setup
+          </button>
+        </div>
+      )}
+      {activeId == null && (
+        <p className={styles.help}>
+          All hirelings resolved. Continue to the next screen.
+        </p>
+      )}
     </>
   );
 }
