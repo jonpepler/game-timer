@@ -27,8 +27,11 @@
   color: var(--color-text-muted);
   /* FullScreen toggle (36px + 15px viewport margin) sits in the top
      left corner — reserve room so the connection status doesn't hide
-     under it. */
+     under it. Debug bug-icon toggle (36px + 16px margin) sits in the
+     top right — reserve there too so the "change" claim button can't
+     slide under it on narrow viewports. */
   padding-left: 52px;
+  padding-right: 52px;
   min-height: 36px;
 }
 
