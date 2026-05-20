@@ -91,7 +91,7 @@
   flex-direction: column;
 }
 
-/* ── Hero mode: faction picker takes the whole viewport ──────────
+/* ── Hero mode: turn-based player-pick screen takes the whole viewport ──────────
    The wizard's progress + crumbs are hidden, the form goes
    edge-to-edge, and the picker renders a wide card row. Triggered
    by data-hero on the modal. */
@@ -515,7 +515,7 @@
   text-align: center;
 }
 
-/* ── Hero faction picker — full-viewport card row ────────────── */
+/* ── Hero player-pick — full-viewport card row ────────────── */
 /* Visually hidden but kept in the accessibility tree so screen
    readers + Playwright's role+name queries still find the
    step's heading. */
@@ -701,8 +701,8 @@
   overflow: hidden;
 }
 
-.heroCardAdset {
-  /* ADSET steps are PERMANENT on the hero card — no toggle. The
+.heroCardSteps {
+  /* Per-option setup steps are PERMANENT on the hero card — no toggle. The
      list scrolls inside the card if it overflows. */
   flex: 1;
   overflow-y: auto;
@@ -717,12 +717,12 @@
   gap: 5px;
 }
 
-.heroCardAdset li {
+.heroCardSteps li {
   display: flex;
   gap: 6px;
 }
 
-.heroCardAdsetIndex {
+.heroCardStepsIndex {
   color: var(--color-text);
   font-weight: 600;
   flex-shrink: 0;
@@ -817,7 +817,7 @@
 }
 
 /* ── Dealt-resolve: per-player walk through dealt items ─────── */
-.hirelingProgress {
+.resolveProgress {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -826,7 +826,7 @@
   margin: 0 0 8px;
 }
 
-.hirelingProgressItem {
+.resolveProgressItem {
   width: 28px;
   height: 28px;
   border-radius: 999px;
@@ -840,20 +840,20 @@
   color: var(--color-text-muted);
 }
 
-.hirelingProgressItemDone {
+.resolveProgressItemDone {
   background: color-mix(in srgb, var(--color-accent) 25%, transparent);
   color: var(--color-text);
   border-color: var(--color-accent);
 }
 
-.hirelingProgressItemActive {
+.resolveProgressItemActive {
   background: var(--color-accent);
   color: var(--color-surface);
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
-.hirelingPrompt {
+.resolvePrompt {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -863,17 +863,73 @@
   background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
-.hirelingPromptSeat {
+.resolvePromptSeat {
   font-size: 16px;
   flex: 1;
 }
 
-/* ── Faction picker ───────────────────────────────────────── */
+/* Grid of remaining dealt cards the active player picks from. */
+.resolveChoiceList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.resolveChoiceCard {
+  /* Override the global button 50x40 reset. */
+  width: 100%;
+  height: auto;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.08s ease;
+}
+
+.resolveChoiceCard:hover,
+.resolveChoiceCard:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-surface-elevated);
+  outline: none;
+}
+
+.resolveChoiceCard:active {
+  transform: scale(0.99);
+}
+
+.resolveChoiceLabel {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.resolveChoiceSteps {
+  list-style: decimal inside;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ── Compact player-pick (non-hero fallback) ───────────────────────────────────────── */
 /* Single horizontal row of cards, scrolling horizontally when the
    hand exceeds the viewport. Used for both draft mode (n+1 dealt)
    and free-choice mode (all legal options). Each card pins at a
    fixed width so the row reads as a hand of cards. */
-.factionDraftRow {
+.pickDraftRow {
   display: flex;
   flex-direction: row;
   gap: 12px;
@@ -883,14 +939,14 @@
   scroll-snap-type: x mandatory;
 }
 
-.factionDraftRow > * {
+.pickDraftRow > * {
   flex: 0 0 200px;
   scroll-snap-align: start;
 }
 
 /* "Leaving" — applied just before the card is removed from the
    draft row. Plays the fly-out keyframe then the card unmounts. */
-@keyframes factionCardLeave {
+@keyframes pickCardLeave {
   0% {
     opacity: 1;
     transform: translateY(0) scale(1) rotate(0deg);
@@ -906,15 +962,15 @@
   }
 }
 
-.factionCardLeaving {
+.pickCardLeaving {
   pointer-events: none;
-  animation: factionCardLeave 0.42s cubic-bezier(0.5, -0.2, 0.6, 0.95) forwards;
+  animation: pickCardLeave 0.42s cubic-bezier(0.5, -0.2, 0.6, 0.95) forwards;
   z-index: 5;
 }
 
-.factionCard {
+.pickCard {
   position: relative;
-  /* Tall enough for label + ADSET steps when expanded; the meeple
+  /* Tall enough for label + setup steps when expanded; the meeple
      sits absolutely positioned at the bottom-left and doesn't push
      the layout. */
   min-height: 200px;
@@ -935,9 +991,9 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
-/* Faction silhouette pinned to the card's bottom-left corner. Tinted
-   via mask-image so the meeple takes the faction colour. */
-.factionCardMeeple {
+/* Option silhouette pinned to the card's bottom-left corner.
+   Tinted via mask-image so it takes the option's colour. */
+.pickCardIcon {
   position: absolute;
   left: 10px;
   bottom: 8px;
@@ -953,29 +1009,29 @@
   pointer-events: none;
 }
 
-.factionCard:hover:not(:disabled) {
+.pickCard:hover:not(:disabled) {
   border-color: var(--color-accent);
 }
 
-.factionCardActive {
+.pickCardActive {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
-.factionCard:disabled,
-.factionCardDisabled {
+.pickCard:disabled,
+.pickCardDisabled {
   opacity: 0.35;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.factionHeader {
+.pickHeader {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.factionSwatch {
+.pickSwatch {
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -983,12 +1039,12 @@
   border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
 }
 
-.factionLabel {
+.pickLabel {
   font-weight: 600;
   font-size: 14px;
 }
 
-.factionAdsetToggle {
+.pickStepsToggle {
   /* Override the global button reset (50x40). */
   width: auto;
   height: auto;
@@ -1004,11 +1060,11 @@
   white-space: nowrap;
 }
 
-.factionAdsetToggle:hover {
+.pickStepsToggle:hover {
   color: var(--color-text);
 }
 
-.factionAdsetList {
+.pickStepsList {
   list-style: none;
   padding: 0;
   margin: 4px 0 0;
@@ -1019,12 +1075,12 @@
   gap: 4px;
 }
 
-.factionAdsetList li {
+.pickStepsList li {
   display: flex;
   gap: 6px;
 }
 
-.factionAdsetIndex {
+.pickStepsIndex {
   font-weight: 600;
   color: var(--color-text);
   flex-shrink: 0;
@@ -1154,7 +1210,7 @@
   background: transparent;
 }
 
-/* ── ADSET confirmation screen ───────────────────────────── */
+/* ── Per-option setup confirmation screen ───────────────────────────── */
 .confirmList {
   display: flex;
   flex-direction: column;
@@ -1181,7 +1237,7 @@
   font-size: 14px;
 }
 
-.confirmFaction {
+.confirmOption {
   font-size: 12px;
   color: var(--color-text-dim);
 }

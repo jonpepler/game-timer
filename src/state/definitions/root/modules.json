@@ -161,13 +161,12 @@
         }
       },
       "prophets": {
-        "label": "Prophets of the Sun",
-        "demotedLabel": null,
+        "label": "Warm Sun Prophets",
+        "demotedLabel": "Lizard Envoys",
         "module": "riverfolk",
         "excludeOptionIds": [
           "lizards"
         ],
-        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -177,12 +176,11 @@
       },
       "flotilla": {
         "label": "Riverfolk Flotilla",
-        "demotedLabel": null,
+        "demotedLabel": "Otter Divers",
         "module": "riverfolk",
         "excludeOptionIds": [
           "riverfolk"
         ],
-        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -191,10 +189,9 @@
         }
       },
       "bandits": {
-        "label": "Bandit Crew",
-        "demotedLabel": null,
+        "label": "Highway Bandits",
+        "demotedLabel": "Bandit Gangs",
         "module": "riverfolk",
-        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",

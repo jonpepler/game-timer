@@ -1931,10 +1931,10 @@ function PlayerPickScreen({
               >
                 <span className={styles.heroCardLabel}>{o.label}</span>
                 {adsetSteps && adsetSteps.length > 0 && (
-                  <ol className={styles.heroCardAdset}>
+                  <ol className={styles.heroCardSteps}>
                     {adsetSteps.map((s, i) => (
                       <li key={i}>
-                        <span className={styles.heroCardAdsetIndex}>
+                        <span className={styles.heroCardStepsIndex}>
                           {i + 1}.
                         </span>
                         <span>{s}</span>
@@ -2094,7 +2094,7 @@ function PlayerPickScreen({
         </div>
       )}
 
-      <div className={styles.factionDraftRow}>
+      <div className={styles.pickDraftRow}>
         {visible.map((o) => {
           const blocked = blockedForActive.has(o.id);
           const active = picks[activeSeat] === o.id;
@@ -2125,10 +2125,10 @@ function PlayerPickScreen({
               // its children (which would include the nested toggle).
               aria-label={o.label}
               tabIndex={blocked || leaving ? -1 : 0}
-              className={`${styles.factionCard} ${
-                active ? styles.factionCardActive : ""
-              } ${blocked ? styles.factionCardDisabled : ""} ${
-                leaving ? styles.factionCardLeaving : ""
+              className={`${styles.pickCard} ${
+                active ? styles.pickCardActive : ""
+              } ${blocked ? styles.pickCardDisabled : ""} ${
+                leaving ? styles.pickCardLeaving : ""
               }`}
               style={{
                 // Faint faction-coloured wash on the card so each one
@@ -2146,8 +2146,8 @@ function PlayerPickScreen({
                 }
               }}
             >
-              <div className={styles.factionHeader}>
-                <span className={styles.factionLabel}>{o.label}</span>
+              <div className={styles.pickHeader}>
+                <span className={styles.pickLabel}>{o.label}</span>
               </div>
               {characters[o.id] && characters[o.id].length > 0 && (
                 <div className={styles.characterDeal}>
@@ -2168,7 +2168,7 @@ function PlayerPickScreen({
                 <>
                   <button
                     type="button"
-                    className={styles.factionAdsetToggle}
+                    className={styles.pickStepsToggle}
                     onClick={(e) => {
                       e.stopPropagation();
                       setAdsetOpen(open ? null : o.id);
@@ -2178,10 +2178,10 @@ function PlayerPickScreen({
                     {open ? "Hide setup" : "Show setup"}
                   </button>
                   {open && (
-                    <ol className={styles.factionAdsetList}>
+                    <ol className={styles.pickStepsList}>
                       {adsetSteps.map((s, i) => (
                         <li key={i}>
-                          <span className={styles.factionAdsetIndex}>
+                          <span className={styles.pickStepsIndex}>
                             {i + 1}.
                           </span>{" "}
                           {s}
@@ -2197,7 +2197,7 @@ function PlayerPickScreen({
                   src={meepleSrc}
                   alt=""
                   aria-hidden
-                  className={styles.factionCardMeeple}
+                  className={styles.pickCardIcon}
                   style={{
                     // Tint the silhouette via background + mask so the
                     // meeple takes the faction colour. Browsers without
@@ -2233,7 +2233,7 @@ function PlayerPickScreen({
               style={{ all: "unset", cursor: "pointer", padding: "4px 0" }}
             >
               <span
-                className={styles.factionSwatch}
+                className={styles.pickSwatch}
                 style={{ background: option?.color ?? "var(--color-border)" }}
                 aria-hidden
               />
@@ -2288,29 +2288,22 @@ function DealtResolveScreen({
   );
   const seats = seatChoice?.seats ?? [];
 
-  // Sort dealt ids alphabetically for stable resolution order.
-  const ordered = [...dealtIds].sort((a, b) => a.localeCompare(b));
   const current = context[step.id];
   const confirmedIds =
     current?.kind === "dealt-resolve" ? current.confirmedIds : [];
 
-  // The next unconfirmed dealt item (in alphabetical order) is the
-  // one currently up for setup.
-  const activeIndex = ordered.findIndex((id) => !confirmedIds.includes(id));
-  const activeId = activeIndex === -1 ? null : ordered[activeIndex];
-  const activeOption =
-    activeId != null
-      ? (sourceOptions.find((o) => o.id === activeId) ?? {
-          id: activeId,
-          label: activeId,
-        })
-      : null;
-  const activePlayer =
-    activeIndex === -1 || seats.length === 0
-      ? null
-      : seats[activeIndex % seats.length];
+  // Player order: seats in their declared order. Each player picks
+  // ONE dealt item in turn; subsequent players choose from what's
+  // left. `activeSeatIndex` is the player whose turn it is —
+  // equals the count already confirmed. When it reaches either
+  // `seats.length` or `dealtIds.length`, the step is complete.
+  const activeSeatIndex = confirmedIds.length;
+  const activePlayer = seats[activeSeatIndex];
+  const remainingIds = dealtIds.filter((id) => !confirmedIds.includes(id));
+  const allDone =
+    remainingIds.length === 0 || activeSeatIndex >= seats.length;
 
-  if (ordered.length === 0) {
+  if (dealtIds.length === 0) {
     return (
       <>
         <h3 className={styles.screenTitle} id="screen-title">
@@ -2331,59 +2324,91 @@ function DealtResolveScreen({
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      <ol className={styles.hirelingProgress} aria-label="Hireling progress">
-        {ordered.map((id, i) => {
-          const done = confirmedIds.includes(id);
-          const isActive = i === activeIndex;
-          const seat = seats[i % seats.length];
+      {/* Per-player progress tiles. One per dealt item, in player
+          order. Tile shows whether that seat has picked yet, plus a
+          hover/aria title noting what they chose. */}
+      <ol className={styles.resolveProgress} aria-label="Pick order">
+        {dealtIds.map((_, i) => {
+          if (i >= seats.length) return null;
+          const seat = seats[i];
+          const pickedId = confirmedIds[i];
+          const pickedOption = pickedId
+            ? (sourceOptions.find((o) => o.id === pickedId) ?? {
+                id: pickedId,
+                label: pickedId,
+              })
+            : null;
+          const isActive = i === activeSeatIndex && !allDone;
+          const tip = pickedOption
+            ? `${seat.name} — picked ${pickedOption.label}`
+            : isActive
+              ? `${seat.name} — choosing now`
+              : `${seat.name} — waiting`;
           return (
             <li
-              key={id}
-              className={`${styles.hirelingProgressItem} ${
-                done
-                  ? styles.hirelingProgressItemDone
+              key={i}
+              className={`${styles.resolveProgressItem} ${
+                pickedOption
+                  ? styles.resolveProgressItemDone
                   : isActive
-                    ? styles.hirelingProgressItemActive
+                    ? styles.resolveProgressItemActive
                     : ""
               }`}
-              aria-label={
-                done
-                  ? `${id} — set up by ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
-                  : `${id} — awaiting ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
-              }
-              title={
-                done
-                  ? `${id} — set up by ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
-                  : `${id} — awaiting ${seat?.name ?? `Seat ${(i % seats.length) + 1}`}`
-              }
+              aria-label={tip}
+              title={tip}
             >
               {i + 1}
             </li>
           );
         })}
       </ol>
-      {activeId != null && activeOption && (
-        <div className={styles.hirelingPrompt}>
-          <span className={styles.hirelingPromptSeat}>
-            {activePlayer?.name ?? `Seat ${(activeIndex % Math.max(1, seats.length)) + 1}`}
-            {" — set up "}
-            <strong>{activeOption.label}</strong>
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              onChange((curr) => ({
-                ...curr,
-                confirmedIds: [...curr.confirmedIds, activeId],
-              }))
-            }
-            className={styles.primary}
-          >
-            Confirm setup
-          </button>
-        </div>
+      {!allDone && activePlayer && (
+        <>
+          <div className={styles.resolvePrompt}>
+            <span className={styles.resolvePromptSeat}>
+              <strong>{activePlayer.name}</strong>
+              {" — choose a hireling to set up"}
+            </span>
+          </div>
+          <div className={styles.resolveChoiceList}>
+            {remainingIds.map((id) => {
+              const option = sourceOptions.find((o) => o.id === id) ?? {
+                id,
+                label: id,
+              };
+              const adsetSteps = (
+                option as unknown as { adsetSteps?: string[] }
+              ).adsetSteps;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={styles.resolveChoiceCard}
+                  onClick={() =>
+                    onChange((curr) => ({
+                      ...curr,
+                      confirmedIds: [...curr.confirmedIds, id],
+                    }))
+                  }
+                  aria-label={`Set up ${option.label}`}
+                >
+                  <span className={styles.resolveChoiceLabel}>
+                    {option.label}
+                  </span>
+                  {adsetSteps && adsetSteps.length > 0 && (
+                    <ol className={styles.resolveChoiceSteps}>
+                      {adsetSteps.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
-      {activeId == null && (
+      {allDone && (
         <p className={styles.help}>
           All hirelings resolved. Continue to the next screen.
         </p>
