@@ -25,41 +25,39 @@ const COMMIT_SHA =
   (process.env.NEXT_PUBLIC_COMMIT_SHA ?? "").slice(0, 7) || "dev";
 
 const probeLog = createLogger("ws-probe");
+const envLog = createLogger("env");
 
-// Open a RAW WebSocket to the public PeerJS broker and log every
-// event with timing. Used by the diagnostic button to tell us
-// whether the WSS handshake itself fails on this device (vs
-// something PeerJS-specific in the handshake frames).
-function probeBroker() {
-  const url =
-    "wss://0.peerjs.com:443/peerjs?key=peerjs&id=probe-" +
-    Math.random().toString(36).slice(2, 10) +
-    "&token=probe&version=1.5.4";
-  probeLog.info("probe opening", { url });
+// Open a RAW WebSocket and log every event with timing. Used by the
+// diagnostic buttons to distinguish "broker rejects this device" from
+// "device can't do WSS to anywhere". `tag` shows up in the log entry
+// so two side-by-side probes are easy to tell apart.
+function probeWss(tag: string, url: string) {
+  probeLog.info(`${tag} probe opening`, { url });
   const start = Date.now();
   let ws: WebSocket;
   try {
     ws = new WebSocket(url);
   } catch (err) {
-    probeLog.error("probe constructor threw", { error: String(err) });
+    probeLog.error(`${tag} probe constructor threw`, { error: String(err) });
     return;
   }
   const elapsed = () => `${Date.now() - start}ms`;
-  ws.onopen = () => probeLog.info("probe onopen", { elapsed: elapsed() });
+  ws.onopen = () =>
+    probeLog.info(`${tag} probe onopen`, { elapsed: elapsed() });
   ws.onmessage = (e) =>
-    probeLog.info("probe onmessage", {
+    probeLog.info(`${tag} probe onmessage`, {
       elapsed: elapsed(),
       data: typeof e.data === "string" ? e.data.slice(0, 200) : "(binary)",
     });
   ws.onerror = (e) =>
-    probeLog.error("probe onerror", {
+    probeLog.error(`${tag} probe onerror`, {
       elapsed: elapsed(),
       // ErrorEvent on WS is almost always opaque (no detail); we
       // log it anyway in case a future spec exposes more.
       type: e.type,
     });
   ws.onclose = (e) =>
-    probeLog.warn("probe onclose", {
+    probeLog.warn(`${tag} probe onclose`, {
       elapsed: elapsed(),
       code: e.code,
       reason: e.reason || "(empty)",
@@ -70,10 +68,66 @@ function probeBroker() {
   // 1015 TLS, etc.).
   setTimeout(() => {
     if (ws.readyState <= 1) {
-      probeLog.warn("probe forced close", { elapsed: elapsed() });
+      probeLog.warn(`${tag} probe forced close`, { elapsed: elapsed() });
       ws.close();
     }
   }, 10_000);
+}
+
+function probeBroker() {
+  probeWss(
+    "broker",
+    "wss://0.peerjs.com:443/peerjs?key=peerjs&id=probe-" +
+      Math.random().toString(36).slice(2, 10) +
+      "&token=probe&version=1.5.4",
+  );
+}
+
+// Known-good public WSS echo (operated by Lob, no auth, returns hi
+// frame on connect). If this also fails with 1006 then the device or
+// its network is blocking WSS entirely; if it opens but the broker
+// probe fails, the broker is rejecting this client specifically.
+function probeEcho() {
+  probeWss("echo", "wss://echo.websocket.events");
+}
+
+// One-shot environment snapshot — UA, screen, connection quality —
+// logged the first time the overlay component mounts. Helps us tell
+// what kind of device produced the rest of the log without asking the
+// user to read it off the tablet manually.
+let envLogged = false;
+function logEnvOnce() {
+  if (envLogged) return;
+  envLogged = true;
+  if (typeof window === "undefined") return;
+  const conn = (
+    navigator as unknown as {
+      connection?: {
+        effectiveType?: string;
+        saveData?: boolean;
+        downlink?: number;
+        rtt?: number;
+        type?: string;
+      };
+    }
+  ).connection;
+  envLog.info("device", {
+    ua: navigator.userAgent,
+    lang: navigator.language,
+    online: navigator.onLine,
+    cookieEnabled: navigator.cookieEnabled,
+    screen: `${window.screen.width}x${window.screen.height}@${window.devicePixelRatio}`,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    conn: conn
+      ? {
+          effectiveType: conn.effectiveType,
+          saveData: conn.saveData,
+          downlink: conn.downlink,
+          rtt: conn.rtt,
+          type: conn.type,
+        }
+      : "(unavailable)",
+  });
 }
 
 const LEVEL_RANK: Record<LogLevel, number> = {
@@ -111,6 +165,9 @@ export function DebugLogOverlay() {
 
   // Seed from the existing ring buffer + subscribe to new entries.
   useEffect(() => {
+    // Log device info once per session so we know what produced the
+    // rest of the log without asking the user to type it out.
+    logEnvOnce();
     setEntries(getLogBuffer());
     return subscribeLogs((entry) => {
       setEntries((prev) => {
@@ -129,8 +186,7 @@ export function DebugLogOverlay() {
     if (!open) return;
     const el = listRef.current;
     if (!el) return;
-    const nearBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     if (nearBottom) el.scrollTop = el.scrollHeight;
   }, [entries, open]);
 
@@ -193,7 +249,17 @@ export function DebugLogOverlay() {
             title="Open a raw WSS to 0.peerjs.com and log the result"
           >
             <Wifi size={14} aria-hidden />
-            Probe
+            Broker
+          </button>
+          <button
+            type="button"
+            onClick={probeEcho}
+            className={styles.actionButton}
+            aria-label="Probe known-good WebSocket echo"
+            title="Open a raw WSS to a known-good echo server. If this fails too, the device is blocking WSS; if it opens but Broker fails, the broker is rejecting this client."
+          >
+            <Wifi size={14} aria-hidden />
+            Echo
           </button>
           <button
             type="button"
@@ -232,7 +298,9 @@ export function DebugLogOverlay() {
             key={`${entry.timestamp}-${i}`}
             className={`${styles.entry} ${styles[`level_${entry.level}`]}`}
           >
-            <span className={styles.entryTime}>{formatTime(entry.timestamp)}</span>
+            <span className={styles.entryTime}>
+              {formatTime(entry.timestamp)}
+            </span>
             <span className={styles.entryLevel}>{entry.level}</span>
             <span className={styles.entryNs}>[{entry.namespace}]</span>
             <span className={styles.entryMsg}>{entry.message}</span>
