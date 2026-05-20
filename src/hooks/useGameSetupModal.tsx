@@ -1,4 +1,4 @@
-import { type Ref, useState } from "react";
+import { type ReactNode, type Ref, useState } from "react";
 import { GameSetupWizard } from "@/components/GameSetupWizard";
 import type {
   GameConfig,
@@ -20,12 +20,17 @@ interface UseGameSetupOptions {
   // SETUP_PICK messages into the wizard's setupContext without
   // crossing through the hook.
   wizardRef?: Ref<GameSetupWizardHandle>;
+  // Optional companion-facing pane rendered alongside the wizard's
+  // first screen. Forwarded directly to GameSetupWizard.
+  sidePanel?: ReactNode;
+  // Forwarded directly to GameSetupWizard.
+  onScreenChange?: (screenIndex: number) => void;
 }
 
 export const useGameSetup = (
   options: UseGameSetupOptions = {},
 ): UseGameSetupReturn => {
-  const { onSubmit, peerHooks, wizardRef } = options;
+  const { onSubmit, peerHooks, wizardRef, sidePanel, onScreenChange } = options;
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState<GameConfig | null>(null);
 
@@ -42,6 +47,8 @@ export const useGameSetup = (
       onSubmit={handleSubmit}
       onClose={() => setIsOpen(false)}
       peerHooks={peerHooks}
+      sidePanel={sidePanel}
+      onScreenChange={onScreenChange}
     />
   );
 

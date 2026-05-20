@@ -1,0 +1,209 @@
+.panel {
+  width: 320px;
+  max-width: 90vw;
+  padding: 16px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  /* Ensures the panel paints on its own composited layer so the
+     wizard's `transition: transform` runs smoothly. */
+  will-change: transform, opacity;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.closeButton {
+  /* Override the global button reset */
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.closeButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  padding: 24px 0;
+  justify-content: center;
+}
+
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.errorMessage {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.retryButton {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.qrFrame {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  align-self: center;
+  display: inline-flex;
+}
+
+.codeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.codeLabel {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.codeValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--color-text);
+  padding: 8px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  user-select: all;
+}
+
+.urlValue {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  word-break: break-all;
+  padding: 8px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  user-select: all;
+}
+
+.copyButton {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.copyButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.copyButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.help {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.footerActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.deviceCount {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.stopButton {
+  /* Override the global button reset */
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stopButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}

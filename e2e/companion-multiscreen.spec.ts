@@ -33,23 +33,26 @@ async function installTestPeer(context: BrowserContext) {
   await context.addInitScript({ content: PEER_TEST_INIT_SCRIPT });
 }
 
-// Open the host's /timer page, dismiss the auto-opened wizard, click
-// Share to spin up the peer session, and return the user-visible
-// session code (the chip's text).
+// Open the host's /timer page and return the user-visible session
+// code. The wizard auto-opens, which in turn auto-fires
+// sessionHost.open() — with the test peer factory installed this
+// resolves instantly, so the SharePanel inside the wizard's side
+// pane shows the code immediately. We dismiss the wizard after
+// reading so the rest of the test can interact with the chrome.
 async function startHostAndShare(page: Page): Promise<string> {
   await page.goto(`${BASE}/timer`);
-  // Dismiss the auto-opened wizard so the Share button is reachable
-  // (a modal dialog blocks pointer events on the chrome below it).
-  await page.getByRole("button", { name: /^Cancel$/ }).click();
-  // Click Share → fake peer resolves immediately.
-  await page.getByRole("button", { name: /share this session/i }).click();
-  // After share, the chip surfaces an aria-label like
-  // "Sharing session <code>, N connected". Pull the code out of it.
+  // Wait for the SharePanel (rendered inside the wizard's modal as
+  // the side pane) to have an actual code visible — the test peer
+  // resolves the open state synchronously, so this is fast.
   const chip = page.getByRole("button", { name: /^Sharing session / });
   await chip.waitFor({ timeout: 5000 });
   const ariaLabel = (await chip.getAttribute("aria-label")) ?? "";
   const match = /Sharing session (\S+),/.exec(ariaLabel);
   if (!match) throw new Error(`couldn't find code in: ${ariaLabel}`);
+  // Dismiss the wizard so the rest of the test can click "New game"
+  // on the chrome to reopen it (mirrors the production flow of
+  // claiming seats, then bumping into the wizard repeatedly).
+  await page.getByRole("button", { name: /^Cancel$/ }).click();
   return match[1];
 }
 
@@ -294,10 +297,10 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await host.locator("main").click();
     await expect(host.getByText(/89\s*turns left/i)).toBeVisible();
 
-    // NOW share the session. We share after kickoff so the companion
-    // sees an already-running timer and the "Next turn" button is
-    // enabled immediately.
-    await host.getByRole("button", { name: /share this session/i }).click();
+    // Read the session code off the now-visible chrome chip. The
+    // share session was auto-opened when the wizard mounted, so by
+    // the time we reach the timer view the chip is already in
+    // open state.
     const chip = host.getByRole("button", { name: /^Sharing session / });
     await chip.waitFor();
     const code = (/Sharing session (\S+),/.exec(

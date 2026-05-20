@@ -52,15 +52,12 @@ test.describe("score layer", () => {
     await expect(page.getByLabel(/^Scores$/)).toHaveCount(0);
   });
 
-  test.skip(
-    "no score panel when Root is picked but player tracking is off",
-    async () => {
-      // Premise no longer applies: in the wizard, Root's seat-players
-      // step is part of the flow, so you can't reach the timer without
-      // seats. If we want to verify "no players", we'd need to allow
-      // 0-seat Root — not currently supported.
-    },
-  );
+  test.skip("no score panel when Root is picked but player tracking is off", async () => {
+    // Premise no longer applies: in the wizard, Root's seat-players
+    // step is part of the flow, so you can't reach the timer without
+    // seats. If we want to verify "no players", we'd need to allow
+    // 0-seat Root — not currently supported.
+  });
 
   test("Root + players renders a track marker per faction, starting at min", async ({
     page,

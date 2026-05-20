@@ -22,6 +22,7 @@ import { VictoryBanner } from "@/components/VictoryBanner";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
+import { SharePanel } from "@/components/SharePanel";
 import { playerColor, playerIcon, playerSubheading } from "@/lib/playerVisual";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
@@ -474,11 +475,54 @@ export default function Home() {
     }),
     [broadcastSeating],
   );
+  // Track the wizard's current screen so the Share-session side
+  // panel can be visible only on screen 0 (the Game-picker), and
+  // the peer session can be auto-opened as the wizard appears.
+  const [wizardScreen, setWizardScreen] = useState(0);
+  // Sticky flag: once the user explicitly stops the share session
+  // during the wizard, don't auto-restart it on subsequent screen
+  // changes. The chrome's Share button stays available to opt back
+  // in manually.
+  const [shareOptedOut, setShareOptedOut] = useState(false);
+  const sharePanelNode = (
+    <SharePanel
+      status={sessionHost.status}
+      sessionCode={sessionHost.sessionCode}
+      connectedPeers={sessionHost.connectedPeers}
+      error={sessionHost.error}
+      onClose={() => {
+        setShareOptedOut(true);
+        sessionHost.close();
+      }}
+      onRetry={sessionHost.open}
+    />
+  );
   const { open, isOpen, modal } = useGameSetup({
     onSubmit: applyConfig,
     peerHooks: wizardPeerHooks,
     wizardRef: wizardHandleRef,
+    sidePanel: sharePanelNode,
+    onScreenChange: setWizardScreen,
   });
+
+  // Auto-open the peer session whenever the wizard is mounted on
+  // its first screen. This is the moment companions can be most
+  // useful (they can claim seats before any choices are made), so
+  // the QR + code surface as part of that screen rather than
+  // requiring a separate Share click.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (wizardScreen !== 0) return;
+    if (sessionHost.status !== "idle") return;
+    if (shareOptedOut) return;
+    sessionHost.open();
+  }, [
+    isOpen,
+    wizardScreen,
+    sessionHost.status,
+    sessionHost.open,
+    shareOptedOut,
+  ]);
 
   // Only auto-open the setup modal on first mount when there's nothing
   // to resume — a restored session counts as already-configured.

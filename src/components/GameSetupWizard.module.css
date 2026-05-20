@@ -4,8 +4,56 @@
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  overflow: hidden;
+  /* `overflow: visible` lets the absolutely-positioned side panel
+     extend outside the dialog's box so it reads as a separate
+     floating pane next to the wizard. The form below still uses
+     `overflow: hidden` so its internal scrolling works. */
+  overflow: visible;
   font-family: inherit;
+}
+
+/* The side panel is absolutely positioned to the LEFT of the
+   dialog, with a gap, so the wizard form keeps its centered
+   position even when the panel hides on later screens (no layout
+   shift). On narrow viewports it stacks above the dialog instead. */
+.sidePanel {
+  position: absolute;
+  right: calc(100% + 16px);
+  top: 0;
+  transition:
+    transform 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.32s ease;
+  will-change: transform, opacity;
+}
+
+.sidePanelHidden {
+  transform: translateX(-32px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidePanel {
+    transition: none;
+  }
+}
+
+/* On narrow viewports there isn't room next to the dialog — stack
+   the panel above it instead. The translation flips to vertical to
+   match. */
+@media (max-width: 1080px) {
+  .sidePanel {
+    position: static;
+    margin-bottom: 12px;
+  }
+  .sidePanelHidden {
+    transform: translateY(-16px);
+    /* `display: none` would skip the transition, but we want it to
+       fade and collapse smoothly. Use max-height + opacity instead. */
+    max-height: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+  }
 }
 
 .form {

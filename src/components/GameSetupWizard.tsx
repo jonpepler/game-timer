@@ -127,6 +127,15 @@ interface GameSetupWizardProps {
   definitions?: GameDefinition[];
   initialDefinitionId?: string;
   peerHooks?: WizardPeerHooks;
+  // Optional companion-facing pane rendered alongside the wizard's
+  // first screen. Used by the timer page to surface a Share dialog
+  // so companions can join from the very start of setup. Animates
+  // out as the wizard advances to later screens.
+  sidePanel?: React.ReactNode;
+  // Notifies the parent when the wizard moves between screens. The
+  // timer page uses this to auto-open the peer session as soon as
+  // the wizard opens to its first screen.
+  onScreenChange?: (screenIndex: number) => void;
 }
 
 // ── Screen catalogue ────────────────────────────────────────────────
@@ -335,6 +344,8 @@ export const GameSetupWizard = forwardRef<
     definitions = listDefinitions(),
     initialDefinitionId = DEFAULT_DEFINITION_ID,
     peerHooks,
+    sidePanel,
+    onScreenChange,
   },
   ref,
 ) {
@@ -379,6 +390,11 @@ export const GameSetupWizard = forwardRef<
     setContext(defaultContext(definition));
     setExpectedTurns(definition.defaultExpectedTurns);
   }, [definition]);
+  // Notify the parent on every screen change (incl. mount) so it can
+  // toggle ancillary UI like the share side panel.
+  useEffect(() => {
+    onScreenChange?.(screenIndex);
+  }, [screenIndex, onScreenChange]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -598,6 +614,11 @@ export const GameSetupWizard = forwardRef<
 
   // ── Render ──────────────────────────────────────────────────────
 
+  // Show the side panel only on the very first screen. On later
+  // screens it slides out — see `.sidePanelHidden` for the
+  // transition (gated by prefers-reduced-motion in CSS).
+  const sidePanelVisible = sidePanel != null && screenIndex === 0;
+
   return (
     <dialog
       ref={dialogRef}
@@ -605,6 +626,16 @@ export const GameSetupWizard = forwardRef<
       aria-labelledby="wizard-title"
       onClose={onClose}
     >
+      {sidePanel != null && (
+        <aside
+          className={`${styles.sidePanel} ${
+            sidePanelVisible ? "" : styles.sidePanelHidden
+          }`}
+          aria-hidden={!sidePanelVisible}
+        >
+          {sidePanel}
+        </aside>
+      )}
       <form
         className={styles.form}
         onSubmit={(e) => {
