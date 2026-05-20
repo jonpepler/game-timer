@@ -1,8 +1,93 @@
+/* Full-screen overlay variant (when the timer page passes
+   onDismiss). Tap-anywhere dismisses, X in the corner is an
+   explicit affordance. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  cursor: pointer;
+  animation: overlayFadeIn 0.4s ease-out backwards;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.dismissButton {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dismissButton:hover,
+.dismissButton:focus-visible {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  outline: none;
+}
+
+.dismissHint {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 32px;
+  /* Cursor stays default on the content itself so users don't
+     read "click to do something" on the laurel/name. */
+  cursor: default;
+}
+
+/* Inside the overlay, the hero scales up further to fill the
+   viewport — the wreath becomes the dominant visual. */
+.overlay .hero {
+  gap: clamp(24px, 5vmin, 56px);
+}
+.overlay .wreath {
+  width: clamp(320px, 72vmin, 720px) !important;
+}
+.overlay .victorName {
+  font-size: clamp(44px, 8vmin, 96px) !important;
+}
+.overlay .suffix {
+  font-size: clamp(22px, 4vmin, 40px) !important;
 }
 
 /* The wreath is a square holding the laurel image + the head

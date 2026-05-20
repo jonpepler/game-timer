@@ -56,25 +56,23 @@
 
 .activePlayer {
   align-self: center;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: clamp(28px, 4.2vmin, 44px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   pointer-events: auto;
-  /* Sits above the timer ring; extra breathing room keeps the
-     name from crowding the circle. */
-  margin-bottom: 12px;
+  /* Sits above the timer ring with breathing room. */
+  margin-bottom: clamp(12px, 2vh, 28px);
 }
 
 /* Tinted faction meeple silhouette. The `background` (set inline)
    carries the faction colour; `mask-image` cuts the silhouette out
-   of that colour. No wrapper chip — the meeple sits next to the
-   coloured player name. */
+   of that colour. Scales with the banner text. */
 .activePlayerMeeple {
-  width: 40px;
-  height: 40px;
+  width: clamp(48px, 7vmin, 80px);
+  height: clamp(48px, 7vmin, 80px);
   display: inline-block;
   flex-shrink: 0;
   -webkit-mask-size: contain;
@@ -87,8 +85,8 @@
 
 .activePlayerSuffix {
   color: var(--color-text-muted);
-  font-weight: 400;
-  font-size: 16px;
+  font-weight: 500;
+  font-size: clamp(18px, 2.8vmin, 28px);
 }
 
 .activePlayerText {
@@ -99,11 +97,33 @@
 }
 
 .activePlayerSubheading {
-  font-size: 13px;
+  font-size: clamp(14px, 2vmin, 18px);
   color: var(--color-text-muted);
   font-weight: 400;
   letter-spacing: 0.01em;
   margin-top: 4px;
+}
+
+/* Timer ring wrapper — scales to fill the remaining vertical
+   space between the active-player banner above and the overlay
+   below. The container is a square (aspect-ratio: 1) sized by
+   the SMALLER of: available width OR available height
+   (100dvh minus reserved chrome). This replaces the JS-computed
+   `size` and lets the ring grow with the viewport. */
+.timerRingWrapper {
+  position: relative;
+  /* Reserved: ~60px chrome top + 60px active banner + 80px
+     footer + 160px overlay-and-padding = ~360px. Cap at a
+     reasonable max so the ring doesn't dominate huge monitors. */
+  width: min(100%, calc(100dvh - 360px), 720px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+@media (max-width: 540px) {
+  .timerRingWrapper {
+    width: min(100%, calc(100dvh - 280px));
+  }
 }
 
 .newGameButton {

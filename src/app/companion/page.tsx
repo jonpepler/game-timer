@@ -215,11 +215,21 @@ function CompanionScreen() {
     } satisfies CompanionToHostMessage);
   };
 
-  const endTurn = () =>
+  // Optimistic lock: when the user taps End my turn, we disable
+  // the button immediately and don't re-enable until the host's
+  // STATE confirms we're no longer the active player. Without
+  // this the button stays highlighted for the round-trip and
+  // can be clicked multiple times in rapid succession.
+  const [endingTurn, setEndingTurn] = useState(false);
+  const endTurn = () => {
+    setEndingTurn(true);
     send({
       type: "END_TURN",
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
+  };
+  // Clear the lock once the host has rotated us off the active
+  // seat (STATE has arrived with a new currentPlayerIndex).
 
   const bumpScore = (delta: number) =>
     send({
@@ -324,6 +334,11 @@ function CompanionScreen() {
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
+  // Lift the End-my-turn optimistic lock once the host has
+  // rotated us off the active seat.
+  useEffect(() => {
+    if (!isMyTurn) setEndingTurn(false);
+  }, [isMyTurn]);
   // The host treats the very first tap of the timer container as
   // "start the timer." If a companion fires END_TURN before then,
   // it accidentally doubles as the start, which is confusing UX.
@@ -609,7 +624,7 @@ function CompanionScreen() {
                   <button
                     type="button"
                     onClick={endTurn}
-                    disabled={!isMyTurn}
+                    disabled={!isMyTurn || endingTurn}
                     className={styles.endTurnButton}
                   >
                     {isMyTurn ? "End my turn" : "Waiting for your turn…"}

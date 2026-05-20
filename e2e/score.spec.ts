@@ -147,7 +147,12 @@ test.describe("score layer", () => {
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("Marquise de Cat");
     await expect(banner).toContainText(/wins/i);
-    // Active-player banner replaced by the victory banner.
-    await expect(page.getByText(/.*’s turn/)).toHaveCount(0);
+    // The victory banner is a full-screen dismissable overlay — the
+    // timer view stays mounted behind it (so the user sees the
+    // final scoreboard when they dismiss). Assert the overlay's
+    // dismiss affordance is present.
+    await expect(
+      page.getByRole("button", { name: /Dismiss victory banner/i }),
+    ).toBeVisible();
   });
 });

@@ -636,11 +636,22 @@ export default function Home() {
   const victorPlayer =
     victor !== null && playerViews ? playerViews[victor] : undefined;
 
+  // Dismissable victory hero. The user can tap-anywhere / X / Esc
+  // to close the celebratory overlay and reveal the timer view
+  // again (e.g. to check the final scoreboard or undo). Reset
+  // whenever a new victor is declared so the banner re-fires.
+  const [victorDismissed, setVictorDismissed] = useState(false);
+  useEffect(() => {
+    if (victor === null) setVictorDismissed(false);
+  }, [victor]);
+
   // Stop the timer the moment a victor is declared so the banner
   // doesn't sit over a still-running countdown.
   useEffect(() => {
     if (victor !== null) pause();
   }, [victor, pause]);
+
+  const showVictoryHero = victorPlayer != null && !victorDismissed;
 
   const scoresVisible = scoreConfig !== undefined && (players?.length ?? 0) > 0;
 
@@ -679,110 +690,109 @@ export default function Home() {
       >
         {modal}
         <main className={styles.main}>
-          {victorPlayer ? (
-            // Victory hero takes over the centre of the page — the
-            // timer ring is hidden and the wreath + head icon +
-            // "X wins" replace it. The footer (turns left / play /
-            // undo / eta) is also hidden below; only the score
-            // panel + time share stay at the bottom.
-            <VictoryBanner
-              victor={{
-                ...victorPlayer,
-                // Prefer the head crop for the wreath's inner slot —
-                // the meeple silhouette is too tall to read at the
-                // hero size.
-                iconSrc: victorPlayer.headIconSrc ?? victorPlayer.iconSrc,
-              }}
-              laurelSrc={activeDef?.vpLaurelPath}
-            />
-          ) : (
-            <>
-              {activePlayer && (
-                <div
-                  className={styles.activePlayer}
-                  style={{ color: activePlayer.color }}
-                >
-                  {activePlayer.iconSrc && (
-                    // Faction meeple, tinted to the faction colour
-                    // via mask-image. When there's no icon
-                    // (Generic / no setup), the player's name
-                    // itself carries the colour — no swatch needed.
-                    <span
-                      className={styles.activePlayerMeeple}
-                      style={{
-                        background: activePlayer.color,
-                        WebkitMaskImage: `url(${activePlayer.iconSrc})`,
-                        maskImage: `url(${activePlayer.iconSrc})`,
-                      }}
-                      aria-hidden
-                    />
-                  )}
-                  <span className={styles.activePlayerText}>
-                    {/* eslint-disable-next-line prettier/prettier */}
-                    <span>
-                      {activePlayer.name}
-                      <span className={styles.activePlayerSuffix}>
-                        {"’s turn"}
-                      </span>
-                    </span>
-                    {activeSubheading && (
-                      <span className={styles.activePlayerSubheading}>
-                        {activeSubheading}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              <div style={{ width: size, height: size, position: "relative" }}>
-                {playerViews && currentPlayerIndex !== null && (
-                  <PlayerArcs
-                    players={playerViews}
-                    activeIndex={currentPlayerIndex}
-                    containerSize={size}
-                    internalSizeOffset={40}
+          <>
+            {activePlayer && (
+              <div
+                className={styles.activePlayer}
+                style={{ color: activePlayer.color }}
+              >
+                {activePlayer.iconSrc && (
+                  // Faction meeple, tinted to the faction colour
+                  // via mask-image. When there's no icon
+                  // (Generic / no setup), the player's name
+                  // itself carries the colour — no swatch needed.
+                  <span
+                    className={styles.activePlayerMeeple}
+                    style={{
+                      background: activePlayer.color,
+                      WebkitMaskImage: `url(${activePlayer.iconSrc})`,
+                      maskImage: `url(${activePlayer.iconSrc})`,
+                    }}
+                    aria-hidden
                   />
                 )}
-                <CircularProgressbar
-                  value={(timerTotalSeconds / averageTime) * 100}
-                  background
-                  styles={{
-                    path: {
-                      stroke: paused
-                        ? "var(--color-timer-paused)"
-                        : "var(--color-timer-active)",
-                      strokeLinecap: "butt",
-                      strokeWidth: "2",
-                      strokeDasharray: "10, 5",
-                    },
-                    trail: {
-                      strokeWidth: "0.2",
-                    },
-                    text: {
-                      fontFamily: "monospace",
-                      fill: paused
-                        ? "var(--color-timer-paused)"
-                        : "var(--color-timer-active)",
-                    },
-                    background: {
-                      fill: "var(--color-timer-overtime)",
-                      fillOpacity: timerFinished
-                        ? stopwatchTotalSeconds / averageTime
-                        : 0,
-                      transitionProperty: "fill-opacity",
-                      transitionDuration: "2s",
-                    },
-                  }}
-                  text={
-                    timerFinished
-                      ? "+" + getStopwatchString()
-                      : getTimerString()
-                  }
-                />
+                <span className={styles.activePlayerText}>
+                  {/* eslint-disable-next-line prettier/prettier */}
+                    <span>
+                    {activePlayer.name}
+                    <span className={styles.activePlayerSuffix}>
+                      {"’s turn"}
+                    </span>
+                  </span>
+                  {activeSubheading && (
+                    <span className={styles.activePlayerSubheading}>
+                      {activeSubheading}
+                    </span>
+                  )}
+                </span>
               </div>
-            </>
-          )}
+            )}
+            <div className={styles.timerRingWrapper}>
+              {playerViews && currentPlayerIndex !== null && (
+                <PlayerArcs
+                  players={playerViews}
+                  activeIndex={currentPlayerIndex}
+                  containerSize={size}
+                  internalSizeOffset={40}
+                />
+              )}
+              <CircularProgressbar
+                value={(timerTotalSeconds / averageTime) * 100}
+                background
+                styles={{
+                  // Cleaner stroke: solid (no dashes), thicker
+                  // path so the ring reads with weight against
+                  // the dark surface. Matches the rest of the
+                  // app's chrome.
+                  path: {
+                    stroke: paused
+                      ? "var(--color-timer-paused)"
+                      : "var(--color-timer-active)",
+                    strokeLinecap: "round",
+                    strokeWidth: "3",
+                  },
+                  trail: {
+                    stroke: "var(--color-border)",
+                    strokeWidth: "1",
+                  },
+                  text: {
+                    fontFamily: "inherit",
+                    fontWeight: 600,
+                    fill: paused
+                      ? "var(--color-timer-paused)"
+                      : "var(--color-text)",
+                  },
+                  background: {
+                    fill: "var(--color-timer-overtime)",
+                    fillOpacity: timerFinished
+                      ? stopwatchTotalSeconds / averageTime
+                      : 0,
+                    transitionProperty: "fill-opacity",
+                    transitionDuration: "2s",
+                  },
+                }}
+                text={
+                  timerFinished ? "+" + getStopwatchString() : getTimerString()
+                }
+              />
+            </div>
+          </>
         </main>
       </div>
+      {showVictoryHero && (
+        // Full-screen overlay variant — sits above the timer
+        // view, dismissable via the X button, tap-anywhere, or
+        // Escape key. The underlying view stays mounted so when
+        // dismissed the user sees the final state.
+        <VictoryBanner
+          victor={{
+            ...victorPlayer!,
+            iconSrc: victorPlayer!.headIconSrc ?? victorPlayer!.iconSrc,
+          }}
+          laurelSrc={activeDef?.vpLaurelPath}
+          onDismiss={() => setVictorDismissed(true)}
+        />
+      )}
       {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
           {scoresVisible && playerViews && scoreConfig && (

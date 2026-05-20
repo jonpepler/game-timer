@@ -326,6 +326,57 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await installTestPeer(context);
   });
 
+  test("End-my-turn button disables itself the moment the companion fires the turn", async ({
+    context,
+  }) => {
+    // Walk a fast Generic game with tracking on so the host has
+    // two real player slots a companion can claim and end turns
+    // against. Tracking via Generic side-steps Root's full wizard
+    // and keeps this test about the END_TURN → disabled transition.
+    const host = await context.newPage();
+    await host.goto(`${BASE}/timer`);
+    await host.getByRole("button", { name: /^Next/ }).click(); // Game → Turns
+    await host.getByRole("button", { name: /^Next/ }).click(); // Turns → Players
+    await host.getByLabel(/track individual players/i).check();
+    await host.getByRole("button", { name: /start game/i }).click();
+    // Kick the timer running so the companion's End-turn button
+    // isn't gated by `gameStarted` (requires at least one
+    // recorded turn). First tap starts the timer, second tap
+    // records turn 1.
+    await host.locator("main").click();
+    await host.locator("main").click();
+
+    // Wizard auto-opens the peer session on screen 0, so by the
+    // time the game is running the chrome already has a "Sharing
+    // session <code>" chip. Read the code off it.
+    const chip = host.getByRole("button", { name: /^Sharing session / });
+    await chip.waitFor();
+    const code = (/Sharing session (\S+),/.exec(
+      (await chip.getAttribute("aria-label")) ?? "",
+    ) ?? [])[1];
+    if (!code) throw new Error("no session code");
+    const companion = await openCompanion(context, code);
+    // After 2 host taps the active rotation has landed on Player 2
+    // (turn 1 recorded against Player 1, currentPlayerIndex rolled
+    // from 0 → 1). Claim that slot so isMyTurn flips true.
+    await companion
+      .getByRole("button", { name: /^Player 2$/ })
+      .click();
+
+    const endButton = companion.getByRole("button", {
+      name: /^End my turn$/,
+    });
+    await expect(endButton).toBeEnabled({ timeout: 5000 });
+    await endButton.click();
+    // The optimistic lock fires synchronously on click — assert
+    // the button flips to disabled before the host's STATE
+    // round-trip lands. The waiting copy appears once the host
+    // confirms the rotation.
+    await expect(endButton.or(companion.getByRole("button", {
+      name: /Waiting for your turn/,
+    }))).toBeDisabled({ timeout: 3000 });
+  });
+
   test("Generic + no-tracking: companion's Next-turn taps advance the host timer", async ({
     context,
   }) => {
