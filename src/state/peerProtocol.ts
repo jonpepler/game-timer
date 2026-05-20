@@ -50,6 +50,20 @@ export type HostToCompanionMessage =
       type: "SETUP_DONE";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       stepId: string;
+    }
+  // The host's wizard publishes its current seating list any time it
+  // mounts or the seats change. Lets companions see + collaboratively
+  // edit the seat list before the game starts — claim a seat, rename
+  // theirs, add a new one. `claimedBy` mirrors the host's claim map
+  // so every companion sees who's already grabbed which slot.
+  | {
+      type: "SETUP_SEATING";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      stepId: string;
+      seats: Array<{ name: string }>;
+      claimedBy: Array<string | null>;
+      minPlayers: number;
+      maxPlayers: number;
     };
 
 // Companion → host. The companion claims a player slot, then issues
@@ -94,4 +108,28 @@ export type CompanionToHostMessage =
       stepId: string;
       seatIndex: number;
       optionId: string;
+    }
+  // Companion-driven edits to the wizard's seating list. The host
+  // applies these to the wizard's setup-context (subject to the
+  // step's min/max bounds) and broadcasts a fresh SETUP_SEATING.
+  // `claim` doubles as the CLAIM message during setup — once the
+  // game has started, peers use the legacy CLAIM message instead.
+  | {
+      type: "SEATING_REQUEST";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      stepId: string;
+      action:
+        | { kind: "add"; name: string }
+        | { kind: "rename"; seatIndex: number; name: string }
+        | { kind: "remove"; seatIndex: number }
+        | { kind: "claim"; seatIndex: number };
+    }
+  // Generic-mode turn advance. END_TURN requires a slot claim; in a
+  // Generic game with no per-player tracking there are no slots to
+  // claim, but seated companions still need a way to advance the
+  // shared timer. TAP_TIMER is the "any peer, any time" variant —
+  // host treats it equivalent to tapping the timer container.
+  | {
+      type: "TAP_TIMER";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
     };

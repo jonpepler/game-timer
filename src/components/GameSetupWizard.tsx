@@ -72,6 +72,23 @@ export interface GameConfig {
 // Currently a single method — adds more if more peer-driven steps land.
 export interface GameSetupWizardHandle {
   applyPick: (stepId: string, seatIndex: number, optionId: string) => void;
+  // Apply a peer-driven seating change (claim/rename/add/remove)
+  // to the wizard's setup-context. Bounds against the step's
+  // min/max enforced inside; out-of-bounds requests are no-ops.
+  // Returns whether the action mutated state — useful for the
+  // host's claim map (only update if the seat actually exists).
+  applySeatingChange: (
+    stepId: string,
+    action:
+      | { kind: "add"; name: string }
+      | { kind: "rename"; seatIndex: number; name: string }
+      | { kind: "remove"; seatIndex: number }
+      | { kind: "claim"; seatIndex: number },
+  ) => boolean;
+  // Whether a seating step exists in the current definition. The
+  // host uses this to decide whether to apply a seating change
+  // (during the wizard) or treat it as a no-op (e.g. Generic flow).
+  hasSeatingStep: () => boolean;
 }
 
 // Signals the wizard emits when it's on a turn-based player-pick step.
@@ -91,6 +108,16 @@ export interface WizardPeerHooks {
   // Called when a turn-based step finishes (all seats filled, wizard
   // advances past the step, or wizard closes).
   onTurnEnd?: (info: { stepId: string }) => void;
+  // Called whenever the seating list changes (initial mount + every
+  // seat add/rename/remove, by host or peer). The parent broadcasts
+  // a SETUP_SEATING message so connected companions can see + edit
+  // the seat list from the very start of setup.
+  onSeatingChange?: (info: {
+    stepId: string;
+    seats: Array<{ name: string }>;
+    minPlayers: number;
+    maxPlayers: number;
+  }) => void;
 }
 
 interface GameSetupWizardProps {
@@ -111,9 +138,7 @@ type WizardScreen =
   | { kind: "track-players"; id: "track-players"; label: string };
 
 const buildScreens = (definition: GameDefinition): WizardScreen[] => {
-  const screens: WizardScreen[] = [
-    { kind: "game", id: "game", label: "Game" },
-  ];
+  const screens: WizardScreen[] = [{ kind: "game", id: "game", label: "Game" }];
   // Definitions with turnsPerPlayer derive expectedTurns from the
   // seat count at submit time — no need to ask. Generic and similar
   // definitions without that field still get the Expected-turns
@@ -162,7 +187,8 @@ const findSeatPlayersStep = (definition: GameDefinition) =>
 const visibleOptions = (
   options: SetupOption[],
   context: SetupContext,
-): SetupOption[] => options.filter((o) => optionVisibleUnderContext(o, context));
+): SetupOption[] =>
+  options.filter((o) => optionVisibleUnderContext(o, context));
 
 const defaultContext = (definition: GameDefinition): SetupContext => {
   const ctx: SetupContext = {};
@@ -187,8 +213,7 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
         break;
       case "multi-toggle": {
         const defaults =
-          step.kind.defaultSelectedIds ??
-          step.kind.options.map((o) => o.id);
+          step.kind.defaultSelectedIds ?? step.kind.options.map((o) => o.id);
         ctx[step.id] = { kind: "multi-toggle", selectedIds: defaults };
         break;
       }
@@ -206,8 +231,7 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
             };
         break;
       case "seat-players": {
-        const count =
-          step.kind.defaultPlayerCount ?? step.kind.minPlayers ?? 2;
+        const count = step.kind.defaultPlayerCount ?? step.kind.minPlayers ?? 2;
         ctx[step.id] = {
           kind: "seat-players",
           seats: Array.from({ length: count }, (_, i) => ({
@@ -388,10 +412,7 @@ export const GameSetupWizard = forwardRef<
       setContext((prev) => {
         const current =
           prev[stepId]?.kind === "player-pick"
-            ? (prev[stepId] as Extract<
-                SetupChoice,
-                { kind: "player-pick" }
-              >)
+            ? (prev[stepId] as Extract<SetupChoice, { kind: "player-pick" }>)
             : { kind: "player-pick" as const, picks: {} };
         return {
           ...prev,
@@ -404,7 +425,121 @@ export const GameSetupWizard = forwardRef<
     },
     [],
   );
-  useImperativeHandle(ref, () => ({ applyPick }), [applyPick]);
+
+  // Bounds for the seating step (used by applySeatingChange below).
+  const seatingStep = useMemo(
+    () => definition.setupSteps?.find((s) => s.kind.type === "seat-players"),
+    [definition],
+  );
+  const seatingBounds = useMemo(() => {
+    if (!seatingStep || seatingStep.kind.type !== "seat-players") {
+      return { min: 1, max: 6 };
+    }
+    return {
+      min: seatingStep.kind.minPlayers ?? 1,
+      max: seatingStep.kind.maxPlayers ?? 6,
+    };
+  }, [seatingStep]);
+
+  // Imperative seating change (driven by peer SEATING_REQUEST
+  // messages). Lets companions claim/rename/add/remove seats from
+  // the very start of setup — the wizard's seating list is the
+  // source of truth, this just routes peer edits into it.
+  const applySeatingChange = useCallback<
+    GameSetupWizardHandle["applySeatingChange"]
+  >(
+    (stepId, action) => {
+      let mutated = false;
+      setContext((prev) => {
+        const current =
+          prev[stepId]?.kind === "seat-players"
+            ? (prev[stepId] as Extract<SetupChoice, { kind: "seat-players" }>)
+            : null;
+        if (!current) return prev;
+        let nextSeats = current.seats;
+        switch (action.kind) {
+          case "add":
+            if (current.seats.length >= seatingBounds.max) break;
+            nextSeats = [
+              ...current.seats,
+              {
+                name:
+                  action.name.trim() || `Player ${current.seats.length + 1}`,
+              },
+            ];
+            mutated = true;
+            break;
+          case "rename":
+            if (
+              action.seatIndex < 0 ||
+              action.seatIndex >= current.seats.length
+            )
+              break;
+            nextSeats = current.seats.map((s, i) =>
+              i === action.seatIndex
+                ? { ...s, name: action.name.trim() || s.name }
+                : s,
+            );
+            mutated = true;
+            break;
+          case "remove":
+            if (current.seats.length <= seatingBounds.min) break;
+            if (
+              action.seatIndex < 0 ||
+              action.seatIndex >= current.seats.length
+            )
+              break;
+            nextSeats = current.seats.filter((_, i) => i !== action.seatIndex);
+            mutated = true;
+            break;
+          case "claim":
+            // The wizard doesn't track claim ownership — the host
+            // owns the claim map. We just verify the seat exists so
+            // the host can mirror it in its own state.
+            mutated =
+              action.seatIndex >= 0 && action.seatIndex < current.seats.length;
+            return prev;
+        }
+        if (!mutated) return prev;
+        return { ...prev, [stepId]: { ...current, seats: nextSeats } };
+      });
+      return mutated;
+    },
+    [seatingBounds.min, seatingBounds.max],
+  );
+
+  const hasSeatingStep = useCallback(() => seatingStep != null, [seatingStep]);
+
+  useImperativeHandle(
+    ref,
+    () => ({ applyPick, applySeatingChange, hasSeatingStep }),
+    [applyPick, applySeatingChange, hasSeatingStep],
+  );
+
+  // Broadcast seating updates so every connected companion can render
+  // + edit the seat list in step. Fires on mount + every change.
+  const seatingChoice =
+    seatingStep && context[seatingStep.id]?.kind === "seat-players"
+      ? (context[seatingStep.id] as Extract<
+          SetupChoice,
+          { kind: "seat-players" }
+        >)
+      : null;
+  useEffect(() => {
+    if (!seatingStep || !seatingChoice) return;
+    peerHooks?.onSeatingChange?.({
+      stepId: seatingStep.id,
+      seats: seatingChoice.seats,
+      minPlayers: seatingBounds.min,
+      maxPlayers: seatingBounds.max,
+    });
+  }, [
+    peerHooks,
+    seatingStep,
+    seatingChoice,
+    seatingBounds.min,
+    seatingBounds.max,
+  ]);
 
   // Fire onTurnEnd when navigating away from a turn-based player-pick
   // screen so the parent can broadcast SETUP_DONE to companions.
@@ -439,7 +574,12 @@ export const GameSetupWizard = forwardRef<
   const back = () => setScreenIndex((i) => Math.max(0, i - 1));
 
   const submit = () => {
-    const players = collectPlayers(definition, context, trackPlayers, trackRoster);
+    const players = collectPlayers(
+      definition,
+      context,
+      trackPlayers,
+      trackRoster,
+    );
     // When the definition declares turnsPerPlayer, derive
     // expectedTurns at submit time from the seat count. Saves the
     // user from a redundant screen and keeps Root's "8 turns each"
@@ -481,9 +621,13 @@ export const GameSetupWizard = forwardRef<
               {screenIndex + 1} / {screens.length} · {currentScreen.label}
             </span>
           </div>
-          <div className={styles.progress} role="progressbar"
-               aria-valuemin={1} aria-valuemax={screens.length}
-               aria-valuenow={screenIndex + 1}>
+          <div
+            className={styles.progress}
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={screens.length}
+            aria-valuenow={screenIndex + 1}
+          >
             {screens.map((s, i) => (
               <span
                 key={s.id}
@@ -491,8 +635,8 @@ export const GameSetupWizard = forwardRef<
                   i === screenIndex
                     ? `${styles.progressTick} ${styles.progressTickActive}`
                     : i < screenIndex
-                    ? `${styles.progressTick} ${styles.progressTickDone}`
-                    : styles.progressTick
+                      ? `${styles.progressTick} ${styles.progressTickDone}`
+                      : styles.progressTick
                 }
               />
             ))}
@@ -635,8 +779,7 @@ function collectPlayers(
     const seatChoice = context[seatStep.id];
     if (seatChoice?.kind !== "seat-players") return undefined;
     const pickChoice = pickStep ? context[pickStep.id] : undefined;
-    const picks =
-      pickChoice?.kind === "player-pick" ? pickChoice.picks : {};
+    const picks = pickChoice?.kind === "player-pick" ? pickChoice.picks : {};
     const pickOptions =
       pickStep && pickStep.kind.type === "player-pick"
         ? pickStep.kind.options
@@ -770,11 +913,13 @@ function StepScreen({
           options={step.kind.options}
           selectedIds={
             context[step.id]?.kind === "multi-toggle"
-              ? (context[step.id] as Extract<
-                  SetupChoice,
-                  { kind: "multi-toggle" }
-                >).selectedIds
-              : step.kind.defaultSelectedIds ?? []
+              ? (
+                  context[step.id] as Extract<
+                    SetupChoice,
+                    { kind: "multi-toggle" }
+                  >
+                ).selectedIds
+              : (step.kind.defaultSelectedIds ?? [])
           }
           onChange={(selectedIds) =>
             setContext((prev) => ({
@@ -792,11 +937,13 @@ function StepScreen({
           context={context}
           selectedId={
             context[step.id]?.kind === "select-one"
-              ? (context[step.id] as Extract<
-                  SetupChoice,
-                  { kind: "select-one" }
-                >).optionId
-              : step.kind.defaultOptionId ?? step.kind.options[0]?.id
+              ? (
+                  context[step.id] as Extract<
+                    SetupChoice,
+                    { kind: "select-one" }
+                  >
+                ).optionId
+              : (step.kind.defaultOptionId ?? step.kind.options[0]?.id)
           }
           onChange={(optionId) =>
             setContext((prev) => ({
@@ -814,11 +961,13 @@ function StepScreen({
           max={step.kind.max}
           value={
             context[step.id]?.kind === "select-count"
-              ? (context[step.id] as Extract<
-                  SetupChoice,
-                  { kind: "select-count" }
-                >).count
-              : step.kind.defaultValue ?? step.kind.min
+              ? (
+                  context[step.id] as Extract<
+                    SetupChoice,
+                    { kind: "select-count" }
+                  >
+                ).count
+              : (step.kind.defaultValue ?? step.kind.min)
           }
           onChange={(count) =>
             setContext((prev) => ({
@@ -834,11 +983,9 @@ function StepScreen({
           step={step}
           value={
             context[step.id]?.kind === "toggle"
-              ? (context[step.id] as Extract<
-                  SetupChoice,
-                  { kind: "toggle" }
-                >).value
-              : step.kind.defaultValue ?? false
+              ? (context[step.id] as Extract<SetupChoice, { kind: "toggle" }>)
+                  .value
+              : (step.kind.defaultValue ?? false)
           }
           onChange={(value) =>
             setContext((prev) => ({
@@ -989,9 +1136,7 @@ function SelectOneScreen({
             aria-label={o.label}
           >
             <span className={styles.chipLabel}>{o.label}</span>
-            {o.module && (
-              <span className={styles.chipModule}>{o.module}</span>
-            )}
+            {o.module && <span className={styles.chipModule}>{o.module}</span>}
             {o.description && (
               <span className={styles.chipDesc}>{o.description}</span>
             )}
@@ -1214,15 +1359,14 @@ function DealRandomScreen({
   onChange: (next: SetupChoice) => void;
 }) {
   const visible = visibleOptions(options, context);
-  const isSkipped =
-    choice?.kind === "deal-random" && choice.skipped === true;
+  const isSkipped = choice?.kind === "deal-random" && choice.skipped === true;
   const dealtIds =
     choice?.kind === "deal-random" && choice.skipped === false
       ? choice.dealtIds
       : null;
   const demotedIds =
     choice?.kind === "deal-random" && choice.skipped === false
-      ? choice.demotedIds ?? []
+      ? (choice.demotedIds ?? [])
       : [];
 
   // Seat count drives the demote rule. We treat any seat-players choice
@@ -1265,14 +1409,16 @@ function DealRandomScreen({
       )}
       <div className={styles.deck}>
         {isSkipped && (
-          <div className={styles.skipNotice}>Skipped — no hirelings this game.</div>
+          <div className={styles.skipNotice}>
+            Skipped — no hirelings this game.
+          </div>
         )}
         {!isSkipped && dealtIds && (
           <>
             {demoteN > 0 && (
               <span className={styles.help}>
-                Per ADSET A.6.2: {demoteN} of {count} start demoted at {seatCount}{" "}
-                players.
+                Per ADSET A.6.2: {demoteN} of {count} start demoted at{" "}
+                {seatCount} players.
               </span>
             )}
             <div className={styles.dealtList}>
@@ -1311,7 +1457,8 @@ function DealRandomScreen({
             onClick={reshuffle}
             className={styles.secondary}
           >
-            <RefreshCw size={14} aria-hidden /> Shuffle{dealtIds ? " again" : ""}
+            <RefreshCw size={14} aria-hidden /> Shuffle
+            {dealtIds ? " again" : ""}
           </button>
           {optional && (
             <button type="button" onClick={skip} className={styles.ghost}>
@@ -1421,7 +1568,15 @@ function PlayerPickScreen({
       dealtIds: newDealt,
       characters: newCharacters,
     }));
-  }, [draftEnabled, dealtIds, pool, seats.length, targetDealCount, options, onChange]);
+  }, [
+    draftEnabled,
+    dealtIds,
+    pool,
+    seats.length,
+    targetDealCount,
+    options,
+    onChange,
+  ]);
 
   // If draft toggled off, drop the dealt hand so re-enabling redeals
   // fresh against the current pool.
@@ -1592,7 +1747,16 @@ function PlayerPickScreen({
           setupSteps: [step],
         } as unknown as GameDefinition),
     });
-  }, [mode, peerHooks, activeSeat, seats, picks, visible, blockedForActive, step]);
+  }, [
+    mode,
+    peerHooks,
+    activeSeat,
+    seats,
+    picks,
+    visible,
+    blockedForActive,
+    step,
+  ]);
 
   return (
     <>
@@ -1658,9 +1822,8 @@ function PlayerPickScreen({
           const active = picks[activeSeat] === o.id;
           const open = adsetOpen === o.id;
           const leaving = leavingIds.includes(o.id);
-          const adsetSteps = (
-            o as unknown as { adsetSteps?: string[] }
-          ).adsetSteps;
+          const adsetSteps = (o as unknown as { adsetSteps?: string[] })
+            .adsetSteps;
           const meepleSrc = (
             o as unknown as {
               assets?: { meepleSvg?: { appPath?: string } };
@@ -1777,8 +1940,8 @@ function PlayerPickScreen({
         {seats.map((seat, i) => {
           const factionId = picks[i];
           const option = factionId
-            ? visible.find((o) => o.id === factionId) ??
-              options.find((o) => o.id === factionId)
+            ? (visible.find((o) => o.id === factionId) ??
+              options.find((o) => o.id === factionId))
             : undefined;
           const isActive = i === activeSeat;
           return (
@@ -1908,4 +2071,3 @@ function TrackPlayersScreen({
     </>
   );
 }
-

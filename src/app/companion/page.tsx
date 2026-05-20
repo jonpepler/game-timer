@@ -18,7 +18,6 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
   selectCurrentPlayerIndex,
   selectRemainingTurns,
-  type Player,
 } from "@/state/gameSession";
 import { playerColor, playerSubheading } from "@/lib/playerVisual";
 import type {
@@ -27,19 +26,6 @@ import type {
   SetupOption,
   SetupStep,
 } from "@/state/gameDefinition";
-
-// Read the chosen-option id from a player's metadata via the
-// active definition's playerVisualFrom key. Returns undefined when
-// either the key isn't declared or the metadata isn't set yet.
-const optionIdFor = (
-  player: Player,
-  visualKey: string | undefined,
-): string | undefined => {
-  if (!visualKey) return undefined;
-  const m = player.metadata[visualKey];
-  if (m?.type === "selected-option") return m.optionId;
-  return undefined;
-};
 
 // Locate the player-pick SetupStep in the active definition. Companion
 // reads its options to populate its own faction-style picker.
@@ -76,20 +62,29 @@ function CompanionScreen() {
     useSessionCompanion<HostToCompanionMessage>(code);
 
   // Track the most recent message of each type. STATE arrives during
-  // gameplay; SETUP_TURN / SETUP_DONE arrive during the host's
-  // wizard. We keep both so the picker overlay can layer on top of
-  // the state view.
-  const [lastState, setLastState] = useState<
-    Extract<HostToCompanionMessage, { type: "STATE" }> | null
-  >(null);
-  const [pendingTurn, setPendingTurn] = useState<
-    Extract<HostToCompanionMessage, { type: "SETUP_TURN" }> | null
-  >(null);
+  // gameplay; SETUP_TURN / SETUP_DONE / SETUP_SEATING arrive during
+  // the host's wizard. We keep all of them so a companion landing
+  // mid-setup can render the right control without waiting for the
+  // next mutation.
+  const [lastState, setLastState] = useState<Extract<
+    HostToCompanionMessage,
+    { type: "STATE" }
+  > | null>(null);
+  const [pendingTurn, setPendingTurn] = useState<Extract<
+    HostToCompanionMessage,
+    { type: "SETUP_TURN" }
+  > | null>(null);
+  const [pendingSeating, setPendingSeating] = useState<Extract<
+    HostToCompanionMessage,
+    { type: "SETUP_SEATING" }
+  > | null>(null);
   useEffect(() => {
     if (!lastMessage) return;
     if (lastMessage.type === "STATE") setLastState(lastMessage);
     else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
     else if (lastMessage.type === "SETUP_DONE") setPendingTurn(null);
+    else if (lastMessage.type === "SETUP_SEATING")
+      setPendingSeating(lastMessage);
   }, [lastMessage]);
 
   const state = lastState?.state ?? null;
@@ -156,6 +151,23 @@ function CompanionScreen() {
     }
   }, [status, claimedSlot, send]);
 
+  // Auto-reclaim during setup: when SETUP_SEATING arrives and the
+  // companion already has a claimed slot from a previous session, ask
+  // the host to honour the claim again. Skipped if someone else has
+  // already grabbed that seat (the user can pick a different one).
+  useEffect(() => {
+    if (!pendingSeating || claimedSlot === null) return;
+    if (claimedSlot < 0 || claimedSlot >= pendingSeating.seats.length) return;
+    const currentClaim = pendingSeating.claimedBy[claimedSlot];
+    if (currentClaim !== null) return;
+    send({
+      type: "SEATING_REQUEST",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      stepId: pendingSeating.stepId,
+      action: { kind: "claim", seatIndex: claimedSlot },
+    } satisfies CompanionToHostMessage);
+  }, [pendingSeating, claimedSlot, send]);
+
   const claim = (playerIndex: number) => {
     setClaimedSlot(playerIndex);
     if (code) {
@@ -200,34 +212,51 @@ function CompanionScreen() {
       delta,
     } satisfies CompanionToHostMessage);
 
-  // Mid-game option swap (e.g. faction change). Looks up the
-  // player-pick step on the definition snapshot to fill in stepId.
-  const pickOption = (optionId: string) => {
-    const pick = definition ? findPlayerPickStep(definition) : undefined;
-    if (!pick) return;
-    send({
-      type: "SET_PLAYER_OPTION",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-      stepId: pick.step.id,
-      optionId,
-    } satisfies CompanionToHostMessage);
-  };
-
   // Wizard-time pick response. Sent in answer to a SETUP_TURN from
   // the host; the host applies it to the wizard's setupContext.
+  // Player-pick is identity-bound: the companion can only pick for
+  // the seat they've claimed, so we route the message through
+  // claimedSlot rather than the SETUP_TURN's seatIndex hint.
   const sendSetupPick = (optionId: string) => {
     if (!pendingTurn) return;
+    if (claimedSlot === null || claimedSlot !== pendingTurn.seatIndex) return;
     send({
       type: "SETUP_PICK",
       protocolVersion: PEER_PROTOCOL_VERSION,
       stepId: pendingTurn.stepId,
-      seatIndex: pendingTurn.seatIndex,
+      seatIndex: claimedSlot,
       optionId,
     } satisfies CompanionToHostMessage);
     // Clear locally — host will broadcast the next SETUP_TURN (or
     // SETUP_DONE) shortly. Optimistic to avoid flicker.
     setPendingTurn(null);
   };
+
+  // Seating-step edits — the companion can claim, rename, add, and
+  // remove seats from the host's wizard during early setup. The host
+  // validates each request against the step's min/max bounds before
+  // re-broadcasting fresh SETUP_SEATING to every connected peer.
+  const sendSeating = (
+    action:
+      | { kind: "add"; name: string }
+      | { kind: "rename"; seatIndex: number; name: string }
+      | { kind: "remove"; seatIndex: number }
+      | { kind: "claim"; seatIndex: number },
+  ) => {
+    if (!pendingSeating) return;
+    send({
+      type: "SEATING_REQUEST",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      stepId: pendingSeating.stepId,
+      action,
+    } satisfies CompanionToHostMessage);
+  };
+
+  const tapTimer = () =>
+    send({
+      type: "TAP_TIMER",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+    } satisfies CompanionToHostMessage);
 
   const stats = useMemo(
     () =>
@@ -246,7 +275,6 @@ function CompanionScreen() {
 
   const visualKey = definition?.playerVisualFrom;
   const subheadingKey = definition?.playerSubheadingFrom;
-  const pickStep = findPlayerPickStep(definition);
   const activePlayerIndex = state ? selectCurrentPlayerIndex(state) : null;
   const playerViews =
     state?.players?.map((p, i) => ({
@@ -277,10 +305,6 @@ function CompanionScreen() {
           // companion UI.
           name: customName.trim() || playerViews[claimedSlot].name,
         }
-      : undefined;
-  const claimedOptionId =
-    claimedSlot !== null && state?.players
-      ? optionIdFor(state.players[claimedSlot], visualKey)
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
@@ -314,226 +338,272 @@ function CompanionScreen() {
   return (
     <FullScreen>
       <div className={styles.container}>
-      <div className={styles.header}>
-        <span
-          className={`${styles.statusDot} ${
-            status === "connecting"
-              ? styles.statusDotConnecting
-              : status === "connected"
-                ? styles.statusDotConnected
-                : status === "disconnected"
-                  ? styles.statusDotDisconnected
-                  : styles.statusDotError
-          }`}
-          aria-hidden
-        />
-        <span>
-          {status === "connecting" && (
-            <>
-              Connecting to <span className={styles.hostCode}>{code}</span>…
-            </>
-          )}
-          {status === "connected" && (
-            <>
-              Connected to <span className={styles.hostCode}>{code}</span>
-            </>
-          )}
-          {status === "disconnected" && (
-            <>
-              Disconnected from <span className={styles.hostCode}>{code}</span>
-            </>
-          )}
-          {status === "error" && (
-            <>Failed to connect: {error?.message ?? "unknown error"}</>
-          )}
-        </span>
-        {claimedPlayer && (
-          <span className={styles.claimedAs}>
-            <span
-              className={styles.claimSwatch}
-              style={{ background: claimedPlayer.color }}
-              aria-hidden
-            />
-            {claimedPlayer.name}
-            <button
-              type="button"
-              onClick={release}
-              className={styles.changeButton}
-            >
-              change
-            </button>
-          </span>
-        )}
-      </div>
-
-      {claimedPlayer && (
-        <label className={styles.nameField}>
-          <span className={styles.nameFieldLabel}>Your name</span>
-          <input
-            type="text"
-            value={customName}
-            onChange={(e) => saveCustomName(e.target.value)}
-            placeholder={
-              claimedSlot !== null
-                ? playerViews[claimedSlot]?.name ?? "Your name"
-                : "Your name"
-            }
-            className={styles.nameInput}
+        <div className={styles.header}>
+          <span
+            className={`${styles.statusDot} ${
+              status === "connecting"
+                ? styles.statusDotConnecting
+                : status === "connected"
+                  ? styles.statusDotConnected
+                  : status === "disconnected"
+                    ? styles.statusDotDisconnected
+                    : styles.statusDotError
+            }`}
+            aria-hidden
           />
-        </label>
-      )}
-
-      {pendingTurn && (
-        <SetupTurnPanel
-          pendingTurn={pendingTurn}
-          claimedSlot={claimedSlot}
-          onPick={sendSetupPick}
-        />
-      )}
-
-      {!state && !pendingTurn && status === "connected" && (
-        <div className={styles.empty}>Waiting for the host to share state…</div>
-      )}
-
-      {state && (
-        <>
-          {victorPlayer ? (
-            <VictoryBanner victor={victorPlayer} />
-          ) : (
-            activePlayer && (
-              <div
-                className={styles.activePlayer}
-                style={{ color: activePlayer.color }}
+          <span>
+            {status === "connecting" && (
+              <>
+                Connecting to <span className={styles.hostCode}>{code}</span>…
+              </>
+            )}
+            {status === "connected" && (
+              <>
+                Connected to <span className={styles.hostCode}>{code}</span>
+              </>
+            )}
+            {status === "disconnected" && (
+              <>
+                Disconnected from{" "}
+                <span className={styles.hostCode}>{code}</span>
+              </>
+            )}
+            {status === "error" && (
+              <>Failed to connect: {error?.message ?? "unknown error"}</>
+            )}
+          </span>
+          {claimedPlayer && (
+            <span className={styles.claimedAs}>
+              <span
+                className={styles.claimSwatch}
+                style={{ background: claimedPlayer.color }}
+                aria-hidden
+              />
+              {claimedPlayer.name}
+              <button
+                type="button"
+                onClick={release}
+                className={styles.changeButton}
               >
-                <span
-                  className={styles.activePlayerSwatch}
-                  style={{ background: activePlayer.color }}
-                  aria-hidden
-                />
-                <span className={styles.activePlayerText}>
-                  {/* eslint-disable-next-line prettier/prettier */}
-                  <span>
-                    {activePlayer.name}
-                    <span className={styles.activePlayerSuffix}>
-                      {"’s turn"}
-                    </span>
-                  </span>
-                  {activeSubheading && (
-                    <span className={styles.activePlayerSubheading}>
-                      {activeSubheading}
-                    </span>
-                  )}
-                </span>
-              </div>
-            )
+                change
+              </button>
+            </span>
           )}
+        </div>
 
-          <div className={styles.bigStat}>
-            <span className={styles.bigStatValue}>{remaining}</span>
-            <span className={styles.bigStatLabel}>turns remaining</span>
-          </div>
+        {claimedPlayer && (
+          <label className={styles.nameField}>
+            <span className={styles.nameFieldLabel}>Your name</span>
+            <input
+              type="text"
+              value={customName}
+              onChange={(e) => saveCustomName(e.target.value)}
+              placeholder={
+                claimedSlot !== null
+                  ? (playerViews[claimedSlot]?.name ?? "Your name")
+                  : "Your name"
+              }
+              className={styles.nameInput}
+            />
+          </label>
+        )}
 
-          {playerViews.length === 0 && (
+        {pendingTurn && (
+          <SetupTurnPanel
+            pendingTurn={pendingTurn}
+            claimedSlot={claimedSlot}
+            onPick={sendSetupPick}
+          />
+        )}
+
+        {!pendingTurn && pendingSeating && !state?.players && (
+          <SetupSeatingPanel
+            seating={pendingSeating}
+            claimedSlot={claimedSlot}
+            onClaim={(seatIndex) => {
+              // Optimistically update local state so the UI reflects
+              // the claim immediately; host will broadcast fresh
+              // SETUP_SEATING to confirm (or reject if taken).
+              setClaimedSlot(seatIndex);
+              if (code) {
+                try {
+                  window.localStorage.setItem(
+                    claimStorageKey(code),
+                    String(seatIndex),
+                  );
+                } catch {
+                  // best-effort
+                }
+              }
+              sendSeating({ kind: "claim", seatIndex });
+            }}
+            onRename={(seatIndex, name) =>
+              sendSeating({ kind: "rename", seatIndex, name })
+            }
+            onAdd={(name) => sendSeating({ kind: "add", name })}
+            onRemove={(seatIndex) => sendSeating({ kind: "remove", seatIndex })}
+          />
+        )}
+
+        {!state &&
+          !pendingTurn &&
+          !pendingSeating &&
+          status === "connected" && (
             <div className={styles.empty}>
-              The host is running a game without per-player tracking, so
-              there's nothing to claim or score from here. You'll still
-              see the turn counter as it ticks down.
+              Waiting for the host to share state…
             </div>
           )}
 
-          {playerViews.length > 0 && claimedSlot === null && (
-            <div className={styles.claimPanel}>
-              <span className={styles.claimTitle}>Claim a player</span>
-              <ul className={styles.claimList}>
-                {playerViews.map((p, i) => (
-                  <li key={i}>
-                    <button
-                      type="button"
-                      onClick={() => claim(i)}
-                      className={styles.claimRow}
-                    >
-                      <span
-                        className={styles.claimSwatch}
-                        style={{ background: p.color }}
-                        aria-hidden
-                      />
-                      {p.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {state && (
+          <>
+            {victorPlayer ? (
+              <VictoryBanner victor={victorPlayer} />
+            ) : (
+              activePlayer && (
+                <div
+                  className={styles.activePlayer}
+                  style={{ color: activePlayer.color }}
+                >
+                  <span
+                    className={styles.activePlayerSwatch}
+                    style={{ background: activePlayer.color }}
+                    aria-hidden
+                  />
+                  <span className={styles.activePlayerText}>
+                    {/* eslint-disable-next-line prettier/prettier */}
+                  <span>
+                      {activePlayer.name}
+                      <span className={styles.activePlayerSuffix}>
+                        {"’s turn"}
+                      </span>
+                    </span>
+                    {activeSubheading && (
+                      <span className={styles.activePlayerSubheading}>
+                        {activeSubheading}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )
+            )}
 
-          {/* Mid-game faction picker removed — faction selection
+            <div className={styles.bigStat}>
+              <span className={styles.bigStatValue}>{remaining}</span>
+              <span className={styles.bigStatLabel}>turns remaining</span>
+            </div>
+
+            {playerViews.length === 0 && (
+              <>
+                <div className={styles.empty}>
+                  The host is running a game without per-player tracking, so
+                  there&apos;s nothing to claim or score from here. Tap below to
+                  advance the timer.
+                </div>
+                <div className={styles.endTurnSlot}>
+                  <button
+                    type="button"
+                    onClick={tapTimer}
+                    className={styles.endTurnButton}
+                  >
+                    Next turn
+                  </button>
+                </div>
+              </>
+            )}
+
+            {playerViews.length > 0 && claimedSlot === null && (
+              <div className={styles.claimPanel}>
+                <span className={styles.claimTitle}>Claim a player</span>
+                <ul className={styles.claimList}>
+                  {playerViews.map((p, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        onClick={() => claim(i)}
+                        className={styles.claimRow}
+                      >
+                        <span
+                          className={styles.claimSwatch}
+                          style={{ background: p.color }}
+                          aria-hidden
+                        />
+                        {p.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Mid-game faction picker removed — faction selection
               happens during the host's wizard via the SETUP_TURN /
               SetupTurnPanel flow, not after the game has started. */}
 
-          {claimedPlayer && state.scoreConfig && (
-            <div className={styles.scoreControls}>
-              <button
-                type="button"
-                onClick={() => bumpScore(-scoreStep)}
-                disabled={atMin}
-                className={styles.scoreButton}
-                aria-label="Decrease my score"
-              >
-                <Minus aria-hidden />
-              </button>
-              <div>
-                <div className={styles.scoreLabel}>My score</div>
-                <div className={styles.scoreValue}>{myScore}</div>
+            {claimedPlayer && state.scoreConfig && (
+              <div className={styles.scoreControls}>
+                <button
+                  type="button"
+                  onClick={() => bumpScore(-scoreStep)}
+                  disabled={atMin}
+                  className={styles.scoreButton}
+                  aria-label="Decrease my score"
+                >
+                  <Minus aria-hidden />
+                </button>
+                <div>
+                  <div className={styles.scoreLabel}>My score</div>
+                  <div className={styles.scoreValue}>{myScore}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => bumpScore(scoreStep)}
+                  disabled={atMax}
+                  className={styles.scoreButton}
+                  aria-label="Increase my score"
+                >
+                  <Plus aria-hidden />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => bumpScore(scoreStep)}
-                disabled={atMax}
-                className={styles.scoreButton}
-                aria-label="Increase my score"
-              >
-                <Plus aria-hidden />
-              </button>
+            )}
+
+            <div className={styles.bottomStack}>
+              {scoresVisible && playerViews.length > 0 && state.scoreConfig && (
+                <ScorePanel
+                  players={playerViews}
+                  scores={state.scores}
+                  scoreConfig={state.scoreConfig}
+                  readOnly
+                />
+              )}
+              {stats.length > 0 && (
+                <PlayerTimeShare stats={stats} players={playerViews} />
+              )}
             </div>
-          )}
 
-          <div className={styles.bottomStack}>
-            {scoresVisible && playerViews.length > 0 && state.scoreConfig && (
-              <ScorePanel
-                players={playerViews}
-                scores={state.scores}
-                scoreConfig={state.scoreConfig}
-                readOnly
-              />
-            )}
-            {stats.length > 0 && (
-              <PlayerTimeShare stats={stats} players={playerViews} />
-            )}
-          </div>
-
-          {/* End-Turn (or pending state) sits AFTER the score panel
+            {/* End-Turn (or pending state) sits AFTER the score panel
               + time-share so other content can flow above it. The
               auto margin pushes it to the viewport bottom when there
               IS spare room. */}
-          {claimedPlayer && !victorPlayer && (
-            <div className={styles.endTurnSlot}>
-              {gameStarted ? (
-                <button
-                  type="button"
-                  onClick={endTurn}
-                  disabled={!isMyTurn}
-                  className={styles.endTurnButton}
-                >
-                  {isMyTurn ? "End my turn" : "Waiting for your turn…"}
-                </button>
-              ) : (
-                <div className={styles.endTurnPending}>
-                  Waiting for the host to start the timer…
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+            {claimedPlayer && !victorPlayer && (
+              <div className={styles.endTurnSlot}>
+                {gameStarted ? (
+                  <button
+                    type="button"
+                    onClick={endTurn}
+                    disabled={!isMyTurn}
+                    className={styles.endTurnButton}
+                  >
+                    {isMyTurn ? "End my turn" : "Waiting for your turn…"}
+                  </button>
+                ) : (
+                  <div className={styles.endTurnPending}>
+                    Waiting for the host to start the timer…
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </FullScreen>
   );
@@ -564,7 +634,8 @@ function SetupTurnPanel({
   if (!myTurn) {
     return (
       <div className={styles.empty}>
-        Waiting for seat {pendingTurn.seatIndex + 1} to pick a {pick?.step.label.toLowerCase() ?? "card"}…
+        Waiting for seat {pendingTurn.seatIndex + 1} to pick a{" "}
+        {pick?.step.label.toLowerCase() ?? "card"}…
       </div>
     );
   }
@@ -596,6 +667,107 @@ function SetupTurnPanel({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Pre-game collaborative seating: the host's wizard publishes its
+// seating list whenever it changes; this panel lets the companion
+// claim a seat (binding their peer identity to it), rename their
+// seat so everyone sees the same name, and add/remove seats.
+function SetupSeatingPanel({
+  seating,
+  claimedSlot,
+  onClaim,
+  onRename,
+  onAdd,
+  onRemove,
+}: {
+  seating: Extract<HostToCompanionMessage, { type: "SETUP_SEATING" }>;
+  claimedSlot: number | null;
+  onClaim: (seatIndex: number) => void;
+  onRename: (seatIndex: number, name: string) => void;
+  onAdd: (name: string) => void;
+  onRemove: (seatIndex: number) => void;
+}) {
+  const { seats, claimedBy, minPlayers, maxPlayers } = seating;
+  const canAdd = seats.length < maxPlayers;
+  const canRemove = seats.length > minPlayers;
+
+  return (
+    <div className={styles.claimPanel}>
+      <span className={styles.claimTitle}>Take a seat</span>
+      <ul className={styles.claimList}>
+        {seats.map((seat, i) => {
+          const claimedByPeer = claimedBy[i];
+          const isMine = claimedSlot === i;
+          const isTakenByOther = !isMine && claimedByPeer !== null;
+          if (isMine) {
+            return (
+              <li key={i} className={styles.claimRow}>
+                <label className={styles.nameField} style={{ flex: 1 }}>
+                  <span className={styles.nameFieldLabel}>
+                    Seat {i + 1} (you)
+                  </span>
+                  <input
+                    type="text"
+                    value={seat.name}
+                    onChange={(e) => onRename(i, e.target.value)}
+                    className={styles.nameInput}
+                    aria-label={`Rename seat ${i + 1}`}
+                  />
+                </label>
+              </li>
+            );
+          }
+          return (
+            <li
+              key={i}
+              className={styles.claimRow}
+              style={{ display: "flex", gap: 8, alignItems: "center" }}
+            >
+              <button
+                type="button"
+                onClick={() => onClaim(i)}
+                disabled={isTakenByOther}
+                style={{ all: "unset", cursor: "pointer", flex: 1 }}
+              >
+                Seat {i + 1} — {seat.name}
+                {isTakenByOther && (
+                  <em
+                    style={{
+                      marginLeft: 8,
+                      opacity: 0.7,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    (taken)
+                  </em>
+                )}
+              </button>
+              {canRemove && !isTakenByOther && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  className={styles.changeButton}
+                  aria-label={`Remove seat ${i + 1}`}
+                >
+                  remove
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {canAdd && (
+        <button
+          type="button"
+          onClick={() => onAdd(`Player ${seats.length + 1}`)}
+          className={styles.changeButton}
+        >
+          + Add seat
+        </button>
+      )}
     </div>
   );
 }

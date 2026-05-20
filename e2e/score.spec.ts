@@ -80,31 +80,33 @@ test.describe("score layer", () => {
   test("+ and - update the score for the selected player", async ({ page }) => {
     await startRoot(page, 2);
     // Marquise is the active player and so the default selection — the
-    // selected-row +/- buttons target Marquise out of the gate.
+    // selected-row +/- buttons target Marquise out of the gate. We
+    // assert against each player's marker aria-label rather than the
+    // selected-row text so the assertion can't be satisfied by any
+    // other "N" elsewhere on the score panel (track ticks, the other
+    // player coincidentally holding the same score).
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
-    // Selected-row score reads 3.
-    await expect(
-      page.getByLabel(/^Scores$/).getByText(/^3$/),
-    ).toBeVisible();
+    await expect(marker(page, "Marquise de Cat")).toHaveAccessibleName(
+      /score 3$/i,
+    );
 
     await decButton(page, "Marquise de Cat").click();
-    await expect(
-      page.getByLabel(/^Scores$/).getByText(/^2$/),
-    ).toBeVisible();
+    await expect(marker(page, "Marquise de Cat")).toHaveAccessibleName(
+      /score 2$/i,
+    );
 
     // Selecting Eyrie's marker re-points the +/- controls to Eyrie.
     await marker(page, "Eyrie Dynasties").click();
     await incButton(page, "Eyrie Dynasties").click();
-    await expect(
-      page.getByLabel(/^Scores$/).getByText(/^1$/),
-    ).toBeVisible();
-    // Marquise's recorded score didn't change — verify by re-selecting.
-    await marker(page, "Marquise de Cat").click();
-    await expect(
-      page.getByLabel(/^Scores$/).getByText(/^2$/),
-    ).toBeVisible();
+    await expect(marker(page, "Eyrie Dynasties")).toHaveAccessibleName(
+      /score 1$/i,
+    );
+    // Marquise's recorded score didn't change.
+    await expect(marker(page, "Marquise de Cat")).toHaveAccessibleName(
+      /score 2$/i,
+    );
   });
 
   test("- is disabled at min, + is disabled at max (Root: 0..30)", async ({

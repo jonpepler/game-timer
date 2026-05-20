@@ -7,7 +7,7 @@ import "react-circular-progressbar/dist/styles.css";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { Footer } from "@/components/timer/Footer";
 import { FullScreen } from "@/components/FullScreen";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
@@ -242,16 +242,89 @@ export default function Home() {
         return;
       }
       case "SETUP_PICK": {
-        // Wizard-time picker pick from a seated companion. We route it
-        // straight into the wizard's setupContext via the imperative
-        // handle; the wizard handles its own validation against the
-        // setupSteps schema + already-applied picks.
+        // Wizard-time picker pick from a seated companion. Player-pick
+        // is identity-bound: a peer can only pick for the seat they've
+        // claimed. The host enforces this against claimMap before
+        // forwarding to the wizard.
         const handle = wizardHandleRef.current;
         if (!handle) {
           peerLog.warn("SETUP_PICK dropped — wizard not mounted", { peerId });
           return;
         }
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("SETUP_PICK rejected — peer hasn't claimed a seat", {
+            peerId,
+          });
+          return;
+        }
+        if (claimed !== msg.seatIndex) {
+          peerLog.warn("SETUP_PICK rejected — seatIndex mismatch with claim", {
+            peerId,
+            claimed,
+            requested: msg.seatIndex,
+          });
+          return;
+        }
         handle.applyPick(msg.stepId, msg.seatIndex, msg.optionId);
+        return;
+      }
+      case "SEATING_REQUEST": {
+        const handle = wizardHandleRef.current;
+        if (!handle) {
+          peerLog.warn("SEATING_REQUEST dropped — wizard not mounted", {
+            peerId,
+          });
+          return;
+        }
+        // For claims, the peer is binding their identity to a seat —
+        // first-come-first-served. Reject if the seat is already
+        // claimed by someone else.
+        if (msg.action.kind === "claim") {
+          const seatIndex = msg.action.seatIndex;
+          const existing = Object.entries(claimMap).find(
+            ([otherPeer, idx]) => idx === seatIndex && otherPeer !== peerId,
+          );
+          if (existing) {
+            peerLog.warn("claim rejected — seat already taken", {
+              peerId,
+              seatIndex,
+              by: existing[0],
+            });
+            return;
+          }
+        }
+        const ok = handle.applySeatingChange(msg.stepId, msg.action);
+        if (!ok) {
+          peerLog.warn("SEATING_REQUEST rejected by wizard", { peerId });
+          return;
+        }
+        if (msg.action.kind === "claim") {
+          setClaimMap((prev) => ({
+            ...prev,
+            [peerId]: (msg.action as { seatIndex: number }).seatIndex,
+          }));
+        } else if (msg.action.kind === "remove") {
+          // The removed seat takes any claim against it with it, and
+          // claims above it shift down by one so they still point at
+          // the same identity.
+          const removed = msg.action.seatIndex;
+          setClaimMap((prev) => {
+            const next: Record<string, number> = {};
+            for (const [pid, idx] of Object.entries(prev)) {
+              if (idx === removed) continue;
+              next[pid] = idx > removed ? idx - 1 : idx;
+            }
+            return next;
+          });
+        }
+        return;
+      }
+      case "TAP_TIMER": {
+        // The companion-side equivalent of tapping the timer
+        // container. Always allowed — Generic + no-tracking is the
+        // primary case but it's harmless in any mode.
+        resetTimer();
         return;
       }
     }
@@ -311,6 +384,56 @@ export default function Home() {
   useEffect(() => {
     sessionHostSendRef.current = sessionHost.send;
   }, [sessionHost.send]);
+  // Latest seating snapshot from the wizard — kept here so we can
+  // re-broadcast SETUP_SEATING when the claim map changes (peers
+  // joining/leaving a claimed seat) without waiting for the wizard
+  // to re-emit.
+  const seatingSnapshotRef = useRef<{
+    stepId: string;
+    seats: Array<{ name: string }>;
+    minPlayers: number;
+    maxPlayers: number;
+  } | null>(null);
+  const claimMapRef = useRef(claimMap);
+
+  const broadcastSeating = useCallback(() => {
+    const snapshot = seatingSnapshotRef.current;
+    if (!snapshot) return;
+    // Project the peerId→seatIndex claim map onto a per-seat list of
+    // claiming peer ids, with `null` for unclaimed seats.
+    const claimedBy: Array<string | null> = snapshot.seats.map(() => null);
+    for (const [peerId, seatIndex] of Object.entries(claimMapRef.current)) {
+      if (seatIndex >= 0 && seatIndex < claimedBy.length) {
+        claimedBy[seatIndex] = peerId;
+      }
+    }
+    sessionHostSendRef.current({
+      type: "SETUP_SEATING",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      stepId: snapshot.stepId,
+      seats: snapshot.seats,
+      claimedBy,
+      minPlayers: snapshot.minPlayers,
+      maxPlayers: snapshot.maxPlayers,
+    });
+  }, []);
+
+  // Mirror claimMap into the ref so broadcastSeating reads the latest
+  // value, and re-broadcast whenever the claim map changes (so other
+  // companions see fresh `claimedBy`).
+  useEffect(() => {
+    claimMapRef.current = claimMap;
+    broadcastSeating();
+  }, [claimMap, broadcastSeating]);
+
+  // Newly-connected companions also need the current seating snapshot
+  // so they can see the seat list + render claim/rename/add controls
+  // before the game starts.
+  useEffect(() => {
+    if (sessionHost.status !== "open") return;
+    broadcastSeating();
+  }, [peerCount, sessionHost.status, broadcastSeating]);
+
   const wizardPeerHooks = useMemo(
     () => ({
       onTurnStart: (info: {
@@ -339,8 +462,17 @@ export default function Home() {
           stepId: info.stepId,
         });
       },
+      onSeatingChange: (info: {
+        stepId: string;
+        seats: Array<{ name: string }>;
+        minPlayers: number;
+        maxPlayers: number;
+      }) => {
+        seatingSnapshotRef.current = info;
+        broadcastSeating();
+      },
     }),
-    [],
+    [broadcastSeating],
   );
   const { open, isOpen, modal } = useGameSetup({
     onSubmit: applyConfig,

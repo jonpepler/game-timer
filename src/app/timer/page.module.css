@@ -9,9 +9,17 @@
 }
 
 .container {
+  /* `position: relative` so absolutely-positioned children (overlay,
+     footer) anchor against this container rather than the viewport.
+     `100dvh` follows the visible viewport on iOS (URL bar in/out),
+     with `100vh` as a static fallback for browsers that don't support
+     dvh yet. Together these stop the overlay from sliding under the
+     URL bar on mobile. */
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   font-family:
     "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans",
     Arial, sans-serif;
@@ -27,6 +35,12 @@
   gap: 12px;
   align-items: stretch;
   pointer-events: none;
+  /* Cap the overlay's height so when the score panel + time-share
+     would otherwise grow taller than the available space above the
+     footer, the column scrolls internally instead of pushing the
+     bottom segment off-screen. */
+  max-height: calc(100% - 112px);
+  overflow-y: auto;
 }
 
 .activePlayer {
