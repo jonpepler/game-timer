@@ -20,6 +20,11 @@ export type PlayerMetadataValue =
       // onto an <img src>. Carried in the metadata bag so the runtime
       // Player keeps all the visual data the option supplied.
       iconSrc?: string;
+      // Optional path to a per-option HEAD icon (portrait crop, used
+      // by the score panel + victory hero where the full-body
+      // silhouette is too tall). Falls back to `iconSrc` when
+      // unavailable.
+      headIconSrc?: string;
     }
   | { type: "scalar"; value: string | number | boolean };
 

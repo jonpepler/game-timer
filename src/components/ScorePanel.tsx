@@ -6,10 +6,12 @@ import type { ScoreConfig } from "@/state/gameDefinition";
 interface Player {
   name: string;
   color: string;
-  // Optional silhouette SVG path (relative to the deployment) — when
-  // present, markers and chips render the icon instead of the
-  // player's name initial.
+  // Optional silhouette SVG path (relative to the deployment).
   iconSrc?: string;
+  // Optional HEAD portrait crop — preferred over `iconSrc` for the
+  // score panel since markers + chips are small circles and a
+  // full-body meeple silhouette doesn't read at that size.
+  headIconSrc?: string;
 }
 
 interface ScorePanelProps {
@@ -116,10 +118,21 @@ export function ScorePanel({
                   aria-label={`${player.name} score ${score}`}
                   title={`${player.name}: ${score}`}
                 >
-                  {player.iconSrc ? (
-                    // Silhouette overlaid on the coloured chip. Solid
-                    // dark fill via mask so the icon reads against the
-                    // faction tint regardless of how light/dark it is.
+                  {player.headIconSrc ? (
+                    // Head-icon PNG (portrait crop) — render as a
+                    // raster image so the artwork's own colours
+                    // come through. The marker's circular border
+                    // crops it into the chip shape.
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={player.headIconSrc}
+                      alt=""
+                      aria-hidden
+                      className={styles.markerHead}
+                    />
+                  ) : player.iconSrc ? (
+                    // Fallback: silhouette overlaid on the coloured
+                    // chip via mask-image.
                     <span
                       className={styles.markerIcon}
                       style={{
@@ -159,7 +172,15 @@ export function ScorePanel({
                   className={styles.chipSwatch}
                   style={{ background: player.color }}
                 >
-                  {player.iconSrc ? (
+                  {player.headIconSrc ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={player.headIconSrc}
+                      alt=""
+                      aria-hidden
+                      className={styles.markerHead}
+                    />
+                  ) : player.iconSrc ? (
                     <span
                       className={styles.markerIcon}
                       style={{

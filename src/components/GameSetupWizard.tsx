@@ -851,11 +851,16 @@ function collectPlayers(
         : undefined;
       const metadata: Record<string, PlayerMetadataValue> = {};
       if (visualKey && option) {
-        const meeple = (
+        const assets = (
           option as unknown as {
-            assets?: { meepleSvg?: { appPath?: string } };
+            assets?: {
+              meepleSvg?: { appPath?: string };
+              headIcon?: Array<{ appPath?: string }>;
+            };
           }
-        ).assets?.meepleSvg?.appPath;
+        ).assets;
+        const meeple = assets?.meepleSvg?.appPath;
+        const head = assets?.headIcon?.[0]?.appPath;
         metadata[visualKey] = {
           type: "selected-option",
           optionId: option.id,
@@ -863,6 +868,7 @@ function collectPlayers(
           color: option.color ?? fallbackColor(i),
           description: option.description,
           ...(meeple ? { iconSrc: meeple } : {}),
+          ...(head ? { headIconSrc: head } : {}),
         };
       }
       return { name: seat.name, metadata };

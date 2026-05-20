@@ -167,7 +167,7 @@
         "excludeOptionIds": [
           "lizards"
         ],
-        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -182,7 +182,7 @@
         "excludeOptionIds": [
           "riverfolk"
         ],
-        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -194,7 +194,7 @@
         "label": "Bandit Crew",
         "demotedLabel": null,
         "module": "riverfolk",
-        "demotedLabelTodo": "Riverfolk Hirelings Pack \u2014 verify on therootdatabase.com",
+        "demotedLabelTodo": "Riverfolk Hirelings Pack — verify on therootdatabase.com",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -337,7 +337,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/marquise.svg",
-            "appPath": "factions/root/meeples/marquise.svg"
+            "appPath": "games/root/meeples/marquise.svg"
           },
           "headIcon": [
             {
@@ -346,7 +346,8 @@
               "originalName": "faction-marquise.png",
               "viewUrl": "https://drive.google.com/file/d/1Caii8wzF2Ptqn8n1CTEqJVF0vvl3ybA4/view?usp=drivesdk",
               "bytes": 46115,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/marquise.png"
             }
           ],
           "meeple": {
@@ -389,7 +390,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/eyrie.svg",
-            "appPath": "factions/root/meeples/eyrie.svg"
+            "appPath": "games/root/meeples/eyrie.svg"
           },
           "headIcon": [
             {
@@ -398,7 +399,8 @@
               "originalName": "faction-eyrie.png",
               "viewUrl": "https://drive.google.com/file/d/1wDQmQMbA4AxlxYvCpgAmS--1foPb8Lyu/view?usp=drivesdk",
               "bytes": 42561,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/eyrie.png"
             }
           ],
           "meeple": {
@@ -441,7 +443,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/alliance.svg",
-            "appPath": "factions/root/meeples/alliance.svg"
+            "appPath": "games/root/meeples/alliance.svg"
           },
           "headIcon": [
             {
@@ -450,7 +452,8 @@
               "originalName": "faction-woodland.png",
               "viewUrl": "https://drive.google.com/file/d/19raDWflW80AnLjyZPVxwUjMFA2C9_u9C/view?usp=drivesdk",
               "bytes": 65943,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/alliance.png"
             }
           ]
         }
@@ -564,7 +567,7 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/vagrant.svg",
             "note": "EwenDC names the Vagabond meeple 'vagrant'.",
-            "appPath": "factions/root/meeples/vagabond.svg"
+            "appPath": "games/root/meeples/vagabond.svg"
           },
           "headIcon": [
             {
@@ -573,7 +576,8 @@
               "originalName": "faction-vagabond.png",
               "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk",
               "bytes": 59851,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/vagabond.png"
             }
           ],
           "vpMarkers": [
@@ -627,7 +631,7 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/cult.svg",
             "note": "EwenDC names this 'cult'.",
-            "appPath": "factions/root/meeples/lizards.svg"
+            "appPath": "games/root/meeples/lizards.svg"
           },
           "headIcon": [
             {
@@ -636,7 +640,8 @@
               "originalName": "faction-cult.png",
               "viewUrl": "https://drive.google.com/file/d/1LulrXXc6UQ6R2dXqHU4uBZ7JACkkkXxc/view?usp=drivesdk",
               "bytes": 63921,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/lizards.png"
             }
           ]
         }
@@ -657,7 +662,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/riverfolk.svg",
-            "appPath": "factions/root/meeples/riverfolk.svg"
+            "appPath": "games/root/meeples/riverfolk.svg"
           },
           "headIcon": [
             {
@@ -666,7 +671,8 @@
               "originalName": "faction-riverfolk.png",
               "viewUrl": "https://drive.google.com/file/d/1c7b0-jLq_RcRXJ3f-xTMxZlmMNCRgrC0/view?usp=drivesdk",
               "bytes": 72723,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/riverfolk.png"
             }
           ],
           "adsetCard": {
@@ -695,7 +701,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/duchy.svg",
-            "appPath": "factions/root/meeples/duchy.svg"
+            "appPath": "games/root/meeples/duchy.svg"
           },
           "headIcon": [
             {
@@ -704,7 +710,8 @@
               "originalName": "faction-duchy.png",
               "viewUrl": "https://drive.google.com/file/d/1-jlJMD2bruDZ6WxOmtGOvFSjo_-4ch-6/view?usp=drivesdk",
               "bytes": 55418,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/duchy.png"
             }
           ]
         }
@@ -725,7 +732,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/corvid.svg",
-            "appPath": "factions/root/meeples/corvids.svg"
+            "appPath": "games/root/meeples/corvids.svg"
           },
           "headIcon": [
             {
@@ -734,7 +741,8 @@
               "originalName": "faction-corvid.png",
               "viewUrl": "https://drive.google.com/file/d/1rNOJJ0lIEoL6Oyx2bpJhEzhVC2baLdfm/view?usp=drivesdk",
               "bytes": 60630,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/corvids.png"
             },
             {
               "source": "batmaster-faction-heads",
@@ -765,7 +773,7 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/warlord.svg",
             "note": "EwenDC names this 'warlord'.",
-            "appPath": "factions/root/meeples/hundreds.svg"
+            "appPath": "games/root/meeples/hundreds.svg"
           },
           "headIcon": [
             {
@@ -774,7 +782,8 @@
               "originalName": "faction-lord of the hundreds.png",
               "viewUrl": "https://drive.google.com/file/d/1a4km21SrPdy3cbTkY2O0gKzXCUQCqDdd/view?usp=drivesdk",
               "bytes": 16174,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/hundreds.png"
             },
             {
               "source": "batmaster-faction-heads",
@@ -846,7 +855,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/keepers.svg",
-            "appPath": "factions/root/meeples/keepers.svg"
+            "appPath": "games/root/meeples/keepers.svg"
           },
           "headIcon": [
             {
@@ -855,7 +864,8 @@
               "originalName": "faction-keepers.png",
               "viewUrl": "https://drive.google.com/file/d/1uhxlOKcZNCCWynFXJ8Gy1w7lrH1HeBpX/view?usp=drivesdk",
               "bytes": 25131,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/keepers.png"
             },
             {
               "source": "batmaster-faction-heads",
@@ -873,7 +883,7 @@
         "color": "#385723",
         "module": "homeland",
         "matchingHireling": "roamers",
-        "description": "Frog newcomers seeking a peaceful Woodland home \u2014 but quick to harden under pressure.",
+        "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
         "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
           "Place 1 lilypad garden in any 3 clearings (3 gardens total).",
@@ -885,7 +895,7 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/diaspora.svg",
             "note": "EwenDC names this 'diaspora'.",
-            "appPath": "factions/root/meeples/lilypad.svg"
+            "appPath": "games/root/meeples/lilypad.svg"
           },
           "headIcon": [
             {
@@ -894,7 +904,8 @@
               "originalName": "Frogs_ Lilypad Diaspora.png",
               "viewUrl": "https://drive.google.com/file/d/1AsDXS5-LN79m7YZwrM49jRNv6I663ASR/view?usp=drivesdk",
               "bytes": 18336,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/lilypad.png"
             }
           ]
         }
@@ -917,7 +928,7 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/council.svg",
             "note": "EwenDC names this 'council'.",
-            "appPath": "factions/root/meeples/twilight.svg"
+            "appPath": "games/root/meeples/twilight.svg"
           },
           "headIcon": [
             {
@@ -926,7 +937,8 @@
               "originalName": "Bats_ Twilight Council.png",
               "viewUrl": "https://drive.google.com/file/d/1ObTj5uzoZpt0ie7iaQFzfQU_OMvM05vE/view?usp=drivesdk",
               "bytes": 22986,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/twilight.png"
             }
           ]
         }
@@ -1046,7 +1058,7 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/knaves.svg",
-            "appPath": "factions/root/meeples/knaves.svg"
+            "appPath": "games/root/meeples/knaves.svg"
           },
           "headIcon": [
             {
@@ -1055,7 +1067,8 @@
               "originalName": "Skunks_ Knaves of the Deepwood.png",
               "viewUrl": "https://drive.google.com/file/d/1mXI3vNk--7wECMbzyxONnLYaH5gFeKO-/view?usp=drivesdk",
               "bytes": 20375,
-              "format": "png"
+              "format": "png",
+              "appPath": "games/root/heads/knaves.png"
             }
           ],
           "background": {
@@ -1099,7 +1112,7 @@
       },
       {
         "id": "batmaster-faction-heads",
-        "label": "Faction Head Icons (batmaster1337, Jan 2023) \u2014 fills base-game gaps",
+        "label": "Faction Head Icons (batmaster1337, Jan 2023) — fills base-game gaps",
         "viewUrl": "https://drive.google.com/drive/folders/1fKgErFKzZtg2ONebon98_srT-lWeRVQ5"
       },
       {
@@ -1127,8 +1140,8 @@
       "source": "user-palette",
       "appliedToDefinitionAt": "2026-05-19",
       "uiContrastWarnings": [
-        "vagabond #EBEBEB is near-white \u2014 clashes with the dark theme's light text token; player chip needs an outline.",
-        "twilight #4A2E1B / lilypad #385723 / knaves #595959 are dark \u2014 low contrast against the dark surface tokens. Best rendered via the meeple silhouette on top of the faction-coloured fill."
+        "vagabond #EBEBEB is near-white — clashes with the dark theme's light text token; player chip needs an outline.",
+        "twilight #4A2E1B / lilypad #385723 / knaves #595959 are dark — low contrast against the dark surface tokens. Best rendered via the meeple silhouette on top of the faction-coloured fill."
       ]
     },
     "vpLaurel": {
@@ -1140,7 +1153,8 @@
           "viewUrl": "https://drive.google.com/file/d/1hDsnoQOiJW0tseLr7D6J_0KaeNVqUKR3/view?usp=drivesdk",
           "bytes": 11804,
           "format": "png",
-          "note": "Primary laurel \u2014 wraps the leading-player head icon."
+          "note": "Primary laurel — wraps the leading-player head icon.",
+          "appPath": "games/root/vp/laurel.png"
         },
         {
           "fileId": "176qhUSZWP0zNE4JRAPG4G43HxuV29iQb",

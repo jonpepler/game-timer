@@ -23,7 +23,12 @@ import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
 import { SharePanel } from "@/components/SharePanel";
-import { playerColor, playerIcon, playerSubheading } from "@/lib/playerVisual";
+import {
+  playerColor,
+  playerHeadIcon,
+  playerIcon,
+  playerSubheading,
+} from "@/lib/playerVisual";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
@@ -599,12 +604,17 @@ export default function Home() {
 
   // Project players to a renderable view with resolved colour + icon,
   // since the runtime Player carries metadata not a top-level colour.
+  // `iconSrc` is the full-body silhouette (used on the active-player
+  // banner + faction picker); `headIconSrc` is the portrait crop
+  // used on the score panel + victory hero where the long meeple
+  // doesn't fit.
   const playerViews = useMemo(
     () =>
       players?.map((p, i) => ({
         name: p.name,
         color: playerColor(p, i, visualKey),
         iconSrc: playerIcon(p, visualKey),
+        headIconSrc: playerHeadIcon(p, visualKey),
       })),
     [players, visualKey],
   );
@@ -666,7 +676,16 @@ export default function Home() {
             // "X wins" replace it. The footer (turns left / play /
             // undo / eta) is also hidden below; only the score
             // panel + time share stay at the bottom.
-            <VictoryBanner victor={victorPlayer} />
+            <VictoryBanner
+              victor={{
+                ...victorPlayer,
+                // Prefer the head crop for the wreath's inner slot —
+                // the meeple silhouette is too tall to read at the
+                // hero size.
+                iconSrc: victorPlayer.headIconSrc ?? victorPlayer.iconSrc,
+              }}
+              laurelSrc={activeDef?.vpLaurelPath}
+            />
           ) : (
             <>
               {activePlayer && (

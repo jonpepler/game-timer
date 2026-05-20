@@ -67,6 +67,22 @@ export const playerIcon = (
   return undefined;
 };
 
+// HEAD icon — portrait crop used by the score panel + victory hero
+// where the full-body silhouette is too tall. Falls back to the
+// regular silhouette icon when no head crop was provided.
+export const playerHeadIcon = (
+  player: Player | undefined,
+  visualKey: string | undefined,
+): string | undefined => {
+  if (player && visualKey) {
+    const meta = player.metadata[visualKey];
+    if (meta?.type === "selected-option") {
+      return meta.headIconSrc ?? meta.iconSrc;
+    }
+  }
+  return undefined;
+};
+
 // Subheading shown beneath the player's display name (e.g. "Marquise
 // de Cat" under "Jon"). Returns undefined when the active definition
 // declares no subheading source OR the metadata's label happens to

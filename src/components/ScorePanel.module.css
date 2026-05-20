@@ -100,6 +100,18 @@
   mask-position: center;
 }
 
+/* Raster head-icon variant — when the player has a portrait crop
+   (e.g. Root's batmaster faction heads), we render it as a real
+   image so the artwork's colours come through. The marker's own
+   border crops it into the circle. */
+.markerHead {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
+}
+
 /* ── Selected-player controls (shared by track + leaderboard) ─────── */
 
 .selectedRow {

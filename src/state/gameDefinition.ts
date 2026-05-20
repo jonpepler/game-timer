@@ -182,6 +182,11 @@ export const GameDefinitionSchema = z.object({
   // Metadata key whose label renders as a small subheading beneath
   // each player's name. Suppressed when it'd duplicate the name.
   playerSubheadingFrom: z.string().optional(),
+  // Optional path (relative to the deployment basePath) to a laurel
+  // wreath asset wrapping the leading player's head icon in the
+  // VictoryBanner. Resolved from the modules file's referenceCatalog
+  // at merge time.
+  vpLaurelPath: z.string().optional(),
 });
 export type GameDefinition = z.infer<typeof GameDefinitionSchema>;
 
@@ -379,7 +384,22 @@ export const loadGameDefinitionWithModules = (
   });
 
   const { contentSource: _src, ...rest } = structure;
-  return parseGameDefinition({ ...rest, setupSteps });
+  // Lift the laurel asset path out of the reference catalog if the
+  // modules file declared one. The catalog block sits alongside
+  // `categories` via the passthrough() escape hatch.
+  const refCatalog = (
+    modules as unknown as {
+      referenceCatalog?: {
+        vpLaurel?: { candidates?: Array<{ appPath?: string }> };
+      };
+    }
+  ).referenceCatalog;
+  const vpLaurelPath = refCatalog?.vpLaurel?.candidates?.[0]?.appPath;
+  return parseGameDefinition({
+    ...rest,
+    setupSteps,
+    ...(vpLaurelPath ? { vpLaurelPath } : {}),
+  });
 };
 
 // ── Setup wizard outputs ──────────────────────────────────────────

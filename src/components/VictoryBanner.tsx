@@ -14,10 +14,10 @@ interface Player {
 
 interface VictoryBannerProps {
   victor: Player;
-  // Optional laurel asset (SVG / PNG) wrapping the head icon.
-  // Definitions can declare a laurel path under their assets; the
-  // timer page passes it through. When omitted, a CSS-drawn
-  // crown placeholder fills in.
+  // Optional laurel asset wrapping the head icon. The timer page
+  // resolves it from the active definition's referenceCatalog
+  // (Root ships `games/root/vp/laurel.png`). When omitted, a
+  // CSS-drawn ring + crown placeholder fills in.
   laurelSrc?: string;
 }
 
@@ -57,13 +57,16 @@ export function VictoryBanner({ victor, laurelSrc }: VictoryBannerProps) {
         )}
         <span className={styles.headInner} aria-hidden>
           {victor.iconSrc ? (
-            <span
-              className={styles.headIcon}
-              style={{
-                background: victor.color,
-                WebkitMaskImage: `url(${victor.iconSrc})`,
-                maskImage: `url(${victor.iconSrc})`,
-              }}
+            // Always render as a real <img> here — head crops are
+            // PNGs whose own artwork should come through, and
+            // meeple silhouettes look fine sized down to the
+            // inner-laurel circle even without the mask tint.
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={victor.iconSrc}
+              alt=""
+              aria-hidden
+              className={styles.headPortrait}
             />
           ) : (
             <span className={styles.headInitial}>{initial}</span>
