@@ -492,7 +492,7 @@ function CompanionScreen() {
               <span className={styles.bigStatLabel}>turns remaining</span>
             </div>
 
-            {playerViews.length === 0 && (
+            {playerViews.length === 0 && gameStarted && (
               <>
                 <div className={styles.empty}>
                   The host is running a game without per-player tracking, so
@@ -640,10 +640,15 @@ function SetupTurnPanel({
     );
   }
 
+  const pickLabel = pick?.step.label.toLowerCase() ?? "card";
   return (
-    <div className={styles.factionPicker}>
+    <div
+      className={styles.factionPicker}
+      role="region"
+      aria-label={`Your turn to pick a ${pickLabel}`}
+    >
       <div className={styles.factionPickerHeader}>
-        Your turn — choose a {pick?.step.label.toLowerCase() ?? "card"}
+        Your turn — choose a {pickLabel}
       </div>
       {visible.map((option) => {
         const isBlocked = excluded.has(option.id);

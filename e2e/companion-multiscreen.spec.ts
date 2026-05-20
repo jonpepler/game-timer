@@ -233,23 +233,33 @@ test.describe("companion multi-screen — identity-bound picks", () => {
       companion.getByRole("textbox", { name: /Rename seat 4/i }),
     ).toBeVisible({ timeout: 3000 });
 
-    // Host walks the wizard to the faction picker and skips the
-    // draft (so the full pool is visible to the seated companion).
+    // Host walks the wizard to the faction picker. Draft is ON by
+    // default — the picker IS the draft: a dealt hand of N+1 cards
+    // gets handed to the seated companion via SETUP_TURN. There's
+    // no separate "draft step then pick step" — both happen on this
+    // one screen.
     await navigateToScreen(host, /^Faction$/);
-    await host.getByRole("button", { name: /^Skip draft$/ }).click();
 
-    // Companion now receives SETUP_TURN for seat 4 — its picker
-    // overlay renders with the option list. Pick Marquise de Cat.
-    await expect(
-      companion.getByText(/Your turn — choose a faction/i),
-    ).toBeVisible({ timeout: 5000 });
-    await companion.getByRole("button", { name: /Marquise de Cat/i }).click();
-
-    // Host's wizard records the pick against seat 4 — verify via
-    // the picker summary at the bottom of the faction screen.
-    await expect(host.getByText(/Player 4.*Marquise de Cat/)).toBeVisible({
-      timeout: 3000,
+    // Companion's picker overlay renders the dealt hand. The deal
+    // is random per run, so we can't pin to a specific faction —
+    // we scope the locator to the picker region (a labelled
+    // region so it doesn't catch the page's chrome buttons), pick
+    // the first dealt card, and verify the host wizard registers
+    // that same faction against seat 4.
+    const pickerPanel = companion.getByRole("region", {
+      name: /Your turn to pick a faction/i,
     });
+    await expect(pickerPanel).toBeVisible({ timeout: 5000 });
+    const firstCard = pickerPanel.getByRole("button").first();
+    const pickedLabel = (await firstCard.innerText()).trim();
+    await firstCard.click();
+
+    // Host's wizard records the pick against seat 4. The picker
+    // summary at the bottom of the faction screen shows
+    // "Player 4 — <faction>" once a pick lands.
+    await expect(
+      host.getByText(new RegExp(`Player 4.*${pickedLabel}`)),
+    ).toBeVisible({ timeout: 3000 });
   });
 });
 
