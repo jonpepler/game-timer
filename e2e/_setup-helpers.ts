@@ -116,9 +116,7 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
         await page
           .getByRole("button", { name: options.factions[i], exact: true })
           .click();
-        await page
-          .getByRole("button", { name: /^Confirm setup$/ })
-          .click();
+        await page.getByRole("button", { name: /^Confirm setup$/ }).click();
       }
     }
   } else {
@@ -145,5 +143,36 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
   const startBtn = page.getByRole("button", { name: /start game/i });
   if (await startBtn.isVisible().catch(() => false)) {
     await startBtn.click();
+  }
+}
+
+// Score-milestone dialog (Root's hireling triggers at 4/8/12) opens
+// fullscreen and blocks every subsequent score button. Tests that
+// pump the score upward have to acknowledge the dialog after each
+// crossing — this helper polls briefly and clicks Acknowledge if it
+// appeared.
+export async function dismissMilestoneIfShown(page: Page): Promise<boolean> {
+  const ack = page.getByRole("button", { name: /^Acknowledge$/ });
+  if (await ack.isVisible().catch(() => false)) {
+    await ack.click();
+    return true;
+  }
+  return false;
+}
+
+// Increment a player's score N times, dismissing any milestone dialog
+// that pops up between clicks. The dialog is fullscreen and would
+// otherwise swallow the next + click.
+export async function incrementScoreWithMilestones(
+  page: Page,
+  playerName: string,
+  times: number,
+): Promise<void> {
+  const inc = page.getByRole("button", {
+    name: new RegExp(`Increase score for ${playerName}`, "i"),
+  });
+  for (let i = 0; i < times; i++) {
+    await inc.click();
+    await dismissMilestoneIfShown(page);
   }
 }

@@ -1,11 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
-import { startGame } from "./_setup-helpers";
+import { incrementScoreWithMilestones, startGame } from "./_setup-helpers";
 
 const BASE = "/game-timer";
 
 const startGenericPlayers = (
   page: Page,
-  { expectedTurns, playerCount }: { expectedTurns: number; playerCount: number },
+  {
+    expectedTurns,
+    playerCount,
+  }: { expectedTurns: number; playerCount: number },
 ) =>
   startGame(page, {
     expectedTurns,
@@ -61,13 +64,12 @@ test.describe("session persistence", () => {
       page.getByRole("button", {
         name: new RegExp(`^${name} score `, "i"),
       });
-    const inc = (name: string) =>
-      page.getByRole("button", {
-        name: new RegExp(`Increase score for ${name}`, "i"),
-      });
-    for (let i = 0; i < 5; i++) await inc("Player 1").click();
+    // Root's score config declares hireling-trigger milestones at
+    // 4, 8, 12 — Player 1 → 5 crosses the 4-VP dialog which has to
+    // be acknowledged before the next + click registers.
+    await incrementScoreWithMilestones(page, "Player 1", 5);
     await marker("Player 2").click();
-    for (let i = 0; i < 3; i++) await inc("Player 2").click();
+    await incrementScoreWithMilestones(page, "Player 2", 3);
 
     await page.reload();
 

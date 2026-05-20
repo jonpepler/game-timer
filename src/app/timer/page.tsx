@@ -19,6 +19,7 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
+import { MilestoneDialog } from "@/components/MilestoneDialog";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
@@ -75,6 +76,8 @@ export default function Home() {
     scoreConfig,
     victor,
     definitionId,
+    dismissMilestone,
+    pendingMilestones,
   } = useTimer({
     initialTime,
     initialExpectedTurns: defaultExpectedTurns,
@@ -341,6 +344,14 @@ export default function Home() {
         // container. Always allowed — Generic + no-tracking is the
         // primary case but it's harmless in any mode.
         resetTimer();
+        return;
+      }
+      case "DISMISS_MILESTONE": {
+        // Any connected screen can acknowledge the milestone — the
+        // dialog is fullscreen on every device, so whoever taps
+        // Acknowledge first wins. The next STATE broadcast clears
+        // the dialog on every other screen automatically.
+        dismissMilestone();
         return;
       }
     }
@@ -839,6 +850,27 @@ export default function Home() {
           onDismiss={() => setVictorDismissed(true)}
         />
       )}
+      {pendingMilestones.length > 0 &&
+        (() => {
+          // Render the FIRST pending milestone — dismissal pops the
+          // queue and the next one (if any) takes over on the next
+          // render. Looking up the player view by index gives us
+          // name + color + icon paths without re-querying metadata.
+          const m = pendingMilestones[0];
+          const pv = playerViews?.[m.playerIndex];
+          const name = pv?.name ?? `Player ${m.playerIndex + 1}`;
+          const color = pv?.color ?? "var(--color-border)";
+          return (
+            <MilestoneDialog
+              milestone={m}
+              playerName={name}
+              playerColor={color}
+              playerHeadIconSrc={pv?.headIconSrc}
+              playerIconSrc={pv?.iconSrc}
+              onDismiss={dismissMilestone}
+            />
+          );
+        })()}
       {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
           {scoresVisible && playerViews && scoreConfig && (

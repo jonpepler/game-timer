@@ -72,6 +72,22 @@ export interface GameSessionState {
   // STATE broadcast) resolve the full definition for faction lookups,
   // setup-schema rendering, etc.
   definitionId?: string;
+  // Score milestones that have already fired for each player —
+  // playerIndex → list of atScore values. A milestone fires at most
+  // once per (player, atScore) pair; re-crossing after a fire is
+  // silent.
+  firedMilestones: Record<number, number[]>;
+  // FIFO queue of unfilled milestone dialogs. The first entry is
+  // rendered as a fullscreen modal on host + companion screens; once
+  // dismissed the queue advances. Persisted so a reload doesn't drop
+  // a milestone that fired but wasn't acknowledged.
+  pendingMilestones: PendingMilestone[];
+}
+
+export interface PendingMilestone {
+  playerIndex: number;
+  atScore: number;
+  label: string;
 }
 
 export type GameSessionAction =
@@ -86,6 +102,7 @@ export type GameSessionAction =
   | { type: "INCREMENT_SCORE"; playerIndex: number; delta: number }
   | { type: "END_GAME"; victor: number | null }
   | { type: "SET_DEFINITION_ID"; definitionId: string | undefined }
+  | { type: "DISMISS_MILESTONE" }
   | { type: "RESET" };
 
 export interface GameSessionInit {
@@ -110,6 +127,8 @@ export const createInitialGameSessionState = (
   scoreConfig: params.scoreConfig,
   victor: null,
   definitionId: params.definitionId,
+  firedMilestones: {},
+  pendingMilestones: [],
 });
 
 const averageOf = (turns: TurnRecord[], fallback: number): number => {
@@ -149,7 +168,10 @@ const applyScore = (
   const min = cfg?.min ?? 0;
   const max = cfg?.max;
   const clamped =
-    max !== undefined ? Math.max(min, Math.min(max, rawValue)) : Math.max(min, rawValue);
+    max !== undefined
+      ? Math.max(min, Math.min(max, rawValue))
+      : Math.max(min, rawValue);
+  const previous = state.scores[playerIndex] ?? min;
   const scores = { ...state.scores, [playerIndex]: clamped };
   let victor = state.victor;
   if (
@@ -161,7 +183,47 @@ const applyScore = (
     victor = playerIndex;
     log.info("victory", { playerIndex, score: clamped });
   }
-  return { ...state, scores, victor };
+
+  // Walk any configured milestones and queue dialogs for the ones
+  // newly crossed by this player. A milestone fires when the score
+  // moves from below to >= atScore AND the (player, atScore) pair
+  // hasn't been recorded as fired before. Decreases never fire and
+  // they don't reset firedMilestones — a sequence 0 → 4 → 2 → 4
+  // shows the dialog exactly once.
+  let firedMilestones = state.firedMilestones;
+  let pendingMilestones = state.pendingMilestones;
+  const milestones = cfg?.milestones ?? [];
+  if (milestones.length > 0 && clamped > previous) {
+    const alreadyFired = new Set(firedMilestones[playerIndex] ?? []);
+    const newlyFired: number[] = [];
+    const newlyPending: PendingMilestone[] = [];
+    for (const m of milestones) {
+      if (m.atScore <= previous || m.atScore > clamped) continue;
+      if (alreadyFired.has(m.atScore)) continue;
+      newlyFired.push(m.atScore);
+      newlyPending.push({
+        playerIndex,
+        atScore: m.atScore,
+        label: m.label,
+      });
+    }
+    if (newlyFired.length > 0) {
+      firedMilestones = {
+        ...firedMilestones,
+        [playerIndex]: [...(firedMilestones[playerIndex] ?? []), ...newlyFired],
+      };
+      pendingMilestones = [...pendingMilestones, ...newlyPending];
+      log.info("milestones fired", { playerIndex, newlyFired });
+    }
+  }
+
+  return {
+    ...state,
+    scores,
+    victor,
+    firedMilestones,
+    pendingMilestones,
+  };
 };
 
 export const gameSessionReducer = (
@@ -240,11 +302,20 @@ export const gameSessionReducer = (
     case "SET_SCORE_CONFIG":
       // Clearing the score subsystem also clears any in-flight scores
       // and victor — a different game's score is meaningless here.
+      // Milestone state is config-bound too, so reset it.
       return {
         ...state,
         scoreConfig: action.scoreConfig,
         scores: {},
         victor: null,
+        firedMilestones: {},
+        pendingMilestones: [],
+      };
+    case "DISMISS_MILESTONE":
+      if (state.pendingMilestones.length === 0) return state;
+      return {
+        ...state,
+        pendingMilestones: state.pendingMilestones.slice(1),
       };
     case "SET_SCORE":
       return applyScore(state, action.playerIndex, action.value);

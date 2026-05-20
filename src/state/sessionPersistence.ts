@@ -22,10 +22,18 @@ export const loadSession = (): GameSessionState | undefined => {
   // those live inside react-timer-hook and reset on remount. Force the
   // session back to "not running" so the next tap re-starts the
   // countdown cleanly instead of treating it as a turn-end.
+  //
+  // Backfill milestone state for sessions saved before that feature
+  // shipped (schema version intentionally not bumped so mid-game
+  // restores still work — defaults match what createInitialGameSessionState
+  // would produce). Reads as `?? {}` / `?? []` so any genuinely empty
+  // value also gets a defined empty default.
   return {
     ...persisted.state,
     started: false,
     currentTurnStartedAt: null,
+    firedMilestones: persisted.state.firedMilestones ?? {},
+    pendingMilestones: persisted.state.pendingMilestones ?? [],
   };
 };
 

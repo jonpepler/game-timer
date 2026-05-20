@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { startGame } from "./_setup-helpers";
+import { dismissMilestoneIfShown, startGame } from "./_setup-helpers";
 
 // Dev server runs under basePath "/game-timer" (see next.config.js).
 const BASE = "/game-timer";
@@ -38,7 +38,13 @@ const decButton = (page: Page, playerName: string) =>
 const selectAndPump = async (page: Page, name: string, delta: number) => {
   await marker(page, name).click();
   if (delta > 0) {
-    for (let i = 0; i < delta; i++) await incButton(page, name).click();
+    for (let i = 0; i < delta; i++) {
+      await incButton(page, name).click();
+      // Root's milestones at 4/8/12 open a fullscreen dialog that
+      // blocks every subsequent + click. Dismiss between clicks so
+      // the loop keeps progressing.
+      await dismissMilestoneIfShown(page);
+    }
   } else {
     for (let i = 0; i < -delta; i++) await decButton(page, name).click();
   }
@@ -113,6 +119,7 @@ test.describe("score layer", () => {
     await expect(decButton(page, "Marquise de Cat")).toBeDisabled();
     for (let i = 0; i < 30; i++) {
       await incButton(page, "Marquise de Cat").click();
+      await dismissMilestoneIfShown(page);
     }
     await expect(incButton(page, "Marquise de Cat")).toBeDisabled();
   });
@@ -141,6 +148,7 @@ test.describe("score layer", () => {
 
     for (let i = 0; i < 30; i++) {
       await incButton(page, "Marquise de Cat").click();
+      await dismissMilestoneIfShown(page);
     }
 
     const banner = page.getByRole("status");

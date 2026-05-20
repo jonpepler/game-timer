@@ -13,6 +13,7 @@ import {
 import { ScorePanel } from "@/components/ScorePanel";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { VictoryBanner } from "@/components/VictoryBanner";
+import { MilestoneDialog } from "@/components/MilestoneDialog";
 import { FullScreen } from "@/components/FullScreen";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
@@ -308,6 +309,12 @@ function CompanionScreen() {
   const tapTimer = () =>
     send({
       type: "TAP_TIMER",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+    } satisfies CompanionToHostMessage);
+
+  const dismissMilestone = () =>
+    send({
+      type: "DISMISS_MILESTONE",
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
 
@@ -708,6 +715,26 @@ function CompanionScreen() {
           </>
         )}
       </div>
+      {state?.pendingMilestones && state.pendingMilestones.length > 0 && (
+        <MilestoneDialog
+          milestone={state.pendingMilestones[0]}
+          playerName={
+            playerViews[state.pendingMilestones[0].playerIndex]?.name ??
+            `Player ${state.pendingMilestones[0].playerIndex + 1}`
+          }
+          playerColor={
+            playerViews[state.pendingMilestones[0].playerIndex]?.color ??
+            "var(--color-border)"
+          }
+          playerHeadIconSrc={
+            playerViews[state.pendingMilestones[0].playerIndex]?.headIconSrc
+          }
+          playerIconSrc={
+            playerViews[state.pendingMilestones[0].playerIndex]?.iconSrc
+          }
+          onDismiss={dismissMilestone}
+        />
+      )}
     </FullScreen>
   );
 }

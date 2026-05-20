@@ -18,7 +18,6 @@ import type { GameSessionAction } from "./gameSession";
 export const GAME_DEFINITION_SCHEMA_VERSION = 1;
 export const GAME_INSTANCE_SCHEMA_VERSION = 1;
 
-
 // ── Score subsystem ───────────────────────────────────────────────
 const ScoreDisplayStyleSchema = z.enum([
   "linearTrack",
@@ -27,11 +26,21 @@ const ScoreDisplayStyleSchema = z.enum([
 ]);
 export type ScoreDisplayStyle = z.infer<typeof ScoreDisplayStyleSchema>;
 
-const ScoreVictoryTypeSchema = z.enum([
-  "firstToMax",
-  "highestAtTurnLimit",
-]);
+const ScoreVictoryTypeSchema = z.enum(["firstToMax", "highestAtTurnLimit"]);
 export type ScoreVictoryType = z.infer<typeof ScoreVictoryTypeSchema>;
+
+// Optional fire-once-per-player score thresholds. Each crossing fires
+// a fullscreen dismiss-required dialog with the configured label, so a
+// game can prompt the active player to act when their score hits a
+// specific value (e.g. Root's hireling triggers at 4, 8, 12 VP). The
+// reducer tracks fired thresholds in state.firedMilestones so undo +
+// re-cross don't re-fire, and so a thresholded player can't see the
+// same dialog twice for the same level.
+const ScoreMilestoneSchema = z.object({
+  atScore: z.number(),
+  label: z.string(),
+});
+export type ScoreMilestone = z.infer<typeof ScoreMilestoneSchema>;
 
 const ScoreConfigSchema = z.object({
   displayStyle: ScoreDisplayStyleSchema,
@@ -43,6 +52,7 @@ const ScoreConfigSchema = z.object({
       type: ScoreVictoryTypeSchema,
     })
     .optional(),
+  milestones: z.array(ScoreMilestoneSchema).optional(),
 });
 export type ScoreConfig = z.infer<typeof ScoreConfigSchema>;
 
@@ -322,10 +332,7 @@ export type OptionContent = z.infer<typeof OptionContentSchema>;
 export const GameContentModulesSchema = z
   .object({
     schemaVersion: z.number(),
-    categories: z.record(
-      z.string(),
-      z.record(z.string(), OptionContentSchema),
-    ),
+    categories: z.record(z.string(), z.record(z.string(), OptionContentSchema)),
   })
   // Passthrough so reference catalogue blocks (sources, gaps, colour
   // palette, hireling icons, vp laurels, ...) coexist alongside the
@@ -333,9 +340,8 @@ export const GameContentModulesSchema = z
   .passthrough();
 export type GameContentModules = z.infer<typeof GameContentModulesSchema>;
 
-export const parseGameContentModules = (
-  input: unknown,
-): GameContentModules => GameContentModulesSchema.parse(input);
+export const parseGameContentModules = (input: unknown): GameContentModules =>
+  GameContentModulesSchema.parse(input);
 
 // Resolve a structure + modules pair into a fully-realised, validated
 // GameDefinition. Throws with a path-into-the-document on a missing
@@ -375,11 +381,7 @@ export const loadGameDefinitionWithModules = (
       }
       return { id, ...content };
     });
-    const {
-      optionIds: _drop,
-      optionCategory: _drop2,
-      ...kindRest
-    } = kind;
+    const { optionIds: _drop, optionCategory: _drop2, ...kindRest } = kind;
     return { ...step, kind: { ...kindRest, options } };
   });
 

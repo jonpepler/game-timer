@@ -1,0 +1,130 @@
+/* Fullscreen modal — sits above the timer chrome, dim background,
+   high z-index so it covers PlayerArcs and Footer. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: overlayFade 0.18s ease;
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.card {
+  background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border);
+  border-radius: 18px;
+  padding: 28px 24px 24px;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+  animation: cardEnter 0.32s cubic-bezier(0.2, 0.7, 0.3, 1.05);
+}
+
+@keyframes cardEnter {
+  from {
+    transform: scale(0.85) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.head,
+.meeple,
+.swatch {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.head {
+  object-fit: contain;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.meeple {
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.score {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
+.body {
+  margin: 0;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.button {
+  margin-top: 8px;
+  width: 100%;
+  height: auto;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-text-inverse, #0a0a0a);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  filter: brightness(1.08);
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .card {
+    animation: none;
+  }
+}

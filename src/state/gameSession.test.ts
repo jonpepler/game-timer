@@ -388,3 +388,140 @@ describe("selectors", () => {
     expect(selectTurnElapsedSecondsList(state)).toEqual([60, 30]);
   });
 });
+
+describe("score milestones", () => {
+  const milestoneConfig = {
+    displayStyle: "linearTrack" as const,
+    min: 0,
+    max: 30,
+    increment: 1,
+    victory: { type: "firstToMax" as const },
+    milestones: [
+      { atScore: 4, label: "Trigger hireling A" },
+      { atScore: 8, label: "Trigger hireling B" },
+      { atScore: 12, label: "Trigger hireling C" },
+    ],
+  };
+
+  const init = () =>
+    gameSessionReducer(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: [
+          { name: "A", color: "#fff" },
+          { name: "B", color: "#000" },
+        ],
+        scoreConfig: milestoneConfig,
+      }),
+      { type: "START", at: 0 },
+    );
+
+  it("crossing a milestone queues a pending dialog", () => {
+    const next = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    expect(next.pendingMilestones).toEqual([
+      { playerIndex: 0, atScore: 4, label: "Trigger hireling A" },
+    ]);
+    expect(next.firedMilestones[0]).toEqual([4]);
+  });
+
+  it("does not fire the same milestone twice for the same player", () => {
+    let state = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    // Score down then back to 4 — no re-fire.
+    state = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 2,
+    });
+    state = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    expect(state.pendingMilestones).toEqual([]);
+    expect(state.firedMilestones[0]).toEqual([4]);
+  });
+
+  it("a multi-step jump queues every crossed milestone in order", () => {
+    const next = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 12,
+    });
+    expect(next.pendingMilestones.map((m) => m.atScore)).toEqual([4, 8, 12]);
+  });
+
+  it("milestones are tracked per-player independently", () => {
+    let state = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 4,
+    });
+    state = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 1,
+      value: 4,
+    });
+    expect(state.pendingMilestones).toEqual([
+      { playerIndex: 0, atScore: 4, label: "Trigger hireling A" },
+      { playerIndex: 1, atScore: 4, label: "Trigger hireling A" },
+    ]);
+  });
+
+  it("DISMISS_MILESTONE pops the FIFO queue head", () => {
+    let state = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 12,
+    });
+    expect(state.pendingMilestones).toHaveLength(3);
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    expect(state.pendingMilestones.map((m) => m.atScore)).toEqual([8, 12]);
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    expect(state.pendingMilestones.map((m) => m.atScore)).toEqual([12]);
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    expect(state.pendingMilestones).toEqual([]);
+  });
+
+  it("score decreases never fire milestones", () => {
+    let state = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 12,
+    });
+    // Clear queue then drop the score below all thresholds.
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
+    const decreased = gameSessionReducer(state, {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 0,
+    });
+    expect(decreased.pendingMilestones).toEqual([]);
+    expect(decreased.firedMilestones[0]).toEqual([4, 8, 12]);
+  });
+
+  it("SET_SCORE_CONFIG clears milestone state", () => {
+    let state = gameSessionReducer(init(), {
+      type: "SET_SCORE",
+      playerIndex: 0,
+      value: 12,
+    });
+    state = gameSessionReducer(state, {
+      type: "SET_SCORE_CONFIG",
+      scoreConfig: undefined,
+    });
+    expect(state.pendingMilestones).toEqual([]);
+    expect(state.firedMilestones).toEqual({});
+  });
+});

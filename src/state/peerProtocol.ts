@@ -135,4 +135,12 @@ export type CompanionToHostMessage =
   | {
       type: "TAP_TIMER";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
+  // Score-milestone dialog acknowledgement. Any peer (host or
+  // companion) showing the dialog can dismiss it; the request pops
+  // the host-side queue and the resulting STATE clears the dialog
+  // on every connected screen at once.
+  | {
+      type: "DISMISS_MILESTONE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
     };

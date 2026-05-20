@@ -119,8 +119,8 @@ export const useTimer = ({
   const getStopwatchString = () => getTimeString(stopwatch);
 
   // 55% of the smaller window dimension, capped at 520px. Smaller
-   // than 2/3 was — leaves more vertical room below for the score
-   // panel + time-share + footer without crowding the timer.
+  // than 2/3 was — leaves more vertical room below for the score
+  // panel + time-share + footer without crowding the timer.
   const size = Math.min(Math.min(height, width) * 0.55, 520);
 
   const pause = () => {
@@ -156,6 +156,7 @@ export const useTimer = ({
     dispatch({ type: "INCREMENT_SCORE", playerIndex, delta });
   const endGame = (victor: number | null) =>
     dispatch({ type: "END_GAME", victor });
+  const dismissMilestone = () => dispatch({ type: "DISMISS_MILESTONE" });
 
   return {
     state,
@@ -184,6 +185,8 @@ export const useTimer = ({
     setScore,
     incrementScore,
     endGame,
+    dismissMilestone,
+    pendingMilestones: state.pendingMilestones,
     reset,
     scores: state.scores,
     scoreConfig: state.scoreConfig,
