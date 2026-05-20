@@ -15,6 +15,11 @@
   gap: 12px;
   font-size: 13px;
   color: var(--color-text-muted);
+  /* FullScreen toggle (36px + 15px viewport margin) sits in the top
+     left corner — reserve room so the connection status doesn't hide
+     under it. */
+  padding-left: 52px;
+  min-height: 36px;
 }
 
 .statusDot {
@@ -348,6 +353,61 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+.factionPickerHeader {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+/* Each dealt faction renders as a wide tappable row — override the
+   global `button { width: 50px; height: 40px }` reset so the faction
+   label has room to breathe on mobile. */
+.factionButton {
+  width: 100%;
+  height: auto;
+  min-height: 56px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.08s ease;
+}
+
+.factionButton:hover:not(:disabled),
+.factionButton:focus-visible:not(:disabled) {
+  border-color: var(--color-accent);
+  background: var(--color-surface-elevated);
+}
+
+.factionButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.factionButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.factionSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+  flex-shrink: 0;
 }
 
 .factionSelect {

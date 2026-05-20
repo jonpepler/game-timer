@@ -626,18 +626,19 @@ export const GameSetupWizard = forwardRef<
       aria-labelledby="wizard-title"
       onClose={onClose}
     >
-      {sidePanel != null && (
-        <aside
-          className={`${styles.sidePanel} ${
-            sidePanelVisible ? "" : styles.sidePanelHidden
-          }`}
-          aria-hidden={!sidePanelVisible}
-        >
-          {sidePanel}
-        </aside>
-      )}
+      <div className={styles.modalInner}>
+        {sidePanel != null && (
+          <aside
+            className={`${styles.sidePanel} ${
+              sidePanelVisible ? "" : styles.sidePanelHidden
+            }`}
+            aria-hidden={!sidePanelVisible}
+          >
+            {sidePanel}
+          </aside>
+        )}
       <form
-        className={styles.form}
+        className={`${styles.form} ${styles.formCard}`}
         onSubmit={(e) => {
           e.preventDefault();
           next();
@@ -746,6 +747,7 @@ export const GameSetupWizard = forwardRef<
           </div>
         </footer>
       </form>
+      </div>
     </dialog>
   );
 });

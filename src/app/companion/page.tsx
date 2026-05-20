@@ -492,24 +492,27 @@ function CompanionScreen() {
               <span className={styles.bigStatLabel}>turns remaining</span>
             </div>
 
-            {playerViews.length === 0 && gameStarted && (
-              <>
-                <div className={styles.empty}>
-                  The host is running a game without per-player tracking, so
-                  there&apos;s nothing to claim or score from here. Tap below to
-                  advance the timer.
-                </div>
-                <div className={styles.endTurnSlot}>
-                  <button
-                    type="button"
-                    onClick={tapTimer}
-                    className={styles.endTurnButton}
-                  >
-                    Next turn
-                  </button>
-                </div>
-              </>
-            )}
+            {playerViews.length === 0 &&
+              gameStarted &&
+              !pendingSeating &&
+              !pendingTurn && (
+                <>
+                  <div className={styles.empty}>
+                    The host is running a game without per-player tracking,
+                    so there&apos;s nothing to claim or score from here. Tap
+                    below to advance the timer.
+                  </div>
+                  <div className={styles.endTurnSlot}>
+                    <button
+                      type="button"
+                      onClick={tapTimer}
+                      className={styles.endTurnButton}
+                    >
+                      Next turn
+                    </button>
+                  </div>
+                </>
+              )}
 
             {playerViews.length > 0 && claimedSlot === null && (
               <div className={styles.claimPanel}>
