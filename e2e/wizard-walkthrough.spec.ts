@@ -90,15 +90,16 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
 
   // ── Faction picker (last screen) ─────────────────────────
   await navigateToScreen(page, /^Faction$/);
-  await expect(page.locator(":text('choose a faction')").first()).toBeVisible();
+  // The hero picker is identity-bound — the prompt names the
+  // active picker seat ("choose your faction").
+  await expect(page.getByText(/choose your faction/i)).toBeVisible();
   await save(page, "10-faction-picker-draft");
   // Switch out of draft mode for the screenshot below.
   await page.getByRole("button", { name: /^Skip draft$/ }).click();
-  // Reveal ADSET text on Marquise via its labelled toggle.
-  await page
-    .getByRole("button", { name: /Show setup for Marquise de Cat/ })
-    .click();
-  await expect(page.getByText("Place your Keep")).toBeVisible();
+  // ADSET steps are now PERMANENTLY rendered on each card (no
+  // toggle) — the hero treatment shows them inline, so we just
+  // assert the marquise's setup text is visible somewhere.
+  await expect(page.getByText("Place your Keep").first()).toBeVisible();
   await save(page, "11-faction-picker-with-adset");
 
   // Pick factions for all four seats. Picking counts down from the
@@ -127,8 +128,22 @@ test("Root faction draft — picker deals n+1 cards by default", async ({
   await page.getByLabel(/^Game$/).selectOption("root");
   // The picker defaults to draft mode, so just walking to it shows
   // a dealt hand of (seats + 1) cards. Default seats = 4 → 5 cards.
+  // We assert by counting the dealt card buttons in the hero row:
+  // each card is a `role="button"` keyed by its faction label, and
+  // exactly N+1 of them render in draft mode (vs the full legal
+  // pool in skip-draft mode).
   await navigateToScreen(page, /^Faction$/);
-  await expect(page.getByText(/Drafting 5 cards/)).toBeVisible();
+  // The picker prompt always names the active seat, so this proves
+  // we're on the hero picker screen.
+  await expect(page.getByText(/choose your faction/i)).toBeVisible();
+  // Count the dealt cards — Root has 14+ legal factions, so 5 ≠
+  // the full pool.
+  const cards = page
+    .getByRole("region", { name: /faction picker/i })
+    .or(page.locator('[class*="heroCardRow"]'))
+    .first()
+    .getByRole("button");
+  await expect(cards).toHaveCount(5);
   await save(page, "draft-02-faction-pool");
 });
 

@@ -307,11 +307,12 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     const pickedLabel = (await firstCard.innerText()).trim();
     await firstCard.click();
 
-    // Host's wizard records the pick against seat 4. The picker
-    // summary at the bottom of the faction screen shows
-    // "Player 4 — <faction>" once a pick lands.
+    // Host's wizard records the pick against seat 4. The picker's
+    // dot summary uses `title` (and aria-label) to surface each
+    // seat's pick — assert there's a dot titled "Player 4 — X" for
+    // whichever faction the companion just picked.
     await expect(
-      host.getByText(new RegExp(`Player 4.*${pickedLabel}`)),
+      host.getByTitle(new RegExp(`Player 4 — ${pickedLabel}`)),
     ).toBeVisible({ timeout: 3000 });
   });
 });

@@ -80,6 +80,41 @@
   flex-direction: column;
 }
 
+/* ── Hero mode: faction picker takes the whole viewport ──────────
+   The wizard's progress + crumbs are hidden, the form goes
+   edge-to-edge, and the picker renders a wide card row. Triggered
+   by data-hero on the modal. */
+.modal[data-hero="true"] {
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+.modal[data-hero="true"] .modalInner {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+.modal[data-hero="true"] .formCard {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  border: none;
+  border-radius: 0;
+  background: var(--color-surface);
+}
+.modal[data-hero="true"] .header {
+  display: none;
+}
+.modal[data-hero="true"] .body {
+  padding: 24px 0 0;
+  min-height: 0;
+  flex: 1;
+}
+.modal[data-hero="true"] .actions {
+  background: transparent;
+  border-top: none;
+  padding: 8px 24px 24px;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -467,6 +502,307 @@
   border: 1px dashed var(--color-border);
   border-radius: 8px;
   text-align: center;
+}
+
+/* ── Hero faction picker — full-viewport card row ────────────── */
+/* Visually hidden but kept in the accessibility tree so screen
+   readers + Playwright's role+name queries still find the
+   step's heading. */
+.heroPickerSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.heroPicker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 24px;
+  padding: 8px 4vw 0;
+}
+
+.heroPickerInstruction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text);
+  /* Subtle fade-in so the instruction settles in alongside the
+     cards rather than blinking on instantly. */
+  animation: heroInstructionEnter 0.4s ease-out backwards;
+}
+
+.heroPickerInstructionSubtle {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@keyframes heroInstructionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heroCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(12px, 1.6vw, 28px);
+  flex: 1;
+  width: 100%;
+  /* Allow the row to scroll horizontally when N+1 cards exceed the
+     viewport width — the cards stay at their aspect ratio rather
+     than getting squashed. */
+  overflow-x: auto;
+  /* The meeples overhang the bottom of each card, so room is
+     reserved here for them. */
+  padding-bottom: 56px;
+  padding-left: clamp(12px, 4vw, 64px);
+  padding-right: clamp(12px, 4vw, 64px);
+}
+
+.heroCard {
+  /* Standard playing-card aspect ratio (2.5 x 3.5"). */
+  aspect-ratio: 5 / 7;
+  width: clamp(180px, 16vw, 260px);
+  /* The card itself is bounded by its width × aspect-ratio; meeples
+     overhang it via negative bottom positioning. */
+  flex-shrink: 0;
+  position: relative;
+  padding: 18px 16px 64px; /* extra bottom padding clears overhanging meeple */
+  border-radius: 14px;
+  border: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  overflow: visible;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1),
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  /* Cards stagger in from below on mount. */
+  animation: heroCardEnter 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.heroCard:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.heroCard:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.heroCard:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.heroCard:nth-child(4) {
+  animation-delay: 0.16s;
+}
+.heroCard:nth-child(5) {
+  animation-delay: 0.2s;
+}
+.heroCard:nth-child(6) {
+  animation-delay: 0.24s;
+}
+.heroCard:nth-child(7) {
+  animation-delay: 0.28s;
+}
+
+@keyframes heroCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(48px) rotate(-2deg) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0) scale(1);
+  }
+}
+
+.heroCard:hover:not(.heroCardDisabled):not(.heroCardLeaving),
+.heroCard:focus-visible:not(.heroCardDisabled):not(.heroCardLeaving) {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+
+.heroCardActive {
+  box-shadow: 0 0 0 3px var(--color-accent);
+}
+
+.heroCardDisabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+@keyframes heroCardLeave {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+  }
+  60% {
+    opacity: 0.7;
+    transform: translateY(-32px) scale(0.92) rotate(-6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px) scale(0.6) rotate(-18deg);
+    margin-right: calc(-1 * clamp(180px, 16vw, 260px));
+  }
+}
+
+.heroCardLeaving {
+  pointer-events: none;
+  animation: heroCardLeave 0.5s cubic-bezier(0.5, -0.2, 0.6, 0.95) forwards;
+  z-index: 5;
+}
+
+.heroCardLabel {
+  font-weight: 700;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.2;
+  /* Two-line clamp — keeps the header height predictable across
+     short ("Vagabond") and long ("Hundreds of the Deepwood") names. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.heroCardAdset {
+  /* ADSET steps are PERMANENT on the hero card — no toggle. The
+     list scrolls inside the card if it overflows. */
+  flex: 1;
+  overflow-y: auto;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.heroCardAdset li {
+  display: flex;
+  gap: 6px;
+}
+
+.heroCardAdsetIndex {
+  color: var(--color-text);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.heroCardCharacters {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.heroCardCharactersList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heroCardCharactersList li {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+/* Meeple silhouette overhangs the bottom edge of the card. Sized
+   relative to the card so it scales with the viewport. */
+.heroCardMeeple {
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88px;
+  height: 88px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroCard,
+  .heroPickerInstruction {
+    animation: none;
+  }
+  .heroCardLeaving {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.heroPickerFootnote {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.heroPickerSummary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.heroPickerSummaryDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+
+.heroPickerSummaryDotActive {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.heroPickerSummaryDotFilled {
+  background: color-mix(in srgb, var(--color-accent) 55%, transparent);
 }
 
 /* ── Faction picker ───────────────────────────────────────── */

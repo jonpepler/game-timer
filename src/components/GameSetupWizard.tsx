@@ -632,11 +632,20 @@ export const GameSetupWizard = forwardRef<
   // screens it slides out — see `.sidePanelHidden` for the
   // transition (gated by prefers-reduced-motion in CSS).
   const sidePanelVisible = sidePanel != null && screenIndex === 0;
+  // Hero mode: the faction picker (and any future turn-based
+  // player-pick step) takes the whole viewport. The wizard chrome
+  // collapses, the modal goes edge-to-edge, and the step renders
+  // its card row as the dominant visual.
+  const isHeroScreen =
+    currentScreen.kind === "setup-step" &&
+    currentScreen.step.kind.type === "player-pick" &&
+    currentScreen.step.kind.mode === "turn-based";
 
   return (
     <dialog
       ref={dialogRef}
       className={styles.modal}
+      data-hero={isHeroScreen ? "true" : undefined}
       aria-labelledby="wizard-title"
       onClose={onClose}
     >
@@ -1807,6 +1816,179 @@ function PlayerPickScreen({
     blockedForActive,
     step,
   ]);
+
+  // Hero mode: dominate the viewport with a card row. Triggered
+  // for turn-based player-pick steps (Root). Other modes (host-only)
+  // keep the compact panel further below.
+  if (mode === "turn-based") {
+    const seatName =
+      seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`;
+    return (
+      <div className={styles.heroPicker}>
+        {/* Visually-hidden heading keeps screen reader + Playwright
+            navigation working alongside the visible instruction. */}
+        <h3 className={styles.heroPickerSrOnly} id="screen-title">
+          {step.label}
+        </h3>
+        <div className={styles.heroPickerInstruction}>
+          <span className={styles.heroPickerInstructionSubtle}>
+            {seats.filter((_, i) => picks[i] != null).length}/{seats.length}{" "}
+            picked · seat {activeSeat + 1} of {seats.length}
+          </span>
+          <span>
+            {seatName} — choose your {step.label.toLowerCase()}
+          </span>
+        </div>
+
+        <div className={styles.heroCardRow}>
+          {visible.map((o) => {
+            const blocked = blockedForActive.has(o.id);
+            const active = picks[activeSeat] === o.id;
+            const leaving = leavingIds.includes(o.id);
+            const adsetSteps = (o as unknown as { adsetSteps?: string[] })
+              .adsetSteps;
+            const meepleSrc = (
+              o as unknown as {
+                assets?: { meepleSvg?: { appPath?: string } };
+              }
+            ).assets?.meepleSvg?.appPath;
+            const onActivate = () => {
+              if (blocked || leaving) return;
+              pick(o.id);
+            };
+            return (
+              <div
+                key={o.id}
+                role="button"
+                aria-pressed={active}
+                aria-disabled={blocked || leaving}
+                aria-label={o.label}
+                tabIndex={blocked || leaving ? -1 : 0}
+                className={`${styles.heroCard} ${
+                  active ? styles.heroCardActive : ""
+                } ${blocked ? styles.heroCardDisabled : ""} ${
+                  leaving ? styles.heroCardLeaving : ""
+                }`}
+                style={{
+                  background: o.color
+                    ? `color-mix(in srgb, ${o.color} 18%, var(--color-surface))`
+                    : "var(--color-surface)",
+                  borderColor: o.color ?? "var(--color-border)",
+                }}
+                onClick={onActivate}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onActivate();
+                  }
+                }}
+              >
+                <span className={styles.heroCardLabel}>{o.label}</span>
+                {adsetSteps && adsetSteps.length > 0 && (
+                  <ol className={styles.heroCardAdset}>
+                    {adsetSteps.map((s, i) => (
+                      <li key={i}>
+                        <span className={styles.heroCardAdsetIndex}>
+                          {i + 1}.
+                        </span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {characters[o.id] && characters[o.id].length > 0 && (
+                  <div className={styles.heroCardCharacters}>
+                    Dealt{" "}
+                    {characters[o.id].length === 1
+                      ? "character"
+                      : "captains"}
+                    <ul className={styles.heroCardCharactersList}>
+                      {characters[o.id].map((charId) => (
+                        <li key={charId}>{labelForCharacter(o, charId)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {meepleSrc && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={meepleSrc}
+                    alt=""
+                    aria-hidden
+                    className={styles.heroCardMeeple}
+                    style={{
+                      background: o.color ?? "var(--color-text)",
+                      WebkitMaskImage: `url(${meepleSrc})`,
+                      maskImage: `url(${meepleSrc})`,
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={styles.heroPickerFootnote}>
+          <ul
+            className={styles.heroPickerSummary}
+            aria-label="Seat picks so far"
+          >
+            {seats.map((seat, i) => {
+              const factionId = picks[i];
+              const option = factionId
+                ? (visible.find((o) => o.id === factionId) ??
+                  options.find((o) => o.id === factionId))
+                : undefined;
+              const label = option
+                ? `${seat.name} — ${option.label}`
+                : `${seat.name} — not yet`;
+              return (
+                <li
+                  key={i}
+                  className={`${styles.heroPickerSummaryDot} ${
+                    i === activeSeat
+                      ? styles.heroPickerSummaryDotActive
+                      : picks[i] != null
+                        ? styles.heroPickerSummaryDotFilled
+                        : ""
+                  }`}
+                  aria-label={label}
+                  title={label}
+                />
+              );
+            })}
+          </ul>
+          {draftEnabled && (
+            <>
+              <button
+                type="button"
+                onClick={reshuffle}
+                className={styles.secondary}
+              >
+                <RefreshCw size={14} aria-hidden /> Shuffle
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftEnabled(false)}
+                className={styles.ghost}
+              >
+                Skip draft
+              </button>
+            </>
+          )}
+          {!draftEnabled && (
+            <button
+              type="button"
+              onClick={() => setDraftEnabled(true)}
+              className={styles.secondary}
+            >
+              <RefreshCw size={14} aria-hidden /> Back to draft
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
