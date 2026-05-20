@@ -27,15 +27,16 @@ import {
   playerSubheading,
 } from "@/lib/playerVisual";
 import { createLogger } from "@/lib/logger";
-
-const stateLog = createLogger("companion-state");
-const playersLog = createLogger("companion-players");
 import type {
   GameDefinition,
   SetupConstraint,
   SetupOption,
   SetupStep,
 } from "@/state/gameDefinition";
+import type { Player } from "@/state/gameSession";
+
+const stateLog = createLogger("companion-state");
+const playersLog = createLogger("companion-players");
 
 // Locate the player-pick SetupStep in the active definition. Companion
 // reads its options to populate its own faction-style picker.
@@ -141,6 +142,13 @@ function CompanionScreen() {
   const definition = pendingTurn?.definition ?? lastState?.definition;
 
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
+  // When true, the faction-swap modal is open. Lets the claimant pick
+  // a new option from the definition's player-pick step without
+  // re-running setup.
+  const [changingFaction, setChangingFaction] = useState(false);
+  // Two-step preview inside the swap modal — same pattern as the
+  // wizard's PlayerPickScreen. Tap card → confirm screen → Confirm.
+  const [changePreviewId, setChangePreviewId] = useState<string | null>(null);
 
   // Companion-local display-name override. The host's STATE carries
   // the seat's name (set in the seat-players step), but the
@@ -340,6 +348,19 @@ function CompanionScreen() {
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
 
+  // Escape-hatch faction swap — lets a player whose seat is wired to
+  // the wrong (or no) faction fix it mid-game without re-setting up.
+  // Same wire format as a mid-game change-of-mind: SET_PLAYER_OPTION
+  // is routed by the host's claim-map, so the swap lands on the
+  // seat that THIS companion has claimed.
+  const sendSetPlayerOption = (stepId: string, optionId: string) =>
+    send({
+      type: "SET_PLAYER_OPTION",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+      stepId,
+      optionId,
+    } satisfies CompanionToHostMessage);
+
   const stats = useMemo(
     () =>
       state
@@ -494,8 +515,23 @@ function CompanionScreen() {
                 onClick={release}
                 className={styles.changeButton}
               >
-                change
+                change seat
               </button>
+              {/* Only show the faction-swap link when the active
+                  definition actually has a player-pick step
+                  (Generic doesn't, so the swap would be a no-op). */}
+              {definition && findPlayerPickStep(definition) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChangePreviewId(null);
+                    setChangingFaction(true);
+                  }}
+                  className={styles.changeButton}
+                >
+                  change faction
+                </button>
+              )}
             </span>
           )}
         </div>
@@ -737,6 +773,24 @@ function CompanionScreen() {
           </>
         )}
       </div>
+      {changingFaction && definition && claimedSlot !== null && (
+        <ChangeFactionModal
+          definition={definition}
+          claimedSlot={claimedSlot}
+          players={state?.players ?? []}
+          previewId={changePreviewId}
+          onPreviewChange={setChangePreviewId}
+          onConfirm={(stepId, optionId) => {
+            sendSetPlayerOption(stepId, optionId);
+            setChangingFaction(false);
+            setChangePreviewId(null);
+          }}
+          onClose={() => {
+            setChangingFaction(false);
+            setChangePreviewId(null);
+          }}
+        />
+      )}
       {state?.pendingMilestones && state.pendingMilestones.length > 0 && (
         <EventDialog
           milestone={state.pendingMilestones[0]}
@@ -965,6 +1019,218 @@ function SetupTurnPanel({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Escape-hatch faction swap modal — fullscreen, mirrors the wizard's
+// PlayerPickScreen UX (tap card → preview → Confirm). Excludes
+// options already claimed by other seats so the SET_PLAYER_OPTION
+// peer message doesn't get rejected on the host. The host's mutex
+// constraints still apply server-side — we only filter the obvious
+// taken-by-someone-else case in the picker.
+function ChangeFactionModal({
+  definition,
+  claimedSlot,
+  players,
+  previewId,
+  onPreviewChange,
+  onConfirm,
+  onClose,
+}: {
+  definition: GameDefinition;
+  claimedSlot: number;
+  players: Player[];
+  previewId: string | null;
+  onPreviewChange: (id: string | null) => void;
+  onConfirm: (stepId: string, optionId: string) => void;
+  onClose: () => void;
+}) {
+  const pick = findPlayerPickStep(definition);
+  if (!pick) return null;
+  const visualKey = definition.playerVisualFrom;
+  // Build the set of optionIds taken by *other* claimed seats so we
+  // can grey them out in the grid (the host would reject them too).
+  const takenIds = new Set<string>();
+  if (visualKey) {
+    players.forEach((p, i) => {
+      if (i === claimedSlot) return;
+      const m = p.metadata[visualKey];
+      if (m && m.type === "selected-option") takenIds.add(m.optionId);
+    });
+  }
+
+  // Keyboard dismissal — Escape closes the modal.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (previewId) {
+    const option = pick.options.find((o) => o.id === previewId);
+    if (!option) {
+      onPreviewChange(null);
+      return null;
+    }
+    const adset = (option as unknown as { adsetSteps?: string[] }).adsetSteps;
+    const meeple = (
+      option as unknown as { assets?: { meepleSvg?: { appPath?: string } } }
+    ).assets?.meepleSvg?.appPath;
+    const color = option.color ?? "var(--color-border)";
+    return (
+      <div
+        className={styles.swapOverlay}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Confirm faction swap"
+      >
+        <div
+          className={styles.heroPreview}
+          style={{ padding: 20, maxWidth: 480, width: "100%" }}
+        >
+          <div className={styles.heroPreviewInstruction}>
+            <span className={styles.heroPreviewSubtle}>
+              Confirm faction swap
+            </span>
+            <span className={styles.heroPreviewTitle}>{option.label}</span>
+          </div>
+          <div
+            className={styles.heroPreviewCard}
+            style={
+              {
+                background: `color-mix(in srgb, ${color} 18%, var(--color-surface))`,
+                borderColor: color,
+              } as React.CSSProperties
+            }
+          >
+            {meeple && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={meeple}
+                alt=""
+                aria-hidden
+                className={styles.heroPreviewMeeple}
+                style={{
+                  background: color,
+                  WebkitMaskImage: `url(${meeple})`,
+                  maskImage: `url(${meeple})`,
+                }}
+              />
+            )}
+            {adset && adset.length > 0 && (
+              <ol className={styles.heroPreviewSteps}>
+                {adset.map((s, i) => (
+                  <li key={i}>
+                    <span className={styles.heroCardAdsetIndex}>{i + 1}.</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+          <div className={styles.heroPreviewActions}>
+            <button
+              type="button"
+              onClick={() => onPreviewChange(null)}
+              className={styles.heroPreviewSecondary}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfirm(pick.step.id, option.id)}
+              className={styles.heroPreviewPrimary}
+            >
+              Confirm swap
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={styles.swapOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Change faction"
+    >
+      <div className={styles.swapPanel}>
+        <header className={styles.swapHeader}>
+          <span className={styles.swapTitle}>Change faction</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className={styles.swapClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </header>
+        <div className={styles.heroCardColumn}>
+          {pick.options.map((option) => {
+            const blocked = takenIds.has(option.id);
+            const adset = (option as unknown as { adsetSteps?: string[] })
+              .adsetSteps;
+            const meeple = (
+              option as unknown as {
+                assets?: { meepleSvg?: { appPath?: string } };
+              }
+            ).assets?.meepleSvg?.appPath;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                disabled={blocked}
+                onClick={() => onPreviewChange(option.id)}
+                className={styles.heroCard}
+                aria-label={option.label}
+                style={
+                  {
+                    ["--faction-color" as string]:
+                      option.color ?? "var(--color-border)",
+                  } as React.CSSProperties
+                }
+              >
+                <span className={styles.heroCardLabel}>{option.label}</span>
+                {adset && adset.length > 0 && (
+                  <ol className={styles.heroCardAdset}>
+                    {adset.map((s, i) => (
+                      <li key={i}>
+                        <span className={styles.heroCardAdsetIndex}>
+                          {i + 1}.
+                        </span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {meeple && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={meeple}
+                    alt=""
+                    aria-hidden
+                    className={styles.heroCardMeeple}
+                    style={{
+                      background: option.color ?? "var(--color-text)",
+                      WebkitMaskImage: `url(${meeple})`,
+                      maskImage: `url(${meeple})`,
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

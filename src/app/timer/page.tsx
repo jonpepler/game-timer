@@ -238,15 +238,38 @@ export default function Home() {
           });
           return;
         }
+        // Pull asset paths through the same passthrough route the
+        // wizard uses at submit time, so the new metadata carries
+        // iconSrc / headIconSrc and the renderer keeps showing the
+        // faction's meeple + head crop after the swap.
+        const assets = (
+          option as unknown as {
+            assets?: {
+              meepleSvg?: { appPath?: string };
+              headIcon?: Array<{ appPath?: string }>;
+            };
+          }
+        ).assets;
+        const meeple = assets?.meepleSvg?.appPath;
+        const head = assets?.headIcon?.[0]?.appPath;
+        // Preserve the existing seat name. Earlier code overwrote
+        // player.name with the option's label, which clobbered the
+        // human's display name ("Joel") with the faction label
+        // ("Underground Duchy") every time anyone switched.
+        const existing = state.players?.[claimed];
+        const preservedName = existing?.name ?? option.label;
         setPlayer(claimed, {
-          name: option.label,
+          name: preservedName,
           metadata: {
+            ...(existing?.metadata ?? {}),
             [visualKey]: {
               type: "selected-option",
               optionId: option.id,
               label: option.label,
               color: option.color,
               description: option.description,
+              ...(meeple ? { iconSrc: meeple } : {}),
+              ...(head ? { headIconSrc: head } : {}),
             },
           },
         });
