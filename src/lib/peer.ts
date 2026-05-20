@@ -85,8 +85,44 @@ export function createHost(
     const messageHandlers = new Set<(peerId: string, data: unknown) => void>();
     let opened = false;
 
+    // PeerJS's cloud broker drops the websocket from time to time
+    // ("Lost connection to server"). When it does, the peer goes
+    // into a disconnected-but-not-destroyed state; reconnect()
+    // re-establishes the WSS without invalidating any open data
+    // connections. We retry a few times with a backoff before
+    // giving up.
+    let reconnectAttempts = 0;
+    const tryReconnect = () => {
+      if (peer.destroyed) return;
+      if (reconnectAttempts >= 5) {
+        log.warn("peer reconnect attempts exhausted");
+        return;
+      }
+      reconnectAttempts++;
+      const backoffMs = Math.min(8000, 500 * 2 ** (reconnectAttempts - 1));
+      log.info("peer reconnecting", {
+        attempt: reconnectAttempts,
+        backoffMs,
+      });
+      setTimeout(() => {
+        if (peer.destroyed) return;
+        try {
+          peer.reconnect();
+        } catch (err) {
+          log.warn("peer.reconnect() threw", { error: String(err) });
+        }
+      }, backoffMs);
+    };
+    peer.on("disconnected", () => {
+      log.warn("peer disconnected from broker");
+      tryReconnect();
+    });
+
     peer.on("open", (id) => {
       opened = true;
+      // Reset the backoff once a fresh open completes so a later
+      // disconnect starts from attempt 1 again.
+      reconnectAttempts = 0;
       log.info("host session opened", { sessionCode: id });
 
       peer.on("connection", (conn) => {
@@ -172,7 +208,38 @@ export function connectToHost(
     const closeHandlers = new Set<() => void>();
     let resolved = false;
 
+    // Same broker-flake mitigation as the host: when the WSS to
+    // the broker drops, try to reconnect with a backoff before
+    // bubbling failure to the UI.
+    let reconnectAttempts = 0;
+    const tryReconnect = () => {
+      if (peer.destroyed) return;
+      if (reconnectAttempts >= 5) {
+        log.warn("companion reconnect attempts exhausted");
+        return;
+      }
+      reconnectAttempts++;
+      const backoffMs = Math.min(8000, 500 * 2 ** (reconnectAttempts - 1));
+      log.info("companion reconnecting", {
+        attempt: reconnectAttempts,
+        backoffMs,
+      });
+      setTimeout(() => {
+        if (peer.destroyed) return;
+        try {
+          peer.reconnect();
+        } catch (err) {
+          log.warn("companion peer.reconnect() threw", { error: String(err) });
+        }
+      }, backoffMs);
+    };
+    peer.on("disconnected", () => {
+      log.warn("companion peer disconnected from broker");
+      tryReconnect();
+    });
+
     peer.on("open", (id) => {
+      reconnectAttempts = 0;
       log.info("companion peer opened, dialing host", { hostCode, id });
       const conn = peer.connect(hostCode);
 

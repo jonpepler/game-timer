@@ -87,8 +87,9 @@ export function SharePanel({
       {status === "error" && (
         <div className={styles.errorBlock}>
           <p className={styles.errorMessage}>
-            Couldn&apos;t open a share session:{" "}
-            {error?.message ?? "unknown error"}
+            {error?.message === "Lost connection to server."
+              ? "The PeerJS broker dropped our connection. This usually fixes itself in a few seconds — try again, or switch networks if it persists."
+              : `Couldn't open a share session: ${error?.message ?? "unknown error"}`}
           </p>
           {onRetry && (
             <button
