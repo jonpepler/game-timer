@@ -137,13 +137,16 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
       }
     }
   }
-  // The picker auto-submits after the last confirmed pick when
-  // it sits on the final wizard screen — in that case the Start
-  // Game button is already gone. Otherwise click it.
+  // After the last Confirm the wizard either:
+  //   (a) auto-submits because the picker was the final screen
+  //       (Root used to be this — Start Game button is gone), or
+  //   (b) advances to a downstream step (Root now has the A.10
+  //       "Choose Starting Hands" info screen after Faction, so
+  //       the wizard lands there and shows Start Game).
+  // Try to click Start Game with a brief wait; ignore failure (case
+  // a) so the helper works for both shapes.
   const startBtn = page.getByRole("button", { name: /start game/i });
-  if (await startBtn.isVisible().catch(() => false)) {
-    await startBtn.click();
-  }
+  await startBtn.click({ timeout: 2000 }).catch(() => {});
 }
 
 // Score-milestone dialog (Root's hireling triggers at 4/8/12) opens

@@ -173,6 +173,15 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     type: z.literal("dealt-resolve"),
     sourceStepId: z.string(),
   }),
+  // Instructional screen with no input — the wizard renders the
+  // step's label + description and a Next button. Useful for
+  // single-shot table-side instructions that don't fit naturally
+  // into the description of any input-bearing step (e.g. "Draw
+  // 5 cards" or "Choose Starting Hands" between Root's player
+  // setup and the final shuffle).
+  z.object({
+    type: z.literal("info"),
+  }),
 ]);
 export type SetupStepKind = z.infer<typeof SetupStepKindSchema>;
 
@@ -296,6 +305,12 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("dealt-resolve"),
     sourceStepId: z.string(),
+  }),
+  // Instructional screen — passes through unchanged to the resolved
+  // schema. See the post-resolve SetupStepKindSchema for full
+  // semantics.
+  z.object({
+    type: z.literal("info"),
   }),
 ]);
 

@@ -1242,7 +1242,27 @@ function StepScreen({
         />
       );
     }
+    case "info":
+      return <InfoScreen step={step} />;
   }
+}
+
+// Pure-text instructional screen — renders the step's label as the
+// heading and the description as body. No input, no context entry,
+// no validation. The wizard's Next button is the only action. Used
+// for table-side reminders that have to live in the flow but don't
+// need any decision (e.g. Root's A.7 "draw 5 cards" reminder).
+function InfoScreen({ step }: { step: SetupStep }) {
+  return (
+    <>
+      <h3 className={styles.screenTitle} id="screen-title">
+        {step.label}
+      </h3>
+      {step.description && (
+        <p className={styles.screenSubtitle}>{step.description}</p>
+      )}
+    </>
+  );
 }
 
 function MultiToggleScreen({

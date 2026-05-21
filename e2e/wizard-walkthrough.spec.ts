@@ -116,9 +116,14 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   await confirmButton.click();
   await factionCard("Marquise de Cat").click();
   await confirmButton.click();
-  // The fourth Confirm auto-submits the wizard, so the game
-  // setup heading should be gone without a separate Start Game
-  // click.
+  // Faction is no longer the final wizard step — A.10 "Choose
+  // Starting Hands" follows it. The fourth Confirm advances the
+  // wizard to that info screen; clicking Start Game commits.
+  await expect(
+    page.getByRole("heading", { name: /Choose Starting Hands/i }),
+  ).toBeVisible();
+  await save(page, "12b-choose-starting-hands");
+  await page.getByRole("button", { name: /^Start Game$/ }).click();
   await expect(
     page.getByRole("heading", { name: /game setup/i }),
   ).toHaveCount(0);
@@ -239,6 +244,10 @@ test("Root faction picker — last seat keeps its metadata", async ({
     .getByRole("button", { name: "Marquise de Cat", exact: true })
     .click();
   await confirm.click();
+  // Faction is no longer the final wizard step (A.10 Choose
+  // Starting Hands follows). Hit Start Game on the info screen so
+  // the timer actually mounts and the score panel renders.
+  await page.getByRole("button", { name: /^Start Game$/ }).click();
 
   // After auto-start the score panel renders per-player markers
   // keyed by SEAT name (default "Player N"). The marker for the

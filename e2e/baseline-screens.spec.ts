@@ -62,7 +62,11 @@ test("timer view baseline (Root, scores in play)", async ({ page }) => {
   await confirmButton.click();
   await factionCard("Marquise de Cat").click();
   await confirmButton.click();
-  // The fourth Confirm auto-submits + auto-starts the timer.
+  // Faction is no longer the final wizard step — A.10 "Choose
+  // Starting Hands" is an info step after it — so the picker
+  // advances rather than auto-starting. Click Start Game on the
+  // final info screen to actually start the timer.
+  await page.getByRole("button", { name: /^Start Game$/ }).click();
 
   const selectMarker = (name: string) =>
     page.evaluate((n) => {

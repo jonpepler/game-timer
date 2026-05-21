@@ -124,6 +124,12 @@
       }
     },
     {
+      "id": "draw-hands",
+      "label": "Draw 5 cards",
+      "description": "If you are playing with two players, remove all four dominance cards from the deck. Shuffle the deck. Each player draws five cards.",
+      "kind": { "type": "info" }
+    },
+    {
       "id": "faction",
       "label": "Faction",
       "kind": {
@@ -153,6 +159,12 @@
           }
         ]
       }
+    },
+    {
+      "id": "starting-hands",
+      "label": "Choose Starting Hands",
+      "description": "Each player chooses three cards in their hand to keep and puts the other two cards face down on the shared deck. When finished, shuffle the shared deck.",
+      "kind": { "type": "info" }
     }
   ]
 }

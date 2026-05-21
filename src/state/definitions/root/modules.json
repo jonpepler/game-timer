@@ -881,11 +881,10 @@
         "module": "homeland",
         "matchingHireling": "roamers",
         "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
-          "Place 1 lilypad garden in any 3 clearings (3 gardens total).",
-          "Place 5 warriors distributed among your garden clearings.",
-          "Place all unrest tokens in the supply next to your faction board."
+          "Place 5 warriors and 1 Peaceful enclave in a river clearing, or one adjacent to the river if you cannot. This is your homeland.",
+          "With 2 players, remove the Frog dominance card.",
+          "Shuffle the frog cards into the shared deck. Put the Pond placard near it."
         ],
         "assets": {
           "meepleSvg": {
@@ -913,12 +912,10 @@
         "module": "homeland",
         "matchingHireling": "advocates",
         "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
-          "Place the starting Council token in any clearing.",
-          "Place 5 warriors in or adjacent to the Council clearing.",
-          "Take 1 Agenda card and place it face-up next to your faction board.",
-          "Place all remaining Agenda cards in a shuffled deck next to your faction board."
+          "Choose a homeland clearing. Place 4 warriors there.",
+          "Place 2 warriors in a different clearing.",
+          "Fill your Assemblies track with assemblies on their Closed side."
         ],
         "assets": {
           "meepleSvg": {
@@ -1045,11 +1042,10 @@
           }
         ],
         "captainPoolNote": "Four Captain cards are dealt face-up alongside the Knaves setup card; the player chooses three to use.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
         "adsetSteps": [
-          "Choose 3 of the 4 Captain cards dealt with this setup card; return the rejected card to the box.",
-          "Place 1 warrior in any 4 clearings (4 warriors total).",
-          "Place 1 hostage token of your choice in the Hostage area on your faction board."
+          "Choose 3 Captain cards and return the fourth one to the box. Collect their Captain warriors. Put the items shown on their Captain cards in your Stash.",
+          "Put 1 Captain and 1 Skunk each in three different forests.",
+          "Fill each Acclaim slot with 2 acclaim tokens."
         ],
         "assets": {
           "meepleSvg": {

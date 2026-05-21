@@ -128,10 +128,12 @@ test.describe("score layer", () => {
     page,
   }) => {
     await startRoot(page, 2);
-    // The wizard auto-starts the timer after the last faction
-    // confirm — state.started is true before the first user tap.
-    // One tap = one recorded turn → 15 left, currentPlayer rotates
-    // from Marquise (0) to Eyrie (1).
+    // Wizard now ends on the A.10 info step which doesn't pass
+    // autoStart — Start Game just commits the config. First tap
+    // starts the timer (state.started → true, no turn recorded);
+    // second tap records turn 1, rotating Marquise → Eyrie and
+    // dropping remaining to 15.
+    await page.locator("main").click();
     await page.locator("main").click();
     await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
     // Eyrie is the active player now → auto-selected. Clicking the
