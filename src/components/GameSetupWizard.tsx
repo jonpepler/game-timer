@@ -2165,7 +2165,23 @@ function PlayerPickScreen({
                   }
                 }}
               >
-                <span className={styles.heroCardLabel}>{o.label}</span>
+                <span className={styles.heroCardLabel}>
+                  {o.label}
+                  {(() => {
+                    const military = (o as unknown as { military?: string })
+                      .military;
+                    if (military !== "militant" && military !== "insurgent")
+                      return null;
+                    return (
+                      <span
+                        className={styles.heroCardMilitary}
+                        data-variant={military}
+                      >
+                        {military}
+                      </span>
+                    );
+                  })()}
+                </span>
                 {adsetSteps && adsetSteps.length > 0 && (
                   <ol className={styles.heroCardSteps}>
                     {adsetSteps.map((s, i) => (

@@ -723,12 +723,38 @@
   font-weight: 700;
   font-size: clamp(15px, 1.4vw, 18px);
   line-height: 1.2;
-  /* Two-line clamp — keeps the header height predictable across
-     short ("Vagabond") and long ("Hundreds of the Deepwood") names. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* Allow the badge to wrap below the label rather than fighting
+     it for horizontal room — the badge is small and the label can
+     still take its two lines underneath. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Small badge inside the card label — "militant" / "insurgent"
+   tag pulled from the option's modules JSON. Lowercased + tiny so
+   it reads as metadata, not a competing title. */
+.heroCardMilitary {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text-muted) 25%, transparent);
+  color: var(--color-text);
+}
+
+.heroCardMilitary[data-variant="militant"] {
+  background: color-mix(in srgb, #d96565 25%, transparent);
+  color: #f5b8b8;
+}
+
+.heroCardMilitary[data-variant="insurgent"] {
+  background: color-mix(in srgb, #6abf69 25%, transparent);
+  color: #b8e4b9;
 }
 
 .heroCardSteps {
