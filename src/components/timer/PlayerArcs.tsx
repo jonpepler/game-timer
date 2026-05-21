@@ -69,22 +69,36 @@ export const PlayerArcs = ({ players, activeIndex }: PlayerArcsProps) => {
       aria-label="Player turn indicators"
     >
       <defs>
-        {players.map((_, i) => (
-          <filter
-            key={i}
-            id={`glow-${i}`}
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
-          >
-            <feGaussianBlur stdDeviation="0.3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        ))}
+        {/* Two shared filters — a stronger bloom for the active arc
+            and a subtle halo for the rest. Filter-per-player was
+            unnecessary; the glow's stroke colour comes from the
+            path itself, not the filter. */}
+        <filter
+          id="player-arc-glow-active"
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
+        >
+          <feGaussianBlur stdDeviation="0.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter
+          id="player-arc-glow-inactive"
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
+        >
+          <feGaussianBlur stdDeviation="0.35" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       {players.map((player, i) => {
@@ -99,9 +113,13 @@ export const PlayerArcs = ({ players, activeIndex }: PlayerArcsProps) => {
             fill="none"
             stroke={player.color}
             strokeWidth={isActive ? ACTIVE_WIDTH : INACTIVE_WIDTH}
-            strokeLinecap="butt"
-            opacity={isActive ? 1 : 0.2}
-            filter={isActive ? `url(#glow-${i})` : undefined}
+            strokeLinecap="round"
+            opacity={isActive ? 1 : 0.3}
+            filter={
+              isActive
+                ? "url(#player-arc-glow-active)"
+                : "url(#player-arc-glow-inactive)"
+            }
             style={{
               transition: "stroke-width 0.25s ease, opacity 0.25s ease",
             }}
