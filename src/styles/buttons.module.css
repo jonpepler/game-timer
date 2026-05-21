@@ -7,15 +7,18 @@
  * don't have to repeat width: auto / height: auto in every module.
  */
 
-/* The chunky "Start Game / Save changes / New Game CTA" affordance. */
+/* The chunky "Start Game / Save changes / New Game CTA" affordance.
+   Bumped padding + font + min-height to meet WCAG's 44×44 touch
+   target on every page that uses these classes. */
 .primary {
   width: auto;
   height: auto;
-  padding: 10px 18px;
-  font-size: 15px;
-  font-weight: 500;
+  min-height: 44px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 600;
   font-family: inherit;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -41,11 +44,12 @@
 .secondary {
   width: auto;
   height: auto;
-  padding: 10px 18px;
-  font-size: 15px;
-  font-weight: 500;
+  min-height: 44px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 600;
   font-family: inherit;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;

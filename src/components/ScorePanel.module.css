@@ -249,9 +249,11 @@
 }
 
 .scoreButton {
-  /* Override the global button reset */
-  width: 36px;
-  height: 36px;
+  /* Override the global button reset. Bumped to 56×56 — well above
+     WCAG's 44×44 minimum touch-target so the score adder works on
+     mobile without misfires. */
+  width: 56px;
+  height: 56px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -275,8 +277,8 @@
 }
 
 .scoreButton svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
 }
 
 /* ── Compact leaderboard chips (one row, scoreConfig.displayStyle = leaderboard) ─ */

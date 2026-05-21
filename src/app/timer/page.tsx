@@ -798,12 +798,17 @@ export default function Home() {
         </>
       }
     >
-      <div
-        className={styles.container}
-        onClick={() => {
-          if (!preventClickCapture) resetTimer();
-        }}
-      >
+      {/*
+        Tap-to-advance lives on the timer ring wrapper only — not the
+        whole container — so off-ring chrome (score panel, footer,
+        editable fields, banner) can't accidentally advance turns.
+        preventClickCapture is now dead defence: the score buttons and
+        the wizard modal aren't children of the ring, so they don't
+        bubble into the handler. Kept the state in place for now in
+        case a future surface ends up inside the ring and needs to
+        opt out.
+      */}
+      <div className={styles.container}>
         {modal}
         <main className={styles.main}>
           <>
@@ -843,7 +848,24 @@ export default function Home() {
                 </span>
               </div>
             )}
-            <div className={styles.timerRingWrapper}>
+            <div
+              className={styles.timerRingWrapper}
+              role="button"
+              tabIndex={0}
+              aria-label="Advance turn"
+              onClick={() => {
+                if (!preventClickCapture) resetTimer();
+              }}
+              onKeyDown={(e) => {
+                if (
+                  (e.key === "Enter" || e.key === " ") &&
+                  !preventClickCapture
+                ) {
+                  e.preventDefault();
+                  resetTimer();
+                }
+              }}
+            >
               {playerViews && currentPlayerIndex !== null && (
                 <PlayerArcs
                   players={playerViews}

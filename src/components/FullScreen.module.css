@@ -10,10 +10,11 @@
 }
 
 .toggle {
-  /* Override the global button reset; matches the chrome of New game /
-     Share buttons sitting next to it. */
-  width: 36px;
-  height: 36px;
+  /* Override the global button reset; bumped to 44×44 (WCAG AAA
+     touch target minimum) so the chrome's icon buttons aren't
+     accidentally tapped or missed on phones. */
+  width: 44px;
+  height: 44px;
   padding: 0;
   display: inline-flex;
   align-items: center;

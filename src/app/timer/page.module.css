@@ -118,6 +118,23 @@
   width: min(100%, calc(100dvh - 360px), 720px);
   aspect-ratio: 1;
   flex-shrink: 0;
+  /* Tap-to-advance lives here now; reads as the canonical click
+     target for the page. A circular hit area would be ideal, but
+     a square bounding box works since the ring fills it visually
+     and the keyboard / ARIA contract is the same. */
+  cursor: pointer;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease;
+}
+
+.timerRingWrapper:active {
+  transform: scale(0.985);
+}
+
+.timerRingWrapper:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 6px;
 }
 
 @media (max-width: 540px) {
@@ -131,7 +148,7 @@
      FullScreen toggle + Share chip so the chrome row reads flat. */
   width: auto;
   height: auto;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   font-size: 13px;
   font-weight: 500;

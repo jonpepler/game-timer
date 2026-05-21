@@ -142,6 +142,26 @@ test.describe("score layer", () => {
     await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
   });
 
+  test("tapping outside the timer ring does not advance the turn", async ({
+    page,
+  }) => {
+    await startRoot(page, 2);
+    // Kick the timer running (first tap) and record turn 1 (second
+    // tap), landing on 15 remaining.
+    await page.locator("main").click();
+    await page.locator("main").click();
+    await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
+    // Off-ring click: the active player banner sits ABOVE the
+    // timer ring wrapper, in main but outside the click target.
+    // Tapping it must NOT advance — only the ring is the canonical
+    // hit target now.
+    await page
+      .getByText(/[’']s turn/)
+      .first()
+      .click();
+    await expect(page.getByText(/15\s*turns left/i)).toBeVisible();
+  });
+
   test("hitting Root's max (30) fires a victory banner and stops the active-player banner", async ({
     page,
   }) => {

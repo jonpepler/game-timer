@@ -889,7 +889,7 @@
         "label": "Lilypad Diaspora",
         "color": "#385723",
         "module": "homeland",
-        "military": "insurgent",
+        "military": "militant",
         "matchingHireling": "roamers",
         "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
         "adsetSteps": [
