@@ -450,10 +450,7 @@ function CompanionScreen() {
   if (!code) {
     return (
       <div className={styles.container}>
-        <div className={styles.errorBox}>
-          No host code in the URL — open this page from the Share button on a
-          host device.
-        </div>
+        <CodeEntryPanel />
       </div>
     );
   }
@@ -766,6 +763,7 @@ function CompanionScreen() {
                   scores={state.scores}
                   scoreConfig={state.scoreConfig}
                   readOnly
+                  firedMilestones={state.firedMilestones}
                 />
               )}
               {stats.length > 0 && (
@@ -1046,6 +1044,60 @@ function SetupTurnPanel({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Code-entry fallback for users who land on /companion without a
+// ?code= in the URL (e.g. typed the address by hand, or shared the
+// page URL not the QR link). Lets them paste / type a session code
+// and navigate to ?code=… so the normal connect path takes over.
+function CodeEntryPanel() {
+  const [draft, setDraft] = useState("");
+  const trimmed = draft.trim();
+  const submit = () => {
+    if (trimmed.length === 0) return;
+    // Hand off via the URL so the same page reloads with a code in
+    // place — keeps the rest of the flow (claim restore, connect)
+    // unchanged.
+    window.location.search = `?code=${encodeURIComponent(trimmed)}`;
+  };
+  return (
+    <div className={styles.codeEntryBox}>
+      <p className={styles.codeEntryHint}>
+        Open the QR code on the host device, or enter the session code
+        below.
+      </p>
+      <form
+        className={styles.codeEntryForm}
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <label className={styles.nameFieldLabel} htmlFor="companion-code">
+          Session code
+        </label>
+        <input
+          id="companion-code"
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="e.g. amber-cat-504"
+          className={styles.nameInput}
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <button
+          type="submit"
+          disabled={trimmed.length === 0}
+          className={styles.codeEntrySubmit}
+        >
+          Connect
+        </button>
+      </form>
     </div>
   );
 }

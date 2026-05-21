@@ -26,6 +26,11 @@ interface ScorePanelProps {
   // When true, hide the +/- controls. Companion screen renders this
   // way until v3 of the peer protocol.
   readOnly?: boolean;
+  // Per-player set of milestone atScores that have already fired in
+  // the current game. The track hides fire-once markers whose
+  // threshold has been crossed by anyone (they've done their job and
+  // would otherwise clutter the bar).
+  firedMilestones?: Record<number, number[]>;
 }
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || "?";
@@ -42,6 +47,7 @@ export function ScorePanel({
   onIncrement,
   activePlayerIndex,
   readOnly = false,
+  firedMilestones,
 }: ScorePanelProps) {
   // Always-on selection so the +/- controls don't appear and disappear.
   // Initialise to the active turn player if there is one, otherwise the
@@ -133,12 +139,20 @@ export function ScorePanel({
           <div className={styles.track}>
             <div className={styles.trackBar} aria-hidden />
             {/* Milestone markers — small ticks at each configured
-                atScore, rendered above the player markers so the
-                player heads still occlude them slightly. Display
-                glyph (`marker.display`) or icon (`marker.icon`)
-                comes from the milestone config; aria-hidden because
-                the dialog itself is the canonical announcement. */}
-            {(scoreConfig.milestones ?? []).map((m, i) => {
+                atScore. Fire-once milestones disappear once anyone
+                has crossed them (they've done their job); per-player
+                milestones stay visible because each player can still
+                fire them. */}
+            {(scoreConfig.milestones ?? [])
+              .filter((m) => {
+                if (!m.fireOnce) return true;
+                if (!firedMilestones) return true;
+                const firedByAnyone = Object.values(firedMilestones).some(
+                  (arr) => arr.includes(m.atScore),
+                );
+                return !firedByAnyone;
+              })
+              .map((m, i) => {
               const range = max! - min;
               const pct = range === 0 ? 0 : ((m.atScore - min) / range) * 100;
               return (

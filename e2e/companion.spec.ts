@@ -8,9 +8,17 @@ const BASE = "/game-timer";
 // surfaces.
 
 test.describe("companion route", () => {
-  test("missing host code shows an instructional error", async ({ page }) => {
+  test("missing host code surfaces a code-entry form", async ({ page }) => {
     await page.goto(`${BASE}/companion`);
-    await expect(page.getByText(/no host code in the url/i)).toBeVisible();
+    await expect(
+      page.getByText(/enter the session code below/i),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: /session code/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^Connect$/ }),
+    ).toBeVisible();
   });
 
   test("with a host code, surfaces the Connecting status", async ({ page }) => {

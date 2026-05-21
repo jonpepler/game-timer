@@ -959,6 +959,7 @@ export default function Home() {
               scoreConfig={scoreConfig}
               onIncrement={incrementScore}
               activePlayerIndex={currentPlayerIndex}
+              firedMilestones={state.firedMilestones}
             />
           )}
           {playerStats.length > 0 && (

@@ -5,7 +5,7 @@
      sibling chrome buttons (FullScreen, New game). */
   width: auto;
   height: auto;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   font-size: 13px;
   font-weight: 500;
@@ -32,7 +32,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   font-size: 13px;
   color: var(--color-text-muted);
@@ -58,7 +58,7 @@
      buttons' height so they line up flat. */
   width: auto;
   height: auto;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
