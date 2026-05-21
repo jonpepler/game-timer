@@ -62,6 +62,21 @@ export interface CreateHostOptions {
   desiredId?: string;
 }
 
+// Custom broker key — every peer (host + companion) registers
+// under this namespace on the public PeerJS broker so we don't
+// share an id pool with random other apps using the default
+// "peerjs" key. Two peers on different keys never collide even if
+// they pick the same id. Override by passing your own
+// `peerOptions.key` for tests / self-hosting.
+const PEER_BROKER_KEY = "game-timer";
+
+const withDefaultPeerOptions = (
+  given: PeerOptions | undefined,
+): PeerOptions => ({
+  key: PEER_BROKER_KEY,
+  ...given,
+});
+
 // Test seam: Playwright multi-page tests inject a window-level factory
 // that provides a BroadcastChannel-based fake peer layer so multiple
 // pages on the same origin can talk to each other without contacting
@@ -89,7 +104,10 @@ export function createHost(
   if (testFactory) return testFactory.createHost(options);
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
-    const peer = new Ctor(options.desiredId, options.peerOptions);
+    const peer = new Ctor(
+      options.desiredId,
+      withDefaultPeerOptions(options.peerOptions),
+    );
     const conns = new Map<string, DataConnection>();
     const connectHandlers = new Set<(peerId: string) => void>();
     const disconnectHandlers = new Set<(peerId: string) => void>();
@@ -255,7 +273,7 @@ export function connectToHost(
   if (testFactory) return testFactory.connectToHost(hostCode, options);
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
-    const peer = new Ctor(undefined, options.peerOptions);
+    const peer = new Ctor(undefined, withDefaultPeerOptions(options.peerOptions));
     const messageHandlers = new Set<(data: unknown) => void>();
     const closeHandlers = new Set<() => void>();
     let resolved = false;

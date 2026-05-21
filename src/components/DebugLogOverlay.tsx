@@ -75,9 +75,12 @@ function probeWss(tag: string, url: string) {
 }
 
 function probeBroker() {
+  // Same broker + key the app uses (see PEER_BROKER_KEY in lib/peer)
+  // so the probe exercises the actual production WSS handshake, not
+  // a different namespace.
   probeWss(
     "broker",
-    "wss://0.peerjs.com:443/peerjs?key=peerjs&id=probe-" +
+    "wss://0.peerjs.com:443/peerjs?key=game-timer&id=probe-" +
       Math.random().toString(36).slice(2, 10) +
       "&token=probe&version=1.5.4",
   );
