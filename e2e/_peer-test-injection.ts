@@ -133,6 +133,13 @@ export const PEER_TEST_INIT_SCRIPT = `
             closeHandlers = closeHandlers.filter((x) => x !== h);
           };
         },
+        onConnectionStateChange: (h) => {
+          // Fake never reconnects — fire 'connected' immediately so
+          // the hook lands on "connected" status, mirroring the
+          // real session's replay-on-subscribe behavior.
+          h("connected");
+          return () => {};
+        },
         close: () => {
           channel.postMessage({ from: myId, to: "host", type: "disconnect" });
           channel.close();

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
+import { describePeerError } from "@/lib/peer";
 import {
   PEER_PROTOCOL_VERSION,
   type CompanionToHostMessage,
@@ -463,7 +464,7 @@ function CompanionScreen() {
         <div className={styles.header}>
           <span
             className={`${styles.statusDot} ${
-              status === "connecting"
+              status === "connecting" || status === "reconnecting"
                 ? styles.statusDotConnecting
                 : status === "connected"
                   ? styles.statusDotConnected
@@ -484,15 +485,19 @@ function CompanionScreen() {
                 Connected to <span className={styles.hostCode}>{code}</span>
               </>
             )}
+            {status === "reconnecting" && (
+              <>
+                Reconnecting to{" "}
+                <span className={styles.hostCode}>{code}</span>…
+              </>
+            )}
             {status === "disconnected" && (
               <>
                 Disconnected from{" "}
                 <span className={styles.hostCode}>{code}</span>
               </>
             )}
-            {status === "error" && (
-              <>Failed to connect: {error?.message ?? "unknown error"}</>
-            )}
+            {status === "error" && <>{describePeerError(error)}</>}
           </span>
           {claimedPlayer && (
             <span className={styles.claimedAs}>

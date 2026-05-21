@@ -23,6 +23,11 @@ export interface HostSession {
   close(): void;
 }
 
+export type CompanionConnectionState =
+  | "connected"
+  | "reconnecting"
+  | "closed";
+
 export interface CompanionSession {
   // The code of the host this companion is talking to.
   hostCode: string;
@@ -33,6 +38,12 @@ export interface CompanionSession {
   send: (data: unknown) => void;
   onMessage(handler: (data: unknown) => void): () => void;
   onClose(handler: () => void): () => void;
+  // Tracks connection lifecycle so the UI can distinguish "connected
+  // and working" from "connection dropped, retrying" from "session
+  // ended for real". Fires on every transition.
+  onConnectionStateChange(
+    handler: (state: CompanionConnectionState) => void,
+  ): () => void;
   close(): void;
 }
 
@@ -89,22 +100,23 @@ export function createHost(
     // ("Lost connection to server"). When it does, the peer goes
     // into a disconnected-but-not-destroyed state; reconnect()
     // re-establishes the WSS without invalidating any open data
-    // connections. We retry a few times with a backoff before
-    // giving up.
+    // connections. Keep trying indefinitely (capped at 60s) so the
+    // host doesn't have to refresh after a network blip.
     let reconnectAttempts = 0;
-    const tryReconnect = () => {
+    let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const tryReconnect = (immediate = false) => {
       if (peer.destroyed) return;
-      if (reconnectAttempts >= 5) {
-        log.warn("peer reconnect attempts exhausted");
-        return;
-      }
+      if (pendingReconnectTimer != null) return;
       reconnectAttempts++;
-      const backoffMs = Math.min(8000, 500 * 2 ** (reconnectAttempts - 1));
+      const backoffMs = immediate
+        ? 0
+        : Math.min(60_000, 500 * 2 ** Math.min(reconnectAttempts - 1, 7));
       log.info("peer reconnecting", {
         attempt: reconnectAttempts,
         backoffMs,
       });
-      setTimeout(() => {
+      pendingReconnectTimer = setTimeout(() => {
+        pendingReconnectTimer = null;
         if (peer.destroyed) return;
         try {
           peer.reconnect();
@@ -118,11 +130,43 @@ export function createHost(
       tryReconnect();
     });
 
+    // Network / visibility nudges — when the OS reports we're back
+    // online or the user returns to the tab, immediately retry
+    // rather than waiting for the scheduled backoff.
+    const onOnline = () => {
+      log.info("host window online — kicking immediate reconnect");
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
+      reconnectAttempts = 0;
+      if (peer.disconnected) tryReconnect(/* immediate */ true);
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!peer.disconnected) return;
+      log.info("host tab visible — kicking immediate reconnect");
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
+      reconnectAttempts = 0;
+      tryReconnect(/* immediate */ true);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", onOnline);
+      document.addEventListener("visibilitychange", onVisible);
+    }
+
     peer.on("open", (id) => {
       opened = true;
       // Reset the backoff once a fresh open completes so a later
       // disconnect starts from attempt 1 again.
       reconnectAttempts = 0;
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
       log.info("host session opened", { sessionCode: id });
 
       peer.on("connection", (conn) => {
@@ -181,6 +225,14 @@ export function createHost(
         },
         close: () => {
           log.info("host session closed", { sessionCode: id });
+          if (typeof window !== "undefined") {
+            window.removeEventListener("online", onOnline);
+            document.removeEventListener("visibilitychange", onVisible);
+          }
+          if (pendingReconnectTimer != null) {
+            clearTimeout(pendingReconnectTimer);
+            pendingReconnectTimer = null;
+          }
           peer.destroy();
         },
       });
@@ -208,23 +260,25 @@ export function connectToHost(
     const closeHandlers = new Set<() => void>();
     let resolved = false;
 
-    // Same broker-flake mitigation as the host: when the WSS to
-    // the broker drops, try to reconnect with a backoff before
-    // bubbling failure to the UI.
+    // Broker-flake mitigation: when the WSS to the broker drops,
+    // keep trying to reconnect with exponential backoff capped at
+    // 60s. No hard attempt limit — when the network comes back the
+    // peer should rejoin without the user reloading.
     let reconnectAttempts = 0;
-    const tryReconnect = () => {
+    let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const tryReconnect = (immediate = false) => {
       if (peer.destroyed) return;
-      if (reconnectAttempts >= 5) {
-        log.warn("companion reconnect attempts exhausted");
-        return;
-      }
+      if (pendingReconnectTimer != null) return;
       reconnectAttempts++;
-      const backoffMs = Math.min(8000, 500 * 2 ** (reconnectAttempts - 1));
+      const backoffMs = immediate
+        ? 0
+        : Math.min(60_000, 500 * 2 ** Math.min(reconnectAttempts - 1, 7));
       log.info("companion reconnecting", {
         attempt: reconnectAttempts,
         backoffMs,
       });
-      setTimeout(() => {
+      pendingReconnectTimer = setTimeout(() => {
+        pendingReconnectTimer = null;
         if (peer.destroyed) return;
         try {
           peer.reconnect();
@@ -238,37 +292,108 @@ export function connectToHost(
       tryReconnect();
     });
 
-    peer.on("open", (id) => {
+    // Network / visibility nudges — when the OS reports we're back
+    // online or the user returns to the tab, immediately retry
+    // rather than waiting for the next scheduled backoff.
+    const onOnline = () => {
+      log.info("companion window online — kicking immediate reconnect");
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
       reconnectAttempts = 0;
-      log.info("companion peer opened, dialing host", { hostCode, id });
+      if (peer.disconnected) tryReconnect(/* immediate */ true);
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!peer.disconnected) return;
+      log.info("companion tab visible — kicking immediate reconnect");
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
+      reconnectAttempts = 0;
+      tryReconnect(/* immediate */ true);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", onOnline);
+      document.addEventListener("visibilitychange", onVisible);
+    }
+
+    // Hold the active conn in a closure variable so reconnects can
+    // swap it without breaking the session interface returned to
+    // callers. Without this, the FIRST conn was captured in the
+    // session's `send`/etc. closures and a later broker reconnect
+    // would leave the caller pointing at a dead conn.
+    let currentConn: DataConnection | null = null;
+    let peerIdAtOpen: string | null = null;
+    let destroyed = false;
+    const stateHandlers = new Set<
+      (state: CompanionConnectionState) => void
+    >();
+    let lastState: CompanionConnectionState = "reconnecting";
+    const emitState = (next: CompanionConnectionState) => {
+      if (next === lastState) return;
+      lastState = next;
+      stateHandlers.forEach((h) => h(next));
+    };
+
+    const dialHost = () => {
+      if (peer.destroyed || destroyed) return;
+      log.info("companion dialing host", { hostCode });
       const conn = peer.connect(hostCode);
+      currentConn = conn;
 
       conn.on("open", () => {
-        resolved = true;
-        log.info("companion connected to host", { hostCode });
-        resolve({
-          hostCode,
-          peerId: id,
-          send: (data) => {
-            if (conn.open) conn.send(data);
-          },
-          onMessage: (h) => {
-            messageHandlers.add(h);
-            return () => {
-              messageHandlers.delete(h);
-            };
-          },
-          onClose: (h) => {
-            closeHandlers.add(h);
-            return () => {
-              closeHandlers.delete(h);
-            };
-          },
-          close: () => {
-            log.info("companion closing", { hostCode });
-            peer.destroy();
-          },
-        });
+        emitState("connected");
+        if (!resolved) {
+          resolved = true;
+          log.info("companion connected to host", { hostCode });
+          resolve({
+            hostCode,
+            peerId: peerIdAtOpen ?? "",
+            send: (data) => {
+              if (currentConn && currentConn.open) currentConn.send(data);
+            },
+            onMessage: (h) => {
+              messageHandlers.add(h);
+              return () => {
+                messageHandlers.delete(h);
+              };
+            },
+            onClose: (h) => {
+              closeHandlers.add(h);
+              return () => {
+                closeHandlers.delete(h);
+              };
+            },
+            onConnectionStateChange: (h) => {
+              stateHandlers.add(h);
+              // Replay current state so a late subscriber doesn't
+              // miss the initial "connected" transition.
+              h(lastState);
+              return () => {
+                stateHandlers.delete(h);
+              };
+            },
+            close: () => {
+              log.info("companion closing", { hostCode });
+              destroyed = true;
+              emitState("closed");
+              if (typeof window !== "undefined") {
+                window.removeEventListener("online", onOnline);
+                document.removeEventListener("visibilitychange", onVisible);
+              }
+              if (pendingReconnectTimer != null) {
+                clearTimeout(pendingReconnectTimer);
+                pendingReconnectTimer = null;
+              }
+              peer.destroy();
+            },
+          });
+        } else {
+          log.info("companion re-connected to host", { hostCode });
+        }
       });
 
       conn.on("data", (data) => {
@@ -277,7 +402,19 @@ export function connectToHost(
 
       conn.on("close", () => {
         log.info("companion connection closed", { hostCode });
-        closeHandlers.forEach((h) => h());
+        emitState(destroyed ? "closed" : "reconnecting");
+        // If the host's data channel closes but our peer is still
+        // open, try re-dialling — they might be reloading or had a
+        // brief network blip. The peer's broker-level reconnect
+        // logic handles the other case (broker WSS down).
+        if (!destroyed && !peer.destroyed && !peer.disconnected) {
+          setTimeout(() => {
+            if (!destroyed && !peer.destroyed && !peer.disconnected) {
+              dialHost();
+            }
+          }, 1500);
+        }
+        if (resolved) closeHandlers.forEach((h) => h());
       });
 
       conn.on("error", (err) => {
@@ -287,6 +424,17 @@ export function connectToHost(
         });
         if (!resolved) reject(err);
       });
+    };
+
+    peer.on("open", (id) => {
+      reconnectAttempts = 0;
+      if (pendingReconnectTimer != null) {
+        clearTimeout(pendingReconnectTimer);
+        pendingReconnectTimer = null;
+      }
+      peerIdAtOpen = id;
+      log.info("companion peer opened, dialing host", { hostCode, id });
+      dialHost();
     });
 
     peer.on("error", (err) => {
@@ -294,4 +442,38 @@ export function connectToHost(
       if (!resolved) reject(err);
     });
   });
+}
+
+// Translate a raw PeerJS error into a short, user-facing sentence.
+// PeerJS exposes the failure mode on `err.type`; we map the common
+// ones we've actually hit in the wild. The default "couldn't
+// connect" stays generic on purpose — better than guessing.
+export function describePeerError(err: unknown): string {
+  if (err && typeof err === "object" && "type" in err) {
+    const type = (err as { type?: unknown }).type;
+    switch (type) {
+      case "network":
+        return "Network unavailable — check your Wi-Fi or mobile data.";
+      case "peer-unavailable":
+        return "Host not found. They may have closed the session, or the code is wrong.";
+      case "server-error":
+        return "The sharing service is unreachable. Retrying in the background.";
+      case "socket-error":
+      case "socket-closed":
+        return "Lost the connection to the sharing service. Retrying.";
+      case "disconnected":
+        return "Disconnected — trying to reconnect.";
+      case "browser-incompatible":
+        return "This browser doesn't support the WebRTC features needed to share. Try a different browser.";
+      case "ssl-unavailable":
+        return "Secure connection blocked by your network or browser.";
+      case "unavailable-id":
+        return "That session code is taken. Try starting a new session.";
+      case "invalid-id":
+      case "invalid-key":
+        return "That session code is invalid.";
+    }
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "Couldn't connect. Retrying in the background.";
 }

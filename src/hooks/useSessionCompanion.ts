@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { connectToHost, type CompanionSession } from "@/lib/peer";
 import { toPeerId } from "@/lib/sessionCode";
 
-type Status = "connecting" | "connected" | "disconnected" | "error";
+type Status =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "error";
 
 export interface UseSessionCompanionReturn<TMessage> {
   status: Status;
@@ -44,6 +49,17 @@ export function useSessionCompanion<TMessage>(
         setPeerId(session.peerId);
         session.onMessage((data) => {
           setLastMessage(data as TMessage);
+        });
+        session.onConnectionStateChange((next) => {
+          // Map the session's three-state lifecycle to the hook's
+          // user-facing status. "reconnecting" lets the UI hint
+          // that the connection is being re-established rather
+          // than dead. "closed" → "disconnected" matches the
+          // pre-existing semantics so the rest of the app keeps
+          // working.
+          if (next === "connected") setStatus("connected");
+          else if (next === "reconnecting") setStatus("reconnecting");
+          else if (next === "closed") setStatus("disconnected");
         });
         session.onClose(() => {
           setStatus("disconnected");
