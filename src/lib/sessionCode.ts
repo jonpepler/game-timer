@@ -1,84 +1,44 @@
 /*
- * Human-friendly session codes for PeerJS host ids.
+ * Short, table-friendly session codes for PeerJS host ids.
  *
- * The public PeerJS broker uses a global id namespace, so we prefix
- * everything with a project tag to keep collisions to other Game Timer
- * sessions only. The user-visible portion is two short words + a
- * three-digit number — easy to read out loud to someone across the
- * table.
+ * 4-character codes drawn from a 22-symbol alphabet that excludes
+ * every common look-alike pair (0/O/D, 1/I/L, 2/Z, 5/S, 6/G, 8/B).
+ * Easy to read out loud, easy to type on a phone keyboard. The
+ * broker uses a global id namespace so we prefix on the wire to
+ * keep collisions to other Game Timer sessions.
  *
- *   peer id:        gtmr-fox-river-042
- *   shown to user:  fox-river-042
+ *   peer id:        gtmr-K3WP
+ *   shown to user:  K3WP
  */
 const PREFIX = "gtmr";
 
-// Small, deliberately friendly word lists. Common, easy to pronounce,
-// no homophones to misread on a phone.
-const ADJECTIVES = [
-  "amber",
-  "bright",
-  "calm",
-  "deep",
-  "easy",
-  "fast",
-  "gold",
-  "happy",
-  "icy",
-  "jolly",
-  "kind",
-  "lazy",
-  "mild",
-  "nice",
-  "olive",
-  "plum",
-  "quiet",
-  "ripe",
-  "soft",
-  "tame",
-  "vast",
-  "warm",
-  "wild",
-  "young",
-];
+// 22 unambiguous characters. Letters dropped: B (8), D (0/O), G
+// (6), I (1), L (1/I), O (0), Q (O), S (5), Z (2). Digits dropped:
+// 0 (O), 1 (I), 2 (Z), 5 (S), 6 (G), 8 (B). What's left reads
+// cleanly across sans-serif fonts, mixed case, and on poor phone
+// screens.
+const ALPHABET = "ACEFHJKMNPRTUVWXY3479";
+export const SESSION_CODE_LENGTH = 4;
 
-const NOUNS = [
-  "badger",
-  "cat",
-  "crow",
-  "deer",
-  "eagle",
-  "fox",
-  "frog",
-  "goose",
-  "hare",
-  "ibis",
-  "jay",
-  "lark",
-  "lynx",
-  "mole",
-  "newt",
-  "otter",
-  "owl",
-  "raven",
-  "river",
-  "stoat",
-  "swan",
-  "vole",
-  "wren",
-];
-
-const pick = <T>(list: readonly T[]): T =>
-  list[Math.floor(Math.random() * list.length)];
-
-const threeDigit = () => String(Math.floor(Math.random() * 1000)).padStart(3, "0");
+const randomChar = (): string =>
+  ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
 
 // Returns a fresh user-visible code (no prefix). Caller wraps it with
 // `toPeerId` before passing it to PeerJS.
-export const generateSessionCode = (): string =>
-  `${pick(ADJECTIVES)}-${pick(NOUNS)}-${threeDigit()}`;
+export const generateSessionCode = (): string => {
+  let out = "";
+  for (let i = 0; i < SESSION_CODE_LENGTH; i++) out += randomChar();
+  return out;
+};
+
+// User-typed codes might come in any case / with surrounding
+// whitespace. Normalise to the canonical form before passing to
+// PeerJS or matching against existing sessions.
+export const normaliseSessionCode = (input: string): string =>
+  input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export const toPeerId = (sessionCode: string): string =>
-  `${PREFIX}-${sessionCode}`;
+  `${PREFIX}-${normaliseSessionCode(sessionCode)}`;
 
 export const fromPeerId = (peerId: string): string =>
   peerId.startsWith(`${PREFIX}-`) ? peerId.slice(PREFIX.length + 1) : peerId;
