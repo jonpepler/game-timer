@@ -1781,16 +1781,12 @@ function PlayerPickScreen({
     onChange,
   ]);
 
-  // If draft toggled off, drop the dealt hand so re-enabling redeals
-  // fresh against the current pool.
-  useEffect(() => {
-    if (draftEnabled) return;
-    if (dealtIds == null) return;
-    onChange((curr) => {
-      const { dealtIds: _d, characters: _c, ...rest } = curr;
-      return rest;
-    });
-  }, [draftEnabled, dealtIds, onChange]);
+  // Note: previous version dropped dealtIds when draft toggled off,
+  // so re-enabling re-dealt a fresh hand and lost the player's
+  // remaining picks. The dealt list now persists across draft
+  // toggles — `visible` (above) renders the full pool when draft
+  // is off and the still-in-hand subset when draft is on. Users
+  // wanting a fresh deal use the Shuffle button explicitly.
 
   const reshuffle = () => {
     const newDealt = shuffleAndTake(

@@ -151,6 +151,39 @@ test("Root faction draft — picker deals n+1 cards by default", async ({
   await save(page, "draft-02-faction-pool");
 });
 
+// Regression: toggling Skip-draft → Back-to-draft used to wipe the
+// dealt hand, generating a fresh n+1 set every time. The dealt list
+// now persists across draft toggles so the player can free-pick a
+// faction and return to the same draft.
+test("Root faction draft — Skip + Back preserves the dealt hand", async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await navigateToScreen(page, /^Faction$/);
+
+  const cards = page
+    .locator('[class*="heroCardRow"]')
+    .first()
+    .getByRole("button");
+  // Capture the initial dealt hand by accessible label.
+  const initial = await cards.evaluateAll((els) =>
+    els.map((e) => e.getAttribute("aria-label")),
+  );
+  await expect(cards).toHaveCount(5);
+
+  // Skip draft → full legal pool. Then come back to draft. The
+  // dealt list should still be the same five faction labels in
+  // the same order.
+  await page.getByRole("button", { name: /^Skip draft$/ }).click();
+  await page.getByRole("button", { name: /^Back to draft$/ }).click();
+
+  const restored = await cards.evaluateAll((els) =>
+    els.map((e) => e.getAttribute("aria-label")),
+  );
+  expect(restored).toEqual(initial);
+});
+
 test("Hireling demotion — three dealt, two demoted at 4 players", async ({
   page,
 }) => {
