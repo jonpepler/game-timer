@@ -20,18 +20,22 @@ const VIEW = 100;
 export const PlayerArcs = ({ players, activeIndex }: PlayerArcsProps) => {
   if (!players.length) return null;
 
-  // 10% inset from the viewBox edge so the arc rides just inside the
-  // outer edge of the timer ring it overlays.
+  // The CircularProgressbar draws its track at the edge of its own
+  // 100×100 viewBox with strokeWidth 3 (path) / 1 (trail), so its
+  // visible inner edge sits around r=47. PlayerArcs needs to live
+  // CLEARLY inside that ring, not overlap it — set r to 40 so
+  // there's a few viewBox units of dark gap between the timer ring
+  // and the player arcs.
   const cx = VIEW / 2;
   const cy = VIEW / 2;
-  const r = VIEW / 2 - 5;
+  const r = 40;
 
   const GAP_DEG = 6;
-  // Stroke widths in viewBox units — 100 = full container, so 0.4
-  // is ~0.4% of the timer diameter (≈1.5px on a 360px ring),
-  // matching the previous absolute look at typical sizes.
-  const INACTIVE_WIDTH = 0.6;
-  const ACTIVE_WIDTH = 1.6;
+  // Stroke widths in viewBox units. Bumped slightly since the
+  // smaller radius means shorter arc lengths per segment, so the
+  // active arc needs a touch more weight to read.
+  const INACTIVE_WIDTH = 0.8;
+  const ACTIVE_WIDTH = 2;
   const segmentDeg = 360 / players.length - GAP_DEG;
 
   const toRad = (deg: number) => (deg * Math.PI) / 180;
