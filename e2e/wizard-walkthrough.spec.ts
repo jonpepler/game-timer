@@ -189,6 +189,26 @@ test("Root faction draft — Skip + Back preserves the dealt hand", async ({
   expect(restored).toEqual(initial);
 });
 
+// Regression: pressing Shuffle in draft mode reset activeSeat to 0
+// (seat 1) instead of keeping it at the last seat (ADSET A.8.3 says
+// picking goes counterclockwise from the last seated player).
+test("Root faction draft — Shuffle keeps active seat at last seat", async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/timer`);
+  await page.getByLabel(/^Game$/).selectOption("root");
+  await navigateToScreen(page, /^Faction$/);
+
+  // Default 4 seats → initial active seat is seat 4 (index 3).
+  await expect(page.getByText(/seat 4 of 4/i)).toBeVisible();
+
+  // Press Shuffle — the dealt hand changes but activeSeat must stay
+  // at the last seat, not jump back to seat 1.
+  await page.getByRole("button", { name: /^Shuffle$/ }).click();
+
+  await expect(page.getByText(/seat 4 of 4/i)).toBeVisible();
+});
+
 test("Hireling demotion — three dealt, two demoted at 4 players", async ({
   page,
 }) => {

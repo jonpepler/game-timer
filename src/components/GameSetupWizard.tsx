@@ -1820,7 +1820,7 @@ function PlayerPickScreen({
       dealtIds: newDealt,
       characters: newCharacters,
     }));
-    setActiveSeat(0);
+    setActiveSeat(Math.max(0, seats.length - 1));
   };
 
   // Per ADSET A.8.3: picking goes counterclockwise starting from the
@@ -1830,10 +1830,18 @@ function PlayerPickScreen({
   const [activeSeat, setActiveSeat] = useState(() =>
     Math.max(0, seats.length - 1),
   );
-  // When seats change (count grows/shrinks), pin activeSeat to the
-  // first still-unfilled seat going backwards from the end. Avoids
-  // landing on an out-of-range index.
+  // If the picker mounts before the seat-players context has
+  // propagated, useState's initializer lands at 0. Once seats
+  // populate, snap once to the last seat per ADSET A.8.3.
+  const seatsInitialisedRef = useRef(false);
   useEffect(() => {
+    if (seats.length === 0) return;
+    if (!seatsInitialisedRef.current) {
+      seatsInitialisedRef.current = true;
+      setActiveSeat(seats.length - 1);
+      return;
+    }
+    // Pin activeSeat in range when the seat count shrinks.
     if (activeSeat >= seats.length) {
       setActiveSeat(Math.max(0, seats.length - 1));
     }
