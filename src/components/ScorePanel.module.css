@@ -281,6 +281,110 @@
   height: 22px;
 }
 
+/* ── Catch-up panel (other-player +/- stack) ──────────────────────── */
+
+.othersToggle {
+  width: auto;
+  height: auto;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.othersToggle:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.othersToggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.othersStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: flex-end;
+  /* Cap at roughly three rows visible; the rest scrolls. Players
+     with 4-6 seats start to overflow without this. */
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.otherRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 6px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.otherName {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.otherScore {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 30px;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.scoreButtonSmall {
+  /* Slightly smaller than the primary adder so the catch-up stack
+     reads as secondary chrome. Still over the WCAG 44×44 minimum. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.scoreButtonSmall:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.scoreButtonSmall:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.scoreButtonSmall svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* ── Compact leaderboard chips (one row, scoreConfig.displayStyle = leaderboard) ─ */
 
 .leaderboard {

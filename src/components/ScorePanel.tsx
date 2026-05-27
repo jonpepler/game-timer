@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import styles from "./ScorePanel.module.css";
 import type { ScoreConfig } from "@/state/gameDefinition";
 
@@ -55,6 +55,11 @@ export function ScorePanel({
   const initialSelection =
     activePlayerIndex ?? (players.length > 0 ? 0 : null);
   const [selected, setSelected] = useState<number | null>(initialSelection);
+  // Catch-up panel: a scrollable stack of +/- controls for the other
+  // players, so missed scores can be added without rotating the
+  // selection through the track. Collapsed by default to keep the
+  // panel compact when the active player is the only thing changing.
+  const [othersExpanded, setOthersExpanded] = useState(false);
 
   // Follow the active player as turns rotate, unless the user has
   // manually picked a different marker (we treat any pick as sticky
@@ -77,6 +82,86 @@ export function ScorePanel({
   const selectedScore = selected !== null ? (scores[selected] ?? min) : min;
   const atMin = selectedScore <= min;
   const atMax = max !== undefined ? selectedScore >= max : false;
+
+  // Indices of players NOT currently shown in the main adder. Order
+  // mirrors seating so the catch-up stack reads the same as everywhere
+  // else (player 1 at the top, etc.).
+  const otherIndices = players
+    .map((_, i) => i)
+    .filter((i) => i !== selected);
+
+  // Toggle + stack for the catch-up panel. Both null when the panel
+  // can't make sense (read-only, no onIncrement, or nobody to catch up
+  // on).
+  const showOthersUi =
+    !readOnly && onIncrement !== undefined && otherIndices.length > 0;
+
+  const othersToggleNode = showOthersUi && (
+    <button
+      type="button"
+      onClick={stopProp(() => setOthersExpanded((v) => !v))}
+      className={styles.othersToggle}
+      aria-expanded={othersExpanded}
+      aria-controls="score-panel-others-stack"
+    >
+      {othersExpanded ? (
+        <ChevronUp aria-hidden />
+      ) : (
+        <ChevronDown aria-hidden />
+      )}
+      {othersExpanded ? "Hide other scores" : "Show other scores"}
+    </button>
+  );
+
+  const othersStackNode = showOthersUi && othersExpanded && (
+    <div
+      id="score-panel-others-stack"
+      className={styles.othersStack}
+      role="group"
+      aria-label="Other player scores"
+    >
+      {otherIndices.map((i) => {
+        const player = players[i];
+        const score = scores[i] ?? min;
+        const rowAtMin = score <= min;
+        const rowAtMax = max !== undefined ? score >= max : false;
+        return (
+          <div key={i} className={styles.otherRow}>
+            <button
+              type="button"
+              onClick={stopProp(() => onIncrement!(i, -step))}
+              disabled={rowAtMin}
+              className={styles.scoreButtonSmall}
+              aria-label={`Decrease score for ${player.name}`}
+            >
+              <Minus aria-hidden />
+            </button>
+            <span
+              className={styles.otherName}
+              style={{ color: player.color }}
+            >
+              <span
+                className={styles.selectedSwatch}
+                style={{ background: player.color }}
+                aria-hidden
+              />
+              {player.name}
+            </span>
+            <span className={styles.otherScore}>{score}</span>
+            <button
+              type="button"
+              onClick={stopProp(() => onIncrement!(i, step))}
+              disabled={rowAtMax}
+              className={styles.scoreButtonSmall}
+              aria-label={`Increase score for ${player.name}`}
+            >
+              <Plus aria-hidden />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   // The +/- score adder for the selected player. Hoisted out of the
   // render so we can place it above the track (per user feedback)
@@ -129,6 +214,12 @@ export function ScorePanel({
 
   return (
     <div className={styles.container} aria-label="Scores">
+      {/* Catch-up panel: toggle + scrollable stack of +/- adders for
+          the players NOT currently shown in the main adder. Lives
+          above the selected-player pill so the primary control stays
+          in the same spot regardless of expansion state. */}
+      {othersToggleNode}
+      {othersStackNode}
       {/* Adder sits above the track. With the SCORES heading
           dropped, the adder pill IS the panel's chrome label —
           its name + score effectively title the strip. */}
