@@ -218,8 +218,12 @@ export function ScorePanel({
           the players NOT currently shown in the main adder. Lives
           above the selected-player pill so the primary control stays
           in the same spot regardless of expansion state. */}
-      {othersToggleNode}
-      {othersStackNode}
+      {showOthersUi && (
+        <div className={styles.catchUp}>
+          {othersToggleNode}
+          {othersStackNode}
+        </div>
+      )}
       {/* Adder sits above the track. With the SCORES heading
           dropped, the adder pill IS the panel's chrome label —
           its name + score effectively title the strip. */}

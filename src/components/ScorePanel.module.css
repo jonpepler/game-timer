@@ -283,20 +283,35 @@
 
 /* ── Catch-up panel (other-player +/- stack) ──────────────────────── */
 
+/* Wrapper that owns the spacing between the catch-up controls and
+   the primary adder pill below. Right-aligns its children so the
+   toggle + stack line up with the adder above the track. */
+.catchUp {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  /* Visual separation from the active-player adder so the catch-up
+     panel reads as a distinct affordance. */
+  margin-bottom: 12px;
+}
+
 .othersToggle {
   width: auto;
-  height: auto;
-  padding: 4px 12px;
+  /* Meets the WCAG 2.5.5 (AAA) 44×44 target-size guideline so the
+     toggle taps cleanly on mobile, matching the primary adder
+     buttons below. */
+  min-height: 44px;
+  padding: 8px 16px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  align-self: flex-end;
+  gap: 8px;
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--color-text-muted);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -308,15 +323,16 @@
 }
 
 .othersToggle svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
 }
 
 .othersStack {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  align-self: flex-end;
+  align-self: stretch;
+  align-items: flex-end;
   /* Cap at roughly three rows visible; the rest scrolls. Players
      with 4-6 seats start to overflow without this. */
   max-height: 200px;
