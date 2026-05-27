@@ -253,4 +253,42 @@ describe("connectToHost", () => {
     await expect(promise).rejects.toThrow(/host not found/);
     consoleSpy.mockRestore();
   });
+
+  it("buffers data that arrives before onMessage is registered, then replays on first subscribe", async () => {
+    FakePeer.instances = [];
+    const promise = connectToHost("host-abc", {
+      PeerCtor: FakePeer as unknown as never,
+    });
+    queueMicrotask(() => {
+      const peer = FakePeer.instances[0];
+      peer.emit("open", "companion-1");
+      const conn = peer.outboundConnections[0];
+      conn.open = true;
+      conn.emit("open");
+    });
+    const session = await promise;
+
+    // Emit data BEFORE registering any onMessage handler — simulates
+    // the host broadcasting STATE immediately on connect before the
+    // React hook's .then() callback has had a chance to call onMessage.
+    const conn = FakePeer.instances[0].outboundConnections[0];
+    conn.emit("data", { type: "STATE", value: 1 });
+    conn.emit("data", { type: "STATE", value: 2 });
+
+    // Now register the handler — buffered messages must replay.
+    const received: unknown[] = [];
+    session.onMessage((data) => received.push(data));
+    expect(received).toEqual([
+      { type: "STATE", value: 1 },
+      { type: "STATE", value: 2 },
+    ]);
+
+    // Subsequent messages go straight to the handler (no double delivery).
+    conn.emit("data", { type: "STATE", value: 3 });
+    expect(received).toEqual([
+      { type: "STATE", value: 1 },
+      { type: "STATE", value: 2 },
+      { type: "STATE", value: 3 },
+    ]);
+  });
 });

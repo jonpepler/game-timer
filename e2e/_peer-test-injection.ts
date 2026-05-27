@@ -89,6 +89,7 @@ export const PEER_TEST_INIT_SCRIPT = `
       const myId = "companion-" + randomId();
       let messageHandlers = [];
       let closeHandlers = [];
+      let pendingMessages = [];
 
       const ackPromise = new Promise((resolve) => {
         const onMsg = (ev) => {
@@ -106,7 +107,11 @@ export const PEER_TEST_INIT_SCRIPT = `
         const m = ev.data;
         if (!m || m.to !== myId) return;
         if (m.type === "data") {
-          messageHandlers.forEach((h) => h(m.data));
+          if (messageHandlers.length === 0) {
+            pendingMessages.push(m.data);
+          } else {
+            messageHandlers.forEach((h) => h(m.data));
+          }
         } else if (m.type === "host-closed") {
           closeHandlers.forEach((h) => h());
         }
@@ -123,6 +128,10 @@ export const PEER_TEST_INIT_SCRIPT = `
         },
         onMessage: (h) => {
           messageHandlers.push(h);
+          if (pendingMessages.length > 0) {
+            const buffered = pendingMessages.splice(0);
+            buffered.forEach((msg) => h(msg));
+          }
           return () => {
             messageHandlers = messageHandlers.filter((x) => x !== h);
           };

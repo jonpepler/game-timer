@@ -375,6 +375,85 @@ test.describe("companion multi-screen — identity-bound picks", () => {
   });
 });
 
+test.describe("companion multi-screen — first-connection state delivery", () => {
+  test.beforeEach(async ({ context }) => {
+    await installTestPeer(context);
+  });
+
+  test("companion that connects after game has started sees current state without a host mutation", async ({
+    context,
+  }) => {
+    // Start a game on the host with player tracking so STATE has
+    // meaningful content (players + turns). The companion then connects
+    // AFTER the host has state — this is the late-join race the buffer
+    // fix is meant to solve. No further action is taken on the host
+    // after the companion connects; the companion must see STATE solely
+    // from the first-connection broadcast.
+    const host = await context.newPage();
+    await host.goto(`${BASE}/timer`);
+    await host.getByRole("button", { name: /^Next/ }).click(); // Game → Turns
+    await host.getByRole("button", { name: /^Next/ }).click(); // Turns → Players
+    await host.getByLabel(/track individual players/i).check();
+    await host.getByRole("button", { name: /start game/i }).click();
+
+    // Tap twice to advance past the initial "start" tap and record
+    // turn 1 so the companion's gameStarted gating sees > 0 turns.
+    await host.locator("main").click();
+    await host.locator("main").click();
+
+    // Read the code before connecting the companion.
+    const chip = host.getByRole("button", { name: /^Sharing session / });
+    await chip.waitFor();
+    const code = (/Sharing session (\S+),/.exec(
+      (await chip.getAttribute("aria-label")) ?? "",
+    ) ?? [])[1];
+    if (!code) throw new Error("no session code");
+
+    // Connect the companion AFTER the host already has state.
+    const companion = await openCompanion(context, code);
+
+    // The companion should show the player-claim panel from the
+    // initial STATE broadcast. No further host action is taken —
+    // proving the companion received state on first connect.
+    await expect(companion.getByText(/Claim a player/i)).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test("companion that connects after SETUP_SEATING sees the seat list without a host mutation", async ({
+    context,
+  }) => {
+    // Open the host, get the session code, launch a Root game wizard
+    // so SETUP_SEATING is broadcast, THEN connect the companion. The
+    // companion should see the seat list purely from the initial
+    // first-connection broadcast — no further host action after connect.
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+
+    // Wait for the host to have emitted SETUP_SEATING (the Root
+    // definition fires it as soon as it's selected; the seating step
+    // broadcasts on each seating change). The host's peerCount is 0
+    // here, so the broadcast goes to nobody — but the snapshot is set.
+    // We wait briefly to ensure the React useEffect has fired.
+    await host.waitForTimeout(200);
+
+    // NOW connect the companion — after state is set on the host.
+    const companion = await openCompanion(context, code);
+
+    // Companion must render the seating panel from the initial
+    // first-connection broadcast only.
+    await expect(companion.getByText(/take a seat/i)).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(
+      companion.getByRole("button", { name: /^Claim seat 1$/ }),
+    ).toBeVisible({ timeout: 3000 });
+  });
+});
+
 test.describe("companion multi-screen — game-time interaction", () => {
   test.beforeEach(async ({ context }) => {
     await installTestPeer(context);
@@ -481,5 +560,90 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await expect(host.getByText(/88\s*turns left/i)).toBeVisible({
       timeout: 3000,
     });
+  });
+
+  test("companion score bump updates the companion's own My-score display", async ({
+    context,
+  }) => {
+    // Start a Root game (which has score config) so the companion can
+    // claim a seat during the SETUP_SEATING phase, then bump its score.
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+
+    // Connect companion before wizard so it can claim a seat during setup.
+    const companion = await openCompanion(context, code);
+
+    // Open Root game wizard on the host.
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+
+    // Reduce to 2 seats to keep the test short.
+    await navigateToScreen(host, /seat players/i);
+    // Root defaults to 4 seats; remove seats 4 and 3.
+    await host.getByRole("button", { name: /Remove seat 4/ }).click();
+    await host.getByRole("button", { name: /Remove seat 3/ }).click();
+
+    // Companion sees the seating panel and claims seat 2 (the last seat,
+    // which picks faction FIRST under Root's counterclockwise rule).
+    await expect(companion.getByText(/take a seat/i)).toBeVisible({
+      timeout: 5000,
+    });
+    await companion.getByRole("button", { name: /^Claim seat 2$/ }).click();
+    await expect(
+      companion.getByRole("textbox", { name: /Rename seat 2/i }),
+    ).toBeVisible({ timeout: 3000 });
+
+    // Navigate host to faction picker and skip the draft.
+    await navigateToScreen(host, /^Faction$/);
+    await host.getByRole("button", { name: /^Skip draft$/ }).click();
+
+    // Seat 2's turn fires. The companion sees the picker and picks any
+    // available faction (first card in the list).
+    const pickerPanel = companion.getByRole("region", {
+      name: /Your turn to pick a faction/i,
+    });
+    await expect(pickerPanel).toBeVisible({ timeout: 5000 });
+    const firstCard = pickerPanel.getByRole("button").first();
+    await firstCard.click();
+    await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
+
+    // Now seat 1's turn fires on the host (no companion for seat 1).
+    // Pick any available faction from the host wizard (first enabled card).
+    const hostPickerPanel = host.getByRole("region", {
+      name: /Your turn to pick a faction/i,
+    }).or(host.locator(".GameSetupWizard_heroPicker__E08hU")).first();
+    // Locate all enabled faction cards and click the first one.
+    const enabledCard = host.locator('[aria-label]:not([aria-disabled="true"])').filter({
+      hasText: /.+/,
+    }).first();
+    // Simpler: just find any non-disabled button in the hero card area
+    await host
+      .locator('[class*="heroCard"]:not([aria-disabled="true"])')
+      .first()
+      .click();
+    await host.getByRole("button", { name: /^Confirm setup$/ }).click();
+
+    // Click Start Game (Root's post-faction info screen shows this button).
+    const startBtn = host.getByRole("button", { name: /start game/i });
+    await startBtn.click({ timeout: 3000 }).catch(() => {});
+
+    // Wait for the game to start on the host.
+    await expect(host.getByText(/turns left/i)).toBeVisible({ timeout: 5000 });
+
+    // The companion should now show score controls (claimedPlayer && scoreConfig).
+    const incButton = companion.getByRole("button", {
+      name: /Increase my score/i,
+    });
+    await expect(incButton).toBeVisible({ timeout: 5000 });
+
+    // Score starts at Root's min (0). Bump it once via the companion.
+    await incButton.click();
+
+    // The companion's "My score" display must update to 1 once the host
+    // echoes the incremented STATE back. This is the assertion that
+    // fails if the INCREMENT_SCORE round-trip or STATE broadcast is broken.
+    await expect(
+      companion.getByText("My score").locator("xpath=..").getByText("1"),
+    ).toBeVisible({ timeout: 5000 });
   });
 });

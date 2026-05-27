@@ -346,6 +346,12 @@ export function connectToHost(
     let currentConn: DataConnection | null = null;
     let peerIdAtOpen: string | null = null;
     let destroyed = false;
+    // Buffer data events that arrive before the first onMessage handler
+    // is registered. The companion's caller attaches its handler in a
+    // .then() callback after connectToHost resolves; the host may
+    // broadcast immediately on connection (via a peerCount-keyed
+    // useEffect). Without the buffer those early messages are dropped.
+    const pendingMessages: unknown[] = [];
     const stateHandlers = new Set<
       (state: CompanionConnectionState) => void
     >();
@@ -375,6 +381,12 @@ export function connectToHost(
             },
             onMessage: (h) => {
               messageHandlers.add(h);
+              // Replay any messages that arrived before this handler
+              // was registered (the first-connection race window).
+              if (pendingMessages.length > 0) {
+                const buffered = pendingMessages.splice(0);
+                buffered.forEach((msg) => h(msg));
+              }
               return () => {
                 messageHandlers.delete(h);
               };
@@ -415,7 +427,11 @@ export function connectToHost(
       });
 
       conn.on("data", (data) => {
-        messageHandlers.forEach((h) => h(data));
+        if (messageHandlers.size === 0) {
+          pendingMessages.push(data);
+        } else {
+          messageHandlers.forEach((h) => h(data));
+        }
       });
 
       conn.on("close", () => {
