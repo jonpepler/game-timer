@@ -12,9 +12,7 @@ test.describe("game definition editor", () => {
     await expect(page.getByText("Generic")).toBeVisible();
     await expect(page.getByText("Root")).toBeVisible();
     // Built-ins shouldn't expose edit / delete buttons.
-    await expect(
-      page.getByRole("link", { name: /Edit Root/i }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Edit Root/i })).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /Delete Root/i }),
     ).toHaveCount(0);
@@ -41,16 +39,13 @@ test.describe("game definition editor", () => {
     await expect(picker).toHaveValue(/^wingspan-/);
   });
 
-  test.skip(
-    "custom definition with options populates the player rows",
-    async () => {
-      // The rich definition editor is being rebuilt against the
-      // generic SetupStep schema. While the stub editor only takes
-      // name + defaults, there's no UI path to add per-player options
-      // here; this test wakes back up when /games/new learns to
-      // author setupSteps.
-    },
-  );
+  test.skip("custom definition with options populates the player rows", async () => {
+    // The rich definition editor is being rebuilt against the
+    // generic SetupStep schema. While the stub editor only takes
+    // name + defaults, there's no UI path to add per-player options
+    // here; this test wakes back up when /games/new learns to
+    // author setupSteps.
+  });
 
   test("deleting a custom definition removes it from the library", async ({
     page,
@@ -61,9 +56,7 @@ test.describe("game definition editor", () => {
 
     await expect(page.getByText("Disposable Game")).toBeVisible();
     page.once("dialog", (d) => d.accept());
-    await page
-      .getByRole("button", { name: /Delete Disposable Game/i })
-      .click();
+    await page.getByRole("button", { name: /Delete Disposable Game/i }).click();
     await expect(page.getByText("Disposable Game")).toHaveCount(0);
   });
 

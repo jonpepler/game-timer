@@ -1,7 +1,7 @@
 import { getDateSecondsFromNow } from "@/utils/getDateSecondsFromNow";
 import { EditableField } from "../EditableField";
 import styles from "./Footer.module.css";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { Clock, Hourglass, Pause, Play, Undo2 } from "lucide-react";
 
 type FooterProps = {
@@ -37,9 +37,10 @@ export const Footer = ({
   }, []);
 
   const predictedFinish = mounted
-    ? getDateSecondsFromNow(
-        remainingTurns * averageTime,
-      ).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    ? getDateSecondsFromNow(remainingTurns * averageTime).toLocaleTimeString(
+        [],
+        { hour: "numeric", minute: "2-digit" },
+      )
     : "—";
 
   // Tap-to-advance lives on a parent div. Buttons in the footer need to

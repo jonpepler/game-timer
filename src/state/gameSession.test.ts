@@ -531,9 +531,7 @@ describe("score milestones", () => {
       min: 0,
       max: 30,
       increment: 1,
-      milestones: [
-        { atScore: 4, label: "Trigger", fireOnce: true },
-      ],
+      milestones: [{ atScore: 4, label: "Trigger", fireOnce: true }],
     };
     const state = gameSessionReducer(
       createInitialGameSessionState({

@@ -4,10 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import styles from "./page.module.css";
-import {
-  isBuiltIn,
-  listDefinitions,
-} from "@/state/definitionRegistry";
+import { isBuiltIn, listDefinitions } from "@/state/definitionRegistry";
 import { deleteCustomDefinition } from "@/state/customDefinitions";
 import type { GameDefinition } from "@/state/gameDefinition";
 
@@ -64,8 +61,8 @@ export default function GamesLibrary() {
                   </span>
                 )}
                 <span className={styles.rowMeta}>
-                  {def.defaultExpectedTurns} turns ·{" "}
-                  {def.defaultAverageSeconds}s avg
+                  {def.defaultExpectedTurns} turns · {def.defaultAverageSeconds}
+                  s avg
                   {(() => {
                     const pickStep = def.setupSteps?.find(
                       (s) => s.kind.type === "player-pick",

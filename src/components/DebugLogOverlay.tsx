@@ -192,6 +192,7 @@ export function DebugLogOverlay() {
   // Auto-scroll to bottom when new entries arrive AND the panel is
   // open. The user can scroll up to inspect older history; we don't
   // pull them back to the bottom mid-read.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: entries is a deliberate re-run trigger — auto-scroll when new entries arrive
   useEffect(() => {
     if (!open) return;
     const el = listRef.current;

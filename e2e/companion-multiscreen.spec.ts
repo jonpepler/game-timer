@@ -256,10 +256,9 @@ test.describe("companion multi-screen — setup-time seating", () => {
     await companion
       .getByRole("textbox", { name: /Rename seat 1/i })
       .fill("Alice 2");
-    await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue(
-      "Alice 2",
-      { timeout: 3000 },
-    );
+    await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue("Alice 2", {
+      timeout: 3000,
+    });
   });
 });
 
@@ -306,9 +305,7 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     await firstCard.click();
     // Companion now mirrors the host's two-step pick: tap card →
     // confirm screen → Confirm setup commits the pick.
-    await companion
-      .getByRole("button", { name: /^Confirm setup$/ })
-      .click();
+    await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
 
     // Host's dealt-resolve progress tile for seat 1 should now
     // show that seat picked the named hireling.
@@ -361,9 +358,7 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     await firstCard.click();
     // Companion now mirrors the host's two-step pick: tap card →
     // confirm screen → Confirm setup commits the pick.
-    await companion
-      .getByRole("button", { name: /^Confirm setup$/ })
-      .click();
+    await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
 
     // Host's wizard records the pick against seat 4. The picker's
     // dot summary uses `title` (and aria-label) to surface each
@@ -492,9 +487,7 @@ test.describe("companion multi-screen — game-time interaction", () => {
     // After 2 host taps the active rotation has landed on Player 2
     // (turn 1 recorded against Player 1, currentPlayerIndex rolled
     // from 0 → 1). Claim that slot so isMyTurn flips true.
-    await companion
-      .getByRole("button", { name: /^Player 2$/ })
-      .click();
+    await companion.getByRole("button", { name: /^Player 2$/ }).click();
 
     const endButton = companion.getByRole("button", {
       name: /^End my turn$/,
@@ -505,9 +498,13 @@ test.describe("companion multi-screen — game-time interaction", () => {
     // the button flips to disabled before the host's STATE
     // round-trip lands. The waiting copy appears once the host
     // confirms the rotation.
-    await expect(endButton.or(companion.getByRole("button", {
-      name: /Waiting for your turn/,
-    }))).toBeDisabled({ timeout: 3000 });
+    await expect(
+      endButton.or(
+        companion.getByRole("button", {
+          name: /Waiting for your turn/,
+        }),
+      ),
+    ).toBeDisabled({ timeout: 3000 });
   });
 
   test("Generic + no-tracking: companion's Next-turn taps advance the host timer", async ({
@@ -609,13 +606,19 @@ test.describe("companion multi-screen — game-time interaction", () => {
 
     // Now seat 1's turn fires on the host (no companion for seat 1).
     // Pick any available faction from the host wizard (first enabled card).
-    const hostPickerPanel = host.getByRole("region", {
-      name: /Your turn to pick a faction/i,
-    }).or(host.locator(".GameSetupWizard_heroPicker__E08hU")).first();
+    const _hostPickerPanel = host
+      .getByRole("region", {
+        name: /Your turn to pick a faction/i,
+      })
+      .or(host.locator(".GameSetupWizard_heroPicker__E08hU"))
+      .first();
     // Locate all enabled faction cards and click the first one.
-    const enabledCard = host.locator('[aria-label]:not([aria-disabled="true"])').filter({
-      hasText: /.+/,
-    }).first();
+    const _enabledCard = host
+      .locator('[aria-label]:not([aria-disabled="true"])')
+      .filter({
+        hasText: /.+/,
+      })
+      .first();
     // Simpler: just find any non-disabled button in the hero card area
     await host
       .locator('[class*="heroCard"]:not([aria-disabled="true"])')

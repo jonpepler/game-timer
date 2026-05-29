@@ -124,9 +124,9 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   ).toBeVisible();
   await save(page, "12b-choose-starting-hands");
   await page.getByRole("button", { name: /^Start Game$/ }).click();
-  await expect(
-    page.getByRole("heading", { name: /game setup/i }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /game setup/i })).toHaveCount(
+    0,
+  );
   await save(page, "13-timer-after-start");
 });
 
@@ -222,9 +222,7 @@ test("Hireling demotion — three dealt, two demoted at 4 players", async ({
   await save(page, "hirelings-demoted-4p");
 });
 
-test("Generic flow — collapses to Game / Turns / Players", async ({
-  page,
-}) => {
+test("Generic flow — collapses to Game / Turns / Players", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
   await expect(
     page.getByRole("heading", { name: /pick a game/i }),
@@ -239,9 +237,7 @@ test("Generic flow — collapses to Game / Turns / Players", async ({
 // React committed the applyPick setContext. The score-panel head
 // icon for the last-picked seat would render as the positional
 // fallback swatch instead of the faction's head-icon image.
-test("Root faction picker — last seat keeps its metadata", async ({
-  page,
-}) => {
+test("Root faction picker — last seat keeps its metadata", async ({ page }) => {
   await page.goto(`${BASE}/timer`);
   await page.getByLabel(/^Game$/).selectOption("root");
   await navigateToScreen(page, /^Faction$/);

@@ -35,7 +35,10 @@ export const loadJson = <T>(suffix: string): T | undefined => {
   try {
     return JSON.parse(raw) as T;
   } catch (e) {
-    log.warn("failed to parse stored value; dropping", { suffix, error: String(e) });
+    log.warn("failed to parse stored value; dropping", {
+      suffix,
+      error: String(e),
+    });
     return undefined;
   }
 };

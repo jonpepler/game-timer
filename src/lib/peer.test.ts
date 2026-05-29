@@ -13,11 +13,14 @@ class FakeConnection {
   constructor(public peer: string) {}
 
   on(event: string, handler: (...args: unknown[]) => void) {
+    // biome-ignore lint/suspicious/noAssignInExpressions: ??= lazy-init idiom in test fake
     (this.handlers[event] ??= []).push(handler);
   }
 
   emit(event: string, ...args: unknown[]) {
-    (this.handlers[event] ?? []).forEach((h) => h(...args));
+    (this.handlers[event] ?? []).forEach((h) => {
+      h(...args);
+    });
   }
 
   send(data: unknown) {
@@ -36,11 +39,14 @@ class FakePeer {
   }
 
   on(event: string, handler: (...args: unknown[]) => void) {
+    // biome-ignore lint/suspicious/noAssignInExpressions: ??= lazy-init idiom in test fake
     (this.handlers[event] ??= []).push(handler);
   }
 
   emit(event: string, ...args: unknown[]) {
-    (this.handlers[event] ?? []).forEach((h) => h(...args));
+    (this.handlers[event] ?? []).forEach((h) => {
+      h(...args);
+    });
   }
 
   connect(remoteId: string) {
@@ -141,9 +147,7 @@ describe("createHost", () => {
 
   it("does not reject for errors that happen after open", async () => {
     FakePeer.instances = [];
-    const consoleSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const promise = createHost({ PeerCtor: FakePeer as unknown as never });
     queueMicrotask(() => FakePeer.instances[0].emit("open", "host-1"));
     const session = await promise;
@@ -211,9 +215,9 @@ describe("connectToHost", () => {
     });
     const session = await promise;
     session.send({ ping: 1 });
-    expect(
-      FakePeer.instances[0].outboundConnections[0].sent,
-    ).toEqual([{ ping: 1 }]);
+    expect(FakePeer.instances[0].outboundConnections[0].sent).toEqual([
+      { ping: 1 },
+    ]);
   });
 
   it("onClose fires when the host hangs up", async () => {

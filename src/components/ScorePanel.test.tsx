@@ -31,7 +31,9 @@ describe("ScorePanel — catch-up stack", () => {
     // Toggle starts collapsed.
     const toggle = screen.getByRole("button", { name: /show other scores/i });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("group", { name: /other player scores/i })).toBeNull();
+    expect(
+      screen.queryByRole("group", { name: /other player scores/i }),
+    ).toBeNull();
 
     fireEvent.click(toggle);
     expect(
@@ -54,7 +56,9 @@ describe("ScorePanel — catch-up stack", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /show other scores/i }));
-    fireEvent.click(screen.getByRole("button", { name: /increase score for Bob/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /increase score for Bob/i }),
+    );
     expect(onIncrement).toHaveBeenCalledWith(1, 1);
   });
 

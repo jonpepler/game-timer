@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "format": "biome format --write",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -26,8 +28,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.9.0",
-    "@next/eslint-plugin-next": "^14.2.5",
+    "@biomejs/biome": "2.4.16",
     "@playwright/experimental-ct-react": "^1.60.0",
     "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -38,16 +39,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^6.0.2",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.5",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "eslint-plugin-react": "^7.35.0",
-    "globals": "^15.9.0",
     "jsdom": "^29.1.1",
-    "prettier": "3.3.3",
     "typescript": "^5",
-    "typescript-eslint": "^8.1.0",
     "vitest": "^4.1.6"
   }
 }

@@ -95,12 +95,9 @@ test("ScorePanel — Root track, two players sharing the same score", async ({
       />,
     ),
   );
-  await expect(component).toHaveScreenshot(
-    "score-panel-root-cluster.png",
-    {
-      maxDiffPixelRatio: 0.02,
-    },
-  );
+  await expect(component).toHaveScreenshot("score-panel-root-cluster.png", {
+    maxDiffPixelRatio: 0.02,
+  });
 });
 
 test("ScorePanel — Root track, three-player cluster + active sway scaled", async ({

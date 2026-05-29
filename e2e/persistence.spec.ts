@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { incrementScoreWithMilestones, startGame } from "./_setup-helpers";
 
-const BASE = "/game-timer";
+const _BASE = "/game-timer";
 
 const startGenericPlayers = (
   page: Page,

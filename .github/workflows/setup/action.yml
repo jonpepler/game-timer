@@ -17,5 +17,5 @@ runs:
     
     - name: "Install Dependencies"
       shell: bash
-      if: steps.cache_dependencies.outputs.cache-hit != 'true'
+      if: steps.cache.outputs.cache-hit != 'true'
       run: npm ci

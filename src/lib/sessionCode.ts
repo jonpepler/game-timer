@@ -35,7 +35,10 @@ export const generateSessionCode = (): string => {
 // whitespace. Normalise to the canonical form before passing to
 // PeerJS or matching against existing sessions.
 export const normaliseSessionCode = (input: string): string =>
-  input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  input
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 
 export const toPeerId = (sessionCode: string): string =>
   `${PREFIX}-${normaliseSessionCode(sessionCode)}`;

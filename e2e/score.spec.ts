@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { dismissMilestoneIfShown, startGame } from "./_setup-helpers";
 
 // Dev server runs under basePath "/game-timer" (see next.config.js).
-const BASE = "/game-timer";
+const _BASE = "/game-timer";
 
 const ROOT_FACTIONS = [
   { id: "marquise", label: "Marquise de Cat" },
@@ -35,7 +35,7 @@ const decButton = (page: Page, playerName: string) =>
     name: new RegExp(`Decrease score for ${playerName}`, "i"),
   });
 
-const selectAndPump = async (page: Page, name: string, delta: number) => {
+const _selectAndPump = async (page: Page, name: string, delta: number) => {
   await marker(page, name).click();
   if (delta > 0) {
     for (let i = 0; i < delta; i++) {

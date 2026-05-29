@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  clearSession,
-  loadSession,
-  saveSession,
-} from "./sessionPersistence";
+import { clearSession, loadSession, saveSession } from "./sessionPersistence";
 import {
   createInitialGameSessionState,
   gameSessionReducer,

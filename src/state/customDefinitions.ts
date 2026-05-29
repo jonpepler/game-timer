@@ -1,8 +1,5 @@
 import { clearKey, loadJson, saveJson } from "@/lib/storage";
-import {
-  safeParseGameDefinition,
-  type GameDefinition,
-} from "./gameDefinition";
+import { safeParseGameDefinition, type GameDefinition } from "./gameDefinition";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("custom-definitions");
@@ -44,9 +41,8 @@ const saveAll = (definitions: GameDefinition[]): void => {
 
 export const listCustomDefinitions = (): GameDefinition[] => loadAll();
 
-export const findCustomDefinition = (
-  id: string,
-): GameDefinition | undefined => loadAll().find((d) => d.id === id);
+export const findCustomDefinition = (id: string): GameDefinition | undefined =>
+  loadAll().find((d) => d.id === id);
 
 export const saveCustomDefinition = (def: GameDefinition): void => {
   // Parse-validate again at the save boundary as belt-and-braces. If

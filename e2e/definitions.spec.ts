@@ -95,9 +95,7 @@ test.describe("Root setup wizard surface", () => {
     await page.getByRole("button", { name: /^Skip draft$/ }).click();
     // First seat picks Vagabond — two-step now (preview, then
     // Confirm setup commits the pick).
-    await page
-      .getByRole("button", { name: "Vagabond", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Vagabond", exact: true }).click();
     await page.getByRole("button", { name: /^Confirm setup$/ }).click();
     // The Knaves card should now be visually disabled (aria-disabled)
     // for the next seat — mutex-excluded by Vagabond's pick.

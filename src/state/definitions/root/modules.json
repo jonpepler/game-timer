@@ -107,9 +107,7 @@
         "label": "Forest Patrol",
         "demotedLabel": "Feline Physicians",
         "module": "marauders",
-        "excludeOptionIds": [
-          "marquise"
-        ],
+        "excludeOptionIds": ["marquise"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -121,9 +119,7 @@
         "label": "Last Dynasty",
         "demotedLabel": "Bluebird Nobles",
         "module": "marauders",
-        "excludeOptionIds": [
-          "eyrie"
-        ],
+        "excludeOptionIds": ["eyrie"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -135,9 +131,7 @@
         "label": "Spring Uprising",
         "demotedLabel": "Rabbit Scouts",
         "module": "marauders",
-        "excludeOptionIds": [
-          "alliance"
-        ],
+        "excludeOptionIds": ["alliance"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -149,10 +143,7 @@
         "label": "The Exile",
         "demotedLabel": "The Brigand",
         "module": "marauders",
-        "excludeOptionIds": [
-          "vagabond",
-          "knaves"
-        ],
+        "excludeOptionIds": ["vagabond", "knaves"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -164,9 +155,7 @@
         "label": "Warm Sun Prophets",
         "demotedLabel": "Lizard Envoys",
         "module": "riverfolk",
-        "excludeOptionIds": [
-          "lizards"
-        ],
+        "excludeOptionIds": ["lizards"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -178,9 +167,7 @@
         "label": "Riverfolk Flotilla",
         "demotedLabel": "Otter Divers",
         "module": "riverfolk",
-        "excludeOptionIds": [
-          "riverfolk"
-        ],
+        "excludeOptionIds": ["riverfolk"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -203,9 +190,7 @@
         "label": "Sunward Expedition",
         "demotedLabel": "Mole Artisans",
         "module": "underworld",
-        "excludeOptionIds": [
-          "duchy"
-        ],
+        "excludeOptionIds": ["duchy"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -217,9 +202,7 @@
         "label": "Corvid Spies",
         "demotedLabel": "Raven Sentinels",
         "module": "underworld",
-        "excludeOptionIds": [
-          "corvids"
-        ],
+        "excludeOptionIds": ["corvids"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -242,9 +225,7 @@
         "label": "Flame Bearers",
         "demotedLabel": "Rat Smugglers",
         "module": "marauders",
-        "excludeOptionIds": [
-          "hundreds"
-        ],
+        "excludeOptionIds": ["hundreds"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -256,9 +237,7 @@
         "label": "Vault Keepers",
         "demotedLabel": "Badger Bodyguards",
         "module": "marauders",
-        "excludeOptionIds": [
-          "keepers"
-        ],
+        "excludeOptionIds": ["keepers"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -281,9 +260,7 @@
         "label": "Sunny Advocates",
         "demotedLabel": "Bat Messengers",
         "module": "homeland",
-        "excludeOptionIds": [
-          "twilight"
-        ],
+        "excludeOptionIds": ["twilight"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -295,9 +272,7 @@
         "label": "River Roamers",
         "demotedLabel": "Frog Tinkers",
         "module": "homeland",
-        "excludeOptionIds": [
-          "lilypad"
-        ],
+        "excludeOptionIds": ["lilypad"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -469,90 +444,47 @@
           {
             "id": "thief",
             "label": "Thief",
-            "startingItems": [
-              "boot",
-              "torch",
-              "tea",
-              "sword"
-            ]
+            "startingItems": ["boot", "torch", "tea", "sword"]
           },
           {
             "id": "tinker",
             "label": "Tinker",
-            "startingItems": [
-              "boot",
-              "torch",
-              "bag",
-              "hammer"
-            ]
+            "startingItems": ["boot", "torch", "bag", "hammer"]
           },
           {
             "id": "ranger",
             "label": "Ranger",
-            "startingItems": [
-              "boot",
-              "torch",
-              "crossbow",
-              "sword"
-            ]
+            "startingItems": ["boot", "torch", "crossbow", "sword"]
           },
           {
             "id": "vagrant",
             "label": "Vagrant",
-            "startingItems": [
-              "coin",
-              "torch",
-              "boot"
-            ]
+            "startingItems": ["coin", "torch", "boot"]
           },
           {
             "id": "arbiter",
             "label": "Arbiter",
-            "startingItems": [
-              "boot",
-              "torch",
-              "sword",
-              "sword"
-            ]
+            "startingItems": ["boot", "torch", "sword", "sword"]
           },
           {
             "id": "scoundrel",
             "label": "Scoundrel",
-            "startingItems": [
-              "boot",
-              "boot",
-              "torch",
-              "crossbow"
-            ]
+            "startingItems": ["boot", "boot", "torch", "crossbow"]
           },
           {
             "id": "adventurer",
             "label": "Adventurer",
-            "startingItems": [
-              "boot",
-              "torch",
-              "hammer"
-            ]
+            "startingItems": ["boot", "torch", "hammer"]
           },
           {
             "id": "ronin",
             "label": "Ronin",
-            "startingItems": [
-              "boot",
-              "boot",
-              "torch",
-              "sword"
-            ]
+            "startingItems": ["boot", "boot", "torch", "sword"]
           },
           {
             "id": "harrier",
             "label": "Harrier",
-            "startingItems": [
-              "coin",
-              "torch",
-              "sword",
-              "crossbow"
-            ]
+            "startingItems": ["coin", "torch", "sword", "crossbow"]
           }
         ],
         "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
@@ -960,98 +892,62 @@
           {
             "id": "adventurer",
             "label": "Adventurer",
-            "startingItems": [
-              "hammer",
-              "coin"
-            ]
+            "startingItems": ["hammer", "coin"]
           },
           {
             "id": "arbiter",
             "label": "Arbiter",
-            "startingItems": [
-              "sword",
-              "coin"
-            ]
+            "startingItems": ["sword", "coin"]
           },
           {
             "id": "cheat",
             "label": "Cheat",
-            "startingItems": [
-              "boot",
-              "tea"
-            ]
+            "startingItems": ["boot", "tea"]
           },
           {
             "id": "gladiator",
             "label": "Gladiator",
-            "startingItems": [
-              "sword",
-              "hammer"
-            ]
+            "startingItems": ["sword", "hammer"]
           },
           {
             "id": "harrier",
             "label": "Harrier",
-            "startingItems": [
-              "boot",
-              "crossbow"
-            ]
+            "startingItems": ["boot", "crossbow"]
           },
           {
             "id": "jailor",
             "label": "Jailor",
-            "startingItems": [
-              "crossbow",
-              "bag"
-            ]
+            "startingItems": ["crossbow", "bag"]
           },
           {
             "id": "ranger",
             "label": "Ranger",
-            "startingItems": [
-              "sword",
-              "crossbow"
-            ]
+            "startingItems": ["sword", "crossbow"]
           },
           {
             "id": "ronin",
             "label": "Ronin",
-            "startingItems": [
-              "boot",
-              "sword"
-            ]
+            "startingItems": ["boot", "sword"]
           },
           {
             "id": "scoundrel",
             "label": "Scoundrel",
-            "startingItems": [
-              "crossbow",
-              "tea"
-            ]
+            "startingItems": ["crossbow", "tea"]
           },
           {
             "id": "thief",
             "label": "Thief",
-            "startingItems": [
-              "boot",
-              "bag"
-            ]
+            "startingItems": ["boot", "bag"]
           },
           {
             "id": "tinker",
             "label": "Tinker",
-            "startingItems": [
-              "bag",
-              "hammer"
-            ]
+            "startingItems": ["bag", "hammer"]
           },
           {
             "id": "vagrant",
             "label": "Vagrant",
-            "startingItems": [
-              "tea",
-              "coin"
-            ]
+            "startingItems": ["tea", "coin"]
           }
         ],
         "captainPoolNote": "Four Captain cards are dealt face-up alongside the Knaves setup card; the player chooses three to use.",
@@ -1252,15 +1148,8 @@
       }
     },
     "gaps": {
-      "maps": [
-        "lake",
-        "marsh",
-        "gorge"
-      ],
-      "decks": [
-        "exiles",
-        "squires"
-      ],
+      "maps": ["lake", "marsh", "gorge"],
+      "decks": ["exiles", "squires"],
       "adsetCards": [
         "eyrie",
         "alliance",

@@ -6,10 +6,7 @@ import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
 import { describePeerError } from "@/lib/peer";
-import {
-  normaliseSessionCode,
-  SESSION_CODE_LENGTH,
-} from "@/lib/sessionCode";
+import { normaliseSessionCode, SESSION_CODE_LENGTH } from "@/lib/sessionCode";
 import {
   PEER_PROTOCOL_VERSION,
   type CompanionToHostMessage,
@@ -57,7 +54,7 @@ const findPlayerPickStep = (
   const step = definition?.setupSteps?.find(
     (s) => s.kind.type === "player-pick",
   );
-  if (!step || step.kind.type !== "player-pick") return undefined;
+  if (step?.kind.type !== "player-pick") return undefined;
   return {
     step,
     options: step.kind.options,
@@ -488,8 +485,7 @@ function CompanionScreen() {
             )}
             {status === "reconnecting" && (
               <>
-                Reconnecting to{" "}
-                <span className={styles.hostCode}>{code}</span>…
+                Reconnecting to <span className={styles.hostCode}>{code}</span>…
               </>
             )}
             {status === "disconnected" && (
@@ -503,7 +499,6 @@ function CompanionScreen() {
           {claimedPlayer && (
             <span className={styles.claimedAs}>
               {claimedPlayer.headIconSrc ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={claimedPlayer.headIconSrc}
                   alt=""
@@ -636,7 +631,6 @@ function CompanionScreen() {
                   style={{ color: activePlayer.color }}
                 >
                   {activePlayer.headIconSrc ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={activePlayer.headIconSrc}
                       alt=""
@@ -661,8 +655,7 @@ function CompanionScreen() {
                     />
                   )}
                   <span className={styles.activePlayerText}>
-                    {/* eslint-disable-next-line prettier/prettier */}
-                  <span>
+                    <span>
                       {activePlayer.name}
                       <span className={styles.activePlayerSuffix}>
                         {"’s turn"}
@@ -933,7 +926,6 @@ function SetupTurnPanel({
           }
         >
           {previewMeeple && (
-            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={previewMeeple}
               alt=""
@@ -1031,7 +1023,6 @@ function SetupTurnPanel({
                 </ol>
               )}
               {meepleSrc && (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={meepleSrc}
                   alt=""
@@ -1072,8 +1063,7 @@ function CodeEntryPanel() {
   return (
     <div className={styles.codeEntryBox}>
       <p className={styles.codeEntryHint}>
-        Open the QR code on the host device, or enter the session code
-        below.
+        Open the QR code on the host device, or enter the session code below.
       </p>
       <form
         className={styles.codeEntryForm}
@@ -1145,6 +1135,19 @@ function ChangePlayerOptionModal({
   useEffect(() => {
     setNameDraft(currentName);
   }, [currentName]);
+
+  // Keyboard dismissal — Escape closes the modal.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const renameDirty = nameDraft.trim().length > 0 && nameDraft !== currentName;
   const pick = findPlayerPickStep(definition);
   if (!pick) return null;
@@ -1164,18 +1167,6 @@ function ChangePlayerOptionModal({
       if (m && m.type === "selected-option") takenIds.add(m.optionId);
     });
   }
-
-  // Keyboard dismissal — Escape closes the modal.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   if (previewId) {
     const option = pick.options.find((o) => o.id === previewId);
@@ -1215,7 +1206,6 @@ function ChangePlayerOptionModal({
             }
           >
             {meeple && (
-              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={meeple}
                 alt=""
@@ -1269,7 +1259,9 @@ function ChangePlayerOptionModal({
     >
       <div className={styles.swapPanel}>
         <header className={styles.swapHeader}>
-          <span className={styles.swapTitle}>Change {stepLabel.toLowerCase()}</span>
+          <span className={styles.swapTitle}>
+            Change {stepLabel.toLowerCase()}
+          </span>
           <button
             type="button"
             onClick={onClose}
@@ -1346,7 +1338,6 @@ function ChangePlayerOptionModal({
                   </ol>
                 )}
                 {meeple && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={meeple}
                     alt=""

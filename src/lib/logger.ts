@@ -78,7 +78,9 @@ function emit(
   };
   ringBuffer.push(entry);
   for (const sink of sinks) sink.write(entry);
-  listeners.forEach((fn) => fn(entry));
+  listeners.forEach((fn) => {
+    fn(entry);
+  });
 }
 
 export interface Logger {
@@ -114,9 +116,7 @@ export function clearLogBuffer() {
 }
 
 // Subscribe to live log events. Returns an unsubscribe function.
-export function subscribeLogs(
-  listener: (entry: LogEntry) => void,
-): () => void {
+export function subscribeLogs(listener: (entry: LogEntry) => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

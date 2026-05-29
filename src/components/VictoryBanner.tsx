@@ -62,14 +62,12 @@ export function VictoryBanner({
     >
       {hasHero && (
         <div className={styles.wreath}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={laurelSrc}
             alt=""
             aria-hidden
             className={styles.laurelImg}
           />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={victor.iconSrc}
             alt=""

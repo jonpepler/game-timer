@@ -23,10 +23,7 @@ export interface HostSession {
   close(): void;
 }
 
-export type CompanionConnectionState =
-  | "connected"
-  | "reconnecting"
-  | "closed";
+export type CompanionConnectionState = "connected" | "reconnecting" | "closed";
 
 export interface CompanionSession {
   // The code of the host this companion is talking to.
@@ -54,7 +51,10 @@ export interface ConnectToHostOptions {
 
 export interface CreateHostOptions {
   // Injection seam: tests pass a fake constructor that captures events.
-  PeerCtor?: new (id?: string, opts?: PeerOptions) => Peer;
+  PeerCtor?: new (
+    id?: string,
+    opts?: PeerOptions,
+  ) => Peer;
   peerOptions?: PeerOptions;
   // Desired peer id. Caller is responsible for collision-recovery (try
   // a different id and retry createHost) — this layer just surfaces
@@ -192,15 +192,21 @@ export function createHost(
         conn.on("open", () => {
           conns.set(conn.peer, conn);
           log.info("companion connected", { peerId: conn.peer });
-          connectHandlers.forEach((h) => h(conn.peer));
+          connectHandlers.forEach((h) => {
+            h(conn.peer);
+          });
         });
         conn.on("data", (data) => {
-          messageHandlers.forEach((h) => h(conn.peer, data));
+          messageHandlers.forEach((h) => {
+            h(conn.peer, data);
+          });
         });
         conn.on("close", () => {
           if (conns.delete(conn.peer)) {
             log.info("companion disconnected", { peerId: conn.peer });
-            disconnectHandlers.forEach((h) => h(conn.peer));
+            disconnectHandlers.forEach((h) => {
+              h(conn.peer);
+            });
           }
         });
         conn.on("error", (err) => {
@@ -238,7 +244,9 @@ export function createHost(
         },
         connections: () => {
           const keys: string[] = [];
-          conns.forEach((_, k) => keys.push(k));
+          conns.forEach((_, k) => {
+            keys.push(k);
+          });
           return keys;
         },
         close: () => {
@@ -273,7 +281,10 @@ export function connectToHost(
   if (testFactory) return testFactory.connectToHost(hostCode, options);
   const Ctor = options.PeerCtor ?? Peer;
   return new Promise((resolve, reject) => {
-    const peer = new Ctor(undefined, withDefaultPeerOptions(options.peerOptions));
+    const peer = new Ctor(
+      undefined,
+      withDefaultPeerOptions(options.peerOptions),
+    );
     const messageHandlers = new Set<(data: unknown) => void>();
     const closeHandlers = new Set<() => void>();
     let resolved = false;
@@ -352,14 +363,14 @@ export function connectToHost(
     // broadcast immediately on connection (via a peerCount-keyed
     // useEffect). Without the buffer those early messages are dropped.
     const pendingMessages: unknown[] = [];
-    const stateHandlers = new Set<
-      (state: CompanionConnectionState) => void
-    >();
+    const stateHandlers = new Set<(state: CompanionConnectionState) => void>();
     let lastState: CompanionConnectionState = "reconnecting";
     const emitState = (next: CompanionConnectionState) => {
       if (next === lastState) return;
       lastState = next;
-      stateHandlers.forEach((h) => h(next));
+      stateHandlers.forEach((h) => {
+        h(next);
+      });
     };
 
     const dialHost = () => {
@@ -377,7 +388,7 @@ export function connectToHost(
             hostCode,
             peerId: peerIdAtOpen ?? "",
             send: (data) => {
-              if (currentConn && currentConn.open) currentConn.send(data);
+              if (currentConn?.open) currentConn.send(data);
             },
             onMessage: (h) => {
               messageHandlers.add(h);
@@ -385,7 +396,9 @@ export function connectToHost(
               // was registered (the first-connection race window).
               if (pendingMessages.length > 0) {
                 const buffered = pendingMessages.splice(0);
-                buffered.forEach((msg) => h(msg));
+                buffered.forEach((msg) => {
+                  h(msg);
+                });
               }
               return () => {
                 messageHandlers.delete(h);
@@ -430,7 +443,9 @@ export function connectToHost(
         if (messageHandlers.size === 0) {
           pendingMessages.push(data);
         } else {
-          messageHandlers.forEach((h) => h(data));
+          messageHandlers.forEach((h) => {
+            h(data);
+          });
         }
       });
 
@@ -448,7 +463,10 @@ export function connectToHost(
             }
           }, 1500);
         }
-        if (resolved) closeHandlers.forEach((h) => h());
+        if (resolved)
+          closeHandlers.forEach((h) => {
+            h();
+          });
       });
 
       conn.on("error", (err) => {

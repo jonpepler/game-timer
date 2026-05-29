@@ -55,7 +55,9 @@ test("review: milestone dialog at 4 VP", async ({ page }) => {
       ) as HTMLButtonElement | null
     )?.click();
   });
-  const inc = page.getByRole("button", { name: /Increase score for Player 1/i });
+  const inc = page.getByRole("button", {
+    name: /Increase score for Player 1/i,
+  });
   for (let i = 0; i < 4; i++) await inc.click();
   await expect(
     page.getByRole("button", { name: /^Acknowledge$/ }),
@@ -133,7 +135,9 @@ test("review: track after fire-once milestone has fired", async ({ page }) => {
       ) as HTMLButtonElement | null
     )?.click();
   });
-  const inc = page.getByRole("button", { name: /Increase score for Player 1/i });
+  const inc = page.getByRole("button", {
+    name: /Increase score for Player 1/i,
+  });
   for (let i = 0; i < 4; i++) await inc.click();
   await page.getByRole("button", { name: /^Acknowledge$/ }).click();
   await save(page, "track-after-milestone-fired");

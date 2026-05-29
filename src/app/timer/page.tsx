@@ -11,9 +11,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { PlayerArcs } from "@/components/timer/PlayerArcs";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
-import {
-  type GameConfig,
-  type GameSetupWizardHandle,
+import type {
+  GameConfig,
+  GameSetupWizardHandle,
 } from "@/components/GameSetupWizard";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
@@ -171,7 +171,7 @@ export default function Home() {
         const pickStep = def?.setupSteps?.find(
           (s) => s.kind.type === "player-pick",
         );
-        if (!pickStep || pickStep.kind.type !== "player-pick") {
+        if (pickStep?.kind.type !== "player-pick") {
           peerLog.warn("SET_PLAYER_OPTION rejected — no player-pick step", {
             peerId,
           });
@@ -561,6 +561,7 @@ export default function Home() {
   // Newly-connected companions also need the current seating snapshot
   // so they can see the seat list + render claim/rename/add controls
   // before the game starts.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: peerCount is a deliberate re-run trigger — re-broadcast when a companion connects
   useEffect(() => {
     if (sessionHost.status !== "open") return;
     broadcastSeating();
@@ -608,9 +609,13 @@ export default function Home() {
         const prevSeats = seatingSnapshotRef.current?.seats;
         if (prevSeats && prevSeats.length > 0 && info.seats.length > 0) {
           const oldIndexById = new Map<string, number>();
-          prevSeats.forEach((s, i) => oldIndexById.set(s.id, i));
+          prevSeats.forEach((s, i) => {
+            oldIndexById.set(s.id, i);
+          });
           const newIndexById = new Map<string, number>();
-          info.seats.forEach((s, i) => newIndexById.set(s.id, i));
+          info.seats.forEach((s, i) => {
+            newIndexById.set(s.id, i);
+          });
           let needsRewrite = false;
           for (const [, oldIdx] of Object.entries(claimMapRef.current)) {
             const stillThere = prevSeats[oldIdx]
@@ -811,108 +816,103 @@ export default function Home() {
       <div className={styles.container}>
         {modal}
         <main className={styles.main}>
-          <>
-            {activePlayer && (
-              <div
-                className={styles.activePlayer}
-                style={{ color: activePlayer.color }}
-              >
-                {activePlayer.iconSrc && (
-                  // Faction meeple, tinted to the faction colour
-                  // via mask-image. When there's no icon
-                  // (Generic / no setup), the player's name
-                  // itself carries the colour — no swatch needed.
-                  <span
-                    className={styles.activePlayerMeeple}
-                    style={{
-                      background: activePlayer.color,
-                      WebkitMaskImage: `url(${activePlayer.iconSrc})`,
-                      maskImage: `url(${activePlayer.iconSrc})`,
-                    }}
-                    aria-hidden
-                  />
-                )}
-                <span className={styles.activePlayerText}>
-                  {/* eslint-disable-next-line prettier/prettier */}
-                    <span>
-                    {activePlayer.name}
-                    <span className={styles.activePlayerSuffix}>
-                      {"’s turn"}
-                    </span>
-                  </span>
-                  {activeSubheading && (
-                    <span className={styles.activePlayerSubheading}>
-                      {activeSubheading}
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
+          {activePlayer && (
             <div
-              className={styles.timerRingWrapper}
-              role="button"
-              tabIndex={0}
-              aria-label="Advance turn"
-              onClick={() => {
-                if (!preventClickCapture) resetTimer();
-              }}
-              onKeyDown={(e) => {
-                if (
-                  (e.key === "Enter" || e.key === " ") &&
-                  !preventClickCapture
-                ) {
-                  e.preventDefault();
-                  resetTimer();
-                }
-              }}
+              className={styles.activePlayer}
+              style={{ color: activePlayer.color }}
             >
-              {playerViews && currentPlayerIndex !== null && (
-                <PlayerArcs
-                  players={playerViews}
-                  activeIndex={currentPlayerIndex}
+              {activePlayer.iconSrc && (
+                // Faction meeple, tinted to the faction colour
+                // via mask-image. When there's no icon
+                // (Generic / no setup), the player's name
+                // itself carries the colour — no swatch needed.
+                <span
+                  className={styles.activePlayerMeeple}
+                  style={{
+                    background: activePlayer.color,
+                    WebkitMaskImage: `url(${activePlayer.iconSrc})`,
+                    maskImage: `url(${activePlayer.iconSrc})`,
+                  }}
+                  aria-hidden
                 />
               )}
-              <CircularProgressbar
-                value={(timerTotalSeconds / averageTime) * 100}
-                background
-                styles={{
-                  // Cleaner stroke: solid (no dashes), thicker
-                  // path so the ring reads with weight against
-                  // the dark surface. Matches the rest of the
-                  // app's chrome.
-                  path: {
-                    stroke: paused
-                      ? "var(--color-timer-paused)"
-                      : "var(--color-timer-active)",
-                    strokeLinecap: "round",
-                    strokeWidth: "3",
-                  },
-                  trail: {
-                    stroke: "var(--color-border)",
-                    strokeWidth: "1",
-                  },
-                  text: {
-                    fontFamily: "inherit",
-                    fontWeight: 600,
-                    fill: paused
-                      ? "var(--color-timer-paused)"
-                      : "var(--color-text)",
-                  },
-                  background: {
-                    fill: "var(--color-timer-overtime)",
-                    fillOpacity: timerFinished
-                      ? stopwatchTotalSeconds / averageTime
-                      : 0,
-                    transitionProperty: "fill-opacity",
-                    transitionDuration: "2s",
-                  },
-                }}
-                text={
-                  timerFinished ? "+" + getStopwatchString() : getTimerString()
-                }
-              />
+              <span className={styles.activePlayerText}>
+                <span>
+                  {activePlayer.name}
+                  <span className={styles.activePlayerSuffix}>{"’s turn"}</span>
+                </span>
+                {activeSubheading && (
+                  <span className={styles.activePlayerSubheading}>
+                    {activeSubheading}
+                  </span>
+                )}
+              </span>
             </div>
-          </>
+          )}
+          <div
+            className={styles.timerRingWrapper}
+            role="button"
+            tabIndex={0}
+            aria-label="Advance turn"
+            onClick={() => {
+              if (!preventClickCapture) resetTimer();
+            }}
+            onKeyDown={(e) => {
+              if (
+                (e.key === "Enter" || e.key === " ") &&
+                !preventClickCapture
+              ) {
+                e.preventDefault();
+                resetTimer();
+              }
+            }}
+          >
+            {playerViews && currentPlayerIndex !== null && (
+              <PlayerArcs
+                players={playerViews}
+                activeIndex={currentPlayerIndex}
+              />
+            )}
+            <CircularProgressbar
+              value={(timerTotalSeconds / averageTime) * 100}
+              background
+              styles={{
+                // Cleaner stroke: solid (no dashes), thicker
+                // path so the ring reads with weight against
+                // the dark surface. Matches the rest of the
+                // app's chrome.
+                path: {
+                  stroke: paused
+                    ? "var(--color-timer-paused)"
+                    : "var(--color-timer-active)",
+                  strokeLinecap: "round",
+                  strokeWidth: "3",
+                },
+                trail: {
+                  stroke: "var(--color-border)",
+                  strokeWidth: "1",
+                },
+                text: {
+                  fontFamily: "inherit",
+                  fontWeight: 600,
+                  fill: paused
+                    ? "var(--color-timer-paused)"
+                    : "var(--color-text)",
+                },
+                background: {
+                  fill: "var(--color-timer-overtime)",
+                  fillOpacity: timerFinished
+                    ? stopwatchTotalSeconds / averageTime
+                    : 0,
+                  transitionProperty: "fill-opacity",
+                  transitionDuration: "2s",
+                },
+              }}
+              text={
+                timerFinished ? `+${getStopwatchString()}` : getTimerString()
+              }
+            />
+          </div>
         </main>
       </div>
       {showVictoryHero && (

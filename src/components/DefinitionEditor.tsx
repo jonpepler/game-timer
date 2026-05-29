@@ -122,10 +122,10 @@ export function DefinitionEditor({
       </div>
 
       <p className={styles.help}>
-        Authoring of setup steps, score rules, and per-player options is
-        being rebuilt against the generic SetupStep schema. Until that
-        ships, the editor only covers the basics; existing custom
-        definitions are preserved verbatim on save.
+        Authoring of setup steps, score rules, and per-player options is being
+        rebuilt against the generic SetupStep schema. Until that ships, the
+        editor only covers the basics; existing custom definitions are preserved
+        verbatim on save.
       </p>
 
       {error && <div className={styles.error}>{error}</div>}

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run dev` — start the Next.js dev server on http://localhost:3000 (served under `/game-timer` because of `basePath`)
 - `npm run build` — produce a static export into `./out` (see deployment notes below)
-- `npm run lint` — run `next lint` (ESLint + Prettier)
+- `npm run lint` — run `biome check` (lint + format check); `npm run lint:fix` applies safe fixes, `npm run format` formats in place. CI runs `biome ci` as a deploy gate.
 - `npm test` / `npm run test:watch` — vitest unit + RTL tests (`*.test.ts(x)` co-located with source)
 - `npm run test:e2e` — Playwright e2e tests against the dev server (`./e2e/`)
 - `npm run test:ct` — Playwright component tests with visual screenshots (`./tests-ct/`)

@@ -360,12 +360,12 @@ describe("ADSET-shaped step kinds", () => {
         schemaVersion: 1,
         categories: {
           expansion: {
-            base:      { label: "Base" },
+            base: { label: "Base" },
             marauders: { label: "Marauders" },
           },
           hireling: {
-            h1: { label: "Hireling One",   module: "base" },
-            h2: { label: "Hireling Two",   module: "marauders" },
+            h1: { label: "Hireling One", module: "base" },
+            h2: { label: "Hireling Two", module: "marauders" },
             h3: { label: "Hireling Three", module: "base" },
           },
         },

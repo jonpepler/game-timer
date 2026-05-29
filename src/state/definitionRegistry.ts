@@ -16,9 +16,7 @@ export const DEFAULT_DEFINITION_ID = genericDefinition.id;
 // duplicate ids are skipped.
 export const listDefinitions = (): GameDefinition[] => {
   const builtInIds = new Set(BUILT_INS.map((d) => d.id));
-  const custom = listCustomDefinitions().filter(
-    (d) => !builtInIds.has(d.id),
-  );
+  const custom = listCustomDefinitions().filter((d) => !builtInIds.has(d.id));
   return [...BUILT_INS, ...custom];
 };
 

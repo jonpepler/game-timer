@@ -53,7 +53,6 @@ export function EventDialog({
     >
       <div className={styles.card} style={{ borderColor: playerColor }}>
         {playerHeadIconSrc ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={playerHeadIconSrc}
             alt=""

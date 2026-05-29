@@ -20,6 +20,7 @@ export const EditableField = ({
   const [editing, setEditing] = useState(false);
   const [newValue, setNewValue] = useState(value);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: notify parent only on editing transitions, not when the callback identity changes
   useEffect(() => {
     onEditingChange(editing);
   }, [editing]);
@@ -31,6 +32,7 @@ export const EditableField = ({
         onChange={(event) => setNewValue(event.target.value ?? "")}
       />
       <button
+        type="button"
         onClick={() => {
           onChange(newValue);
           setEditing(false);

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer } from "react";
 import {
-  StopwatchResult,
-  TimerResult,
+  type StopwatchResult,
+  type TimerResult,
   useStopwatch,
   useTimer as useInternalTimer,
 } from "react-timer-hook";
@@ -113,7 +113,7 @@ export const useTimer = ({
   };
 
   const getTimeString = (t: TimerResult | StopwatchResult) =>
-    `${t.hours ? t.hours + ":" : ""}${t.minutes.toString().padStart(2, "0")}:${t.seconds.toString().padStart(2, "0")}`;
+    `${t.hours ? `${t.hours}:` : ""}${t.minutes.toString().padStart(2, "0")}:${t.seconds.toString().padStart(2, "0")}`;
 
   const getTimerString = () => getTimeString(timer);
   const getStopwatchString = () => getTimeString(stopwatch);

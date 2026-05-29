@@ -118,7 +118,9 @@
   color: rgba(0, 0, 0, 0.85);
   cursor: pointer;
   transform: translateX(-50%);
-  transition: transform 0.12s ease, filter 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
 }
 
 /* When the marker is just an initial (no icon), give it a small
@@ -139,7 +141,9 @@
 .markerSelected {
   /* Subtle dropshadow only — was too punchy with the earlier
      duplicated drop-shadow stack. */
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-text) 40%, transparent));
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--color-text) 40%, transparent)
+  );
   z-index: 4;
 }
 

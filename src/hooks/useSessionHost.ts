@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createHost, type HostSession } from "@/lib/peer";
-import {
-  fromPeerId,
-  generateSessionCode,
-  toPeerId,
-} from "@/lib/sessionCode";
+import { fromPeerId, generateSessionCode, toPeerId } from "@/lib/sessionCode";
 
 const COLLISION_RETRY_LIMIT = 6;
 

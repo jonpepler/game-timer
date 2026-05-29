@@ -7,6 +7,7 @@
      would have allowed for. `100vh` stays as a fallback for older
      browsers that don't support dvh. */
   min-height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: 100vh is a deliberate fallback for browsers without dvh support */
   min-height: 100dvh;
   font-family:
     "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans",
@@ -385,7 +386,9 @@
   border: 1px solid var(--color-text);
   border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .endTurnPending {

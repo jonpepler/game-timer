@@ -15,9 +15,9 @@ function EditGameDefinitionPage() {
   const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id");
-  const [definition, setDefinition] = useState<GameDefinition | null | "missing">(
-    null,
-  );
+  const [definition, setDefinition] = useState<
+    GameDefinition | null | "missing"
+  >(null);
 
   useEffect(() => {
     if (!id) {

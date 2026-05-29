@@ -19,7 +19,6 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useReducer,
   useRef,
   useState,
 } from "react";
@@ -508,7 +507,7 @@ export const GameSetupWizard = forwardRef<
     [definition],
   );
   const seatingBounds = useMemo(() => {
-    if (!seatingStep || seatingStep.kind.type !== "seat-players") {
+    if (seatingStep?.kind.type !== "seat-players") {
       return { min: 1, max: 6 };
     }
     return {
@@ -698,14 +697,14 @@ export const GameSetupWizard = forwardRef<
   // a flag lets React commit setContext first, then the effect runs
   // with a fresh `context` in scope.
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
+  // submit() intentionally excluded from deps — it reads `context`
+  // which IS a dep, and we don't want stale closures racing the
+  // flag flip. The effect fires exactly once per request.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: submit excluded to fire once per request without stale-closure race
   useEffect(() => {
     if (!autoSubmitPending) return;
     submit(true);
     setAutoSubmitPending(false);
-    // submit() intentionally excluded from deps — it reads `context`
-    // which IS a dep, and we don't want stale closures racing the
-    // flag flip. The effect fires exactly once per request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSubmitPending, context]);
 
   // ── Render ──────────────────────────────────────────────────────
@@ -1874,19 +1873,6 @@ function PlayerPickScreen({
       .filter((x): x is SetupOption => !!x);
   }, [draftEnabled, dealtIds, pool, picks, leavingIds]);
 
-  if (seats.length === 0) {
-    return (
-      <>
-        <h3 className={styles.screenTitle} id="screen-title">
-          {step.label}
-        </h3>
-        <p className={styles.help}>
-          No seated players yet. Go back to the seating step first.
-        </p>
-      </>
-    );
-  }
-
   const blockedForActive = blockedFor(activeSeat, picks, constraints);
 
   // pick() writes via the updater so it composes correctly even when
@@ -1972,6 +1958,7 @@ function PlayerPickScreen({
     // the picker-only synthetic def below.
     return undefined;
   };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: findDefinition is a stable stub (always undefined); excluding avoids re-running every render
   useEffect(() => {
     if (mode !== "turn-based") return;
     if (!peerHooks?.onTurnStart) return;
@@ -2006,6 +1993,21 @@ function PlayerPickScreen({
     blockedForActive,
     step,
   ]);
+
+  // All hooks above run unconditionally (the two effects no-op when
+  // there are no seats); this early return must stay below them.
+  if (seats.length === 0) {
+    return (
+      <>
+        <h3 className={styles.screenTitle} id="screen-title">
+          {step.label}
+        </h3>
+        <p className={styles.help}>
+          No seated players yet. Go back to the seating step first.
+        </p>
+      </>
+    );
+  }
 
   // Hero mode: dominate the viewport with a card row. Triggered
   // for turn-based player-pick steps (Root). Other modes (host-only)
@@ -2050,7 +2052,6 @@ function PlayerPickScreen({
             }
           >
             {previewMeeple && (
-              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={previewMeeple}
                 alt=""
@@ -2214,7 +2215,6 @@ function PlayerPickScreen({
                   </div>
                 )}
                 {meepleSrc && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={meepleSrc}
                     alt=""
@@ -2450,7 +2450,6 @@ function PlayerPickScreen({
                 </>
               )}
               {meepleSrc && (
-                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={meepleSrc}
                   alt=""
@@ -2571,6 +2570,7 @@ function DealtResolveScreen({
   // in a `player-pick` shell so the companion's existing
   // SetupTurnPanel can render the dealt items without any
   // dealt-resolve-specific code on its side.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: peerHooks has stable identity; including it re-broadcasts every render
   useEffect(() => {
     if (!peerHooks?.onTurnStart) return;
     if (allDone) {
@@ -2609,10 +2609,6 @@ function DealtResolveScreen({
         ],
       } as unknown as GameDefinition,
     });
-    // peerHooks intentionally excluded from deps — the parent keeps
-    // a stable identity for it; including would re-fire on every
-    // render and re-broadcast unnecessarily.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSeatIndex, allDone, dealtIds.length, sourceOptions, step.id]);
 
   if (dealtIds.length === 0) {

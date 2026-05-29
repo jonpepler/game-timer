@@ -31,13 +31,12 @@ export function NumberField({
   // Mirror external value changes (e.g. picking a new game definition
   // reseeds the field) — but only when the parsed text doesn't already
   // agree, so we don't clobber an in-progress edit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: text intentionally excluded — only react to value
   useEffect(() => {
     const parsed = parseInt(text, 10);
     if (Number.isNaN(parsed) || parsed !== value) {
       setText(String(value));
     }
-    // text is intentionally excluded — we only want to react to value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   const commit = (raw: string) => {
