@@ -18,6 +18,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -1776,7 +1777,16 @@ function PlayerPickScreen({
   const targetDealCount = seats.length + 1;
 
   // Lazy deal when draft turns on and we don't yet have a hand.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the deal commits in the same
+  // browser task as the picker's first paint — without this, the
+  // hero card row paints empty for a frame between mount and the
+  // post-paint useEffect that fills dealtIds. That empty frame is
+  // both a visible flash and a real race for code (or tests) that
+  // queries the dealt hand right after the heading appears. The
+  // updater-form `if (curr.dealtIds != null) return curr` guards
+  // against Strict Mode's double-invoked layout effect committing
+  // two different deals back to back in dev.
+  useLayoutEffect(() => {
     if (!draftEnabled) return;
     if (dealtIds != null) return;
     if (pool.length === 0 || seats.length === 0) return;
@@ -1785,11 +1795,14 @@ function PlayerPickScreen({
       targetDealCount,
     );
     const newCharacters = dealCharactersFor(newDealt, options);
-    onChange((curr) => ({
-      ...curr,
-      dealtIds: newDealt,
-      characters: newCharacters,
-    }));
+    onChange((curr) => {
+      if (curr.dealtIds != null) return curr;
+      return {
+        ...curr,
+        dealtIds: newDealt,
+        characters: newCharacters,
+      };
+    });
   }, [
     draftEnabled,
     dealtIds,
