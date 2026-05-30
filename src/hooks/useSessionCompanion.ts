@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { connectToHost, type CompanionSession } from "@/lib/peer";
 import { toPeerId } from "@/lib/sessionCode";
 
@@ -78,9 +78,15 @@ export function useSessionCompanion<TMessage>(
     };
   }, [hostCode]);
 
-  const send = (data: unknown) => {
+  // Stable identity so consumers can safely list `send` in useEffect
+  // dep arrays without re-firing on every render. Without this, the
+  // companion's CLAIM-on-claim useEffect (and similar self-driven
+  // pings) re-runs on every render, and the host's per-CLAIM
+  // setClaimMap → broadcastSeating → STATE round-trip drives the
+  // companion to re-render, forming a tight send/receive loop.
+  const send = useCallback((data: unknown) => {
     sessionRef.current?.send(data);
-  };
+  }, []);
 
   return { status, lastMessage, error, send, peerId };
 }

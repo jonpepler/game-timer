@@ -425,31 +425,45 @@ export default function Home() {
     });
   };
 
-  const sessionHost = useSessionHost({
-    onMessage: handleCompanionMessage,
-    onDisconnect: handleCompanionDisconnect,
-  });
-
-  // Broadcast the latest reducer state to every connected companion
-  // whenever it changes OR a new device joins.
-  const peerCount = sessionHost.connectedPeers.length;
-  const lastStateSentAtRef = useRef<number>(0);
+  // Latest state + definition kept in refs so the synchronous
+  // onConnect callback below can broadcast the freshest snapshot
+  // without depending on React's render timing. Without this, a
+  // companion connecting at the same instant another disconnects
+  // (e.g. Strict Mode's double-mount of useSessionCompanion) can
+  // miss the first-connection STATE: peerCount oscillates 1→2→1
+  // within a single render pass, so the peerCount-keyed useEffect
+  // below never sees a changed dep and skips re-broadcasting.
+  const latestStateRef = useRef(state);
+  const latestDefinitionIdRef = useRef(definitionId);
   useEffect(() => {
-    if (sessionHost.status !== "open") return;
-    const def = definitionId ? findDefinition(definitionId) : undefined;
+    latestStateRef.current = state;
+  }, [state]);
+  useEffect(() => {
+    latestDefinitionIdRef.current = definitionId;
+  }, [definitionId]);
+
+  // The host's send function is held in a ref so the onConnect
+  // callback below can reach the latest sender without re-creating
+  // itself every render (which would re-subscribe useSessionHost).
+  const sessionHostSendRefForState = useRef<(data: unknown) => void>(() => {});
+
+  const lastStateSentAtRef = useRef<number>(0);
+  // Build + broadcast a STATE message. Used both by the
+  // peerCount-keyed useEffect below and by onConnect (where it
+  // bypasses the React render race noted above).
+  const broadcastState = useCallback((peerCountHint: number) => {
+    const def = latestDefinitionIdRef.current
+      ? findDefinition(latestDefinitionIdRef.current)
+      : undefined;
     const now = Date.now();
     const message: HostToCompanionMessage = {
       type: "STATE",
       protocolVersion: PEER_PROTOCOL_VERSION,
-      state,
+      state: latestStateRef.current,
       definition: def,
       sentAt: now,
     };
-    sessionHost.send(message);
-    // Diagnostic — log size and inter-broadcast interval at debug
-    // level so we can spot STATE flooding without spamming the
-    // default info+ filter. Serialize cost is small (one extra
-    // JSON.stringify per emission); reads in the overlay.
+    sessionHostSendRefForState.current(message);
     const bytes = JSON.stringify(message).length;
     const dt = lastStateSentAtRef.current
       ? now - lastStateSentAtRef.current
@@ -458,10 +472,50 @@ export default function Home() {
     stateLog.debug("broadcast", {
       bytes,
       intervalMs: dt,
-      peers: peerCount,
-      turns: state.turns.length,
+      peers: peerCountHint,
+      turns: latestStateRef.current.turns.length,
     });
-  }, [state, peerCount, sessionHost.status, sessionHost.send, definitionId]);
+  }, []);
+
+  // Forward declaration — broadcastSeating is defined further down
+  // but the onConnect callback below needs to call it. We thread
+  // through a ref so we can wire the reference once the function
+  // is defined, without re-creating the onConnect closure (which
+  // would re-subscribe useSessionHost).
+  const broadcastSeatingRef = useRef<() => void>(() => {});
+
+  const sessionHost = useSessionHost({
+    onMessage: handleCompanionMessage,
+    onDisconnect: handleCompanionDisconnect,
+    // Sync-broadcast STATE + seating the moment a peer connects,
+    // bypassing the React render race (see latestStateRef comment
+    // above). The real/fake host's send() fans out to every open
+    // conn, so the freshly-attached peer gets it alongside
+    // existing peers.
+    onConnect: () => {
+      broadcastState(-1);
+      broadcastSeatingRef.current();
+    },
+  });
+
+  // Keep the broadcastState's send-ref pointed at the latest
+  // sessionHost.send so onConnect always sees the live sender.
+  useEffect(() => {
+    sessionHostSendRefForState.current = sessionHost.send;
+  }, [sessionHost.send]);
+
+  // Broadcast on state change too. peerCount stays in the dep array
+  // as a best-effort backstop (covers the common, race-free path);
+  // the onConnect callback above is what guarantees delivery to a
+  // newly-arrived peer under React batching. `state` + `definitionId`
+  // are deliberate change-triggers — broadcastState reads them via
+  // refs (so the deps are otherwise unused inside the effect body).
+  const peerCount = sessionHost.connectedPeers.length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: state + definitionId are deliberate broadcast triggers; their values come from refs inside broadcastState
+  useEffect(() => {
+    if (sessionHost.status !== "open") return;
+    broadcastState(peerCount);
+  }, [state, peerCount, sessionHost.status, definitionId, broadcastState]);
 
   // Player-metadata diagnostic — emit a snapshot whenever the roster
   // identity changes (names + metadata), gated on a content hash so
@@ -558,9 +612,18 @@ export default function Home() {
     broadcastSeating();
   }, [claimMap, broadcastSeating]);
 
+  // Expose the latest broadcastSeating to the onConnect closure
+  // installed above. See note next to broadcastSeatingRef.
+  useEffect(() => {
+    broadcastSeatingRef.current = broadcastSeating;
+  }, [broadcastSeating]);
+
   // Newly-connected companions also need the current seating snapshot
   // so they can see the seat list + render claim/rename/add controls
-  // before the game starts.
+  // before the game starts. peerCount is the best-effort backstop;
+  // the onConnect callback in useSessionHost above is the
+  // race-proof path that handles React batching of connect+disconnect
+  // events under Strict Mode's double-mount.
   // biome-ignore lint/correctness/useExhaustiveDependencies: peerCount is a deliberate re-run trigger — re-broadcast when a companion connects
   useEffect(() => {
     if (sessionHost.status !== "open") return;
