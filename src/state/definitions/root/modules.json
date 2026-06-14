@@ -300,11 +300,12 @@
         "military": "militant",
         "matchingHireling": "patrol",
         "description": "Industrial cats building sawmills, workshops, and recruiters across the wood.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook before relying on it for tournament play.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place your Keep token in any corner clearing.",
-          "Place 1 sawmill, 1 workshop, and 1 recruiter, one in each clearing adjacent to your Keep.",
-          "Place 1 warrior in every clearing except the corner diagonally opposite your Keep."
+          "Choose 3 homeland clearings, each adjacent to one other.",
+          "Put 2 warriors in each of your homelands. Put 1 warrior in each other clearing.",
+          "Put the keep token in one of your homelands, not adjacent to an enemy homeland if able. Put 1 sawmill, workshop, and recruiter on the map, each in a different homeland of yours.",
+          "Fill your Buildings track with your buildings, except the leftmost spaces."
         ],
         "assets": {
           "meepleSvg": {
@@ -353,12 +354,13 @@
         "military": "militant",
         "matchingHireling": "dynasty",
         "description": "Bird aristocracy bound by a Decree. Falls into turmoil if it can't act.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Choose 1 Leader card and place it on your faction board's Leader slot.",
-          "Place your Roost in the corner clearing diagonally opposite the Marquise's Keep (or any corner clearing if Marquise isn't in play).",
-          "Place 6 warriors in your Roost clearing.",
-          "Tuck 1 card of each suit from your hand under the Recruit, Move, Battle, and Build columns of your Decree."
+          "Choose a homeland clearing on the map edge that has 2+ clearings between it and enemy homelands.",
+          "Put 6 warriors and 1 roost in your homeland.",
+          "Put any leader card on your Leader Card slot. Keep the other 3 leaders face up nearby.",
+          "Tuck your 2 Loyal Viziers under the Decree column slots as listed on your current leader card.",
+          "Fill your Roosts spaces with roosts, except the leftmost."
         ],
         "assets": {
           "meepleSvg": {
@@ -408,11 +410,11 @@
         "military": "insurgent",
         "matchingHireling": "uprising",
         "description": "Forest revolutionaries spreading sympathy and igniting open revolt.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place 10 sympathy tokens in the supply next to your faction board.",
-          "Place 3 base tokens (one fox, one mouse, one rabbit) in the supply next to your faction board.",
-          "Place 4 officer cards next to your faction board (none deployed at start)."
+          "Draw 3 cards and add them face down to your Supporters stack.",
+          "Fill your Sympathy track with sympathy tokens.",
+          "Put your 3 bases on your matching Bases spaces."
         ],
         "assets": {
           "meepleSvg": {
@@ -488,12 +490,13 @@
           }
         ],
         "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Use the Vagabond character that was dealt with this setup card.",
-          "Place your Vagabond meeple in any forest.",
-          "Take the starting items shown on your character card and place them face-up in your Satchel.",
-          "Shuffle the Quest deck; deal 3 quests face-up next to the map."
+          "Put your pawn in any forest.",
+          "Shuffle the quest deck. Draw 3 quests to deal out nearby.",
+          "Put 4 \"R\" items under the ruins randomly, unless a non-Vagabond has done so.",
+          "Put your assigned character card in your Character Card slot. Put the listed \"S\" items in your Satchel and on their matching tracks, as needed.",
+          "Put relationship markers for non-Vagabond factions in play on the Indifferent space of your Relationships (after setup)."
         ],
         "assets": {
           "meepleSvg": {
@@ -554,11 +557,13 @@
         "military": "insurgent",
         "matchingHireling": "prophets",
         "description": "Outcast lizards turning discarded cards into gardens and revealed-suit rituals.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place the Outcast marker in the empty Hatred space (any suit).",
-          "Place 4 warriors in any 4 clearings (1 per clearing).",
-          "Place the Lost Souls pile (empty) next to your faction board."
+          "Choose a homeland clearing that is not adjacent to enemy homelands.",
+          "Put 2 warriors and 1 matching garden in your homeland. Put 3 warriors in clearings adjacent to it as evenly as possible.",
+          "Put 2 warriors in your Acolytes box.",
+          "Fill your Gardens tracks with gardens, except the leftmost space of the garden on the map.",
+          "Put your outcast marker on its Outcast side on any space of the Outcast box."
         ],
         "assets": {
           "meepleSvg": {
@@ -587,11 +592,12 @@
         "military": "insurgent",
         "matchingHireling": "flotilla",
         "description": "Otter mercantilists selling services, mercenaries, and dividend funds along the river.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place 4 warriors in two river clearings (2 per clearing).",
-          "Set service-price markers to their starting values (Hand Card 1, Riverboats 2, Mercenaries 2).",
-          "Place all payments and trade-post pieces in the supply next to your faction board."
+          "Put 4 warriors among any clearings along the river.",
+          "Put 3 warriors in your Payments box.",
+          "Fill your Trade Posts tracks with matching trade posts.",
+          "Put your 3 service markers on your Services track, setting a price for each service."
         ],
         "assets": {
           "meepleSvg": {
@@ -626,12 +632,11 @@
         "military": "militant",
         "matchingHireling": "expedition",
         "description": "Mole monarchy tunnelling from the Burrow, swaying Ministers to expand its actions.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place the Burrow token in the Burrow space on your faction board.",
-          "Place 2 warriors and 1 tunnel in any 3 clearings (1 piece per clearing); the tunnel must be in a clearing adjacent to a forest.",
-          "Place all 9 ministers in the Crown area; shuffle and reveal the top 3 to set the starting Crown.",
-          "Place all 12 sway tokens in the supply next to your faction board."
+          "Choose a homeland clearing that is not adjacent to enemy homelands.",
+          "Put 2 warriors and 1 tunnel in your homeland. Put 5 warriors among clearings adjacent to it as evenly as possible.",
+          "Put your Burrow board near the map. Fill your Buildings tracks with your citadels and markets. Put your 9 minister cards face up on your Unswayed Ministers pile. Put your 9 crowns on the square spaces showing victory points."
         ],
         "assets": {
           "meepleSvg": {
@@ -659,11 +664,10 @@
         "military": "insurgent",
         "matchingHireling": "spies",
         "description": "Crow plotters laying secret tokens that punish meddling rivals.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place 4 warriors in any 4 clearings (1 per clearing).",
-          "Place all plot tokens face-down next to your faction board (out of play).",
-          "Place the Embedded Agent token next to your faction board."
+          "Choose a homeland clearing. Put 1 warrior and 1 plot token of your choice face down there.",
+          "Put 1 warrior in a clearing of each suit. (Counting the previous step, place 4 warriors in total.)"
         ],
         "assets": {
           "meepleSvg": {
@@ -699,10 +703,10 @@
         "military": "militant",
         "matchingHireling": "flameBearers",
         "description": "Warlord rats riding mood swings into burning, occupying, and humiliating their neighbours.",
-        "adsetNote": "Transcribed from the Decimator85 ADSET card scan (corrected for OCR errors).",
+        "adsetNote": "Verified against the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
           "Choose a homeland clearing on the map edge that has 2+ clearings between it and enemy homelands.",
-          "Put your Warlord, 4 warriors, and 1 stronghold in your homeland.",
+          "Put your warlord, 4 warriors, and 1 stronghold in your homeland.",
           "Put your Stubborn mood card in your Mood Card slot.",
           "Put the 4 \"R\" items under the ruins randomly, unless this has already been done."
         ],
@@ -783,12 +787,12 @@
         "military": "militant",
         "matchingHireling": "vaultKeepers",
         "description": "Knightly badgers recovering and protecting lost relics, scoring through guarded prestige.",
-        "adsetNote": "First-pass setup text; verify against the official rulebook.",
+        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
-          "Place your Retinue cards in the starting order shown on your faction board.",
-          "Place 4 warriors and 2 waystations in any corner clearing.",
-          "Shuffle the 12 relic tokens face-down; place 1 in each forest space until all relics are placed (or all forests are full).",
-          "Take the Faithful Retainer marker and place it on your faction board."
+          "Shuffle all 12 relic tokens face down. Put one face down randomly in each forest.",
+          "Choose 2 adjacent homeland clearings on the map edge that have 2+ clearings between them and enemy homelands. Put 4 warriors in each homeland.",
+          "Put any remaining relics, as evenly as possible, among any forests that are not adjacent to your homelands.",
+          "Tuck a Faithful Retainer card into each of your Retinue column slots."
         ],
         "assets": {
           "meepleSvg": {
@@ -824,6 +828,7 @@
         "military": "militant",
         "matchingHireling": "roamers",
         "description": "Frog newcomers seeking a peaceful Woodland home — but quick to harden under pressure.",
+        "adsetNote": "Verified against the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
           "Place 5 warriors and 1 Peaceful enclave in a river clearing, or one adjacent to the river if you cannot. This is your homeland.",
           "With 2 players, remove the Frog dominance card.",
@@ -856,6 +861,7 @@
         "military": "insurgent",
         "matchingHireling": "advocates",
         "description": "Diplomats convening assemblies to redirect the woodland from violence to negotiation.",
+        "adsetNote": "Verified against the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
           "Choose a homeland clearing. Place 4 warriors there.",
           "Place 2 warriors in a different clearing.",
@@ -951,6 +957,7 @@
           }
         ],
         "captainPoolNote": "Four Captain cards are dealt face-up alongside the Knaves setup card; the player chooses three to use.",
+        "adsetNote": "Verified against the official therootdatabase.com ADSET (Advanced Setup) card.",
         "adsetSteps": [
           "Choose 3 Captain cards and return the fourth one to the box. Collect their Captain warriors. Put the items shown on their Captain cards in your Stash.",
           "Put 1 Captain and 1 Skunk each in three different forests.",
@@ -988,8 +995,14 @@
     "status": "reference-only",
     "fetchedAt": "2026-05-19",
     "intent": "External asset references gathered from therootdatabase.com Workshop and the EwenDC repo. Drive viewUrls require auth; the static-export app cannot fetch them. Anything that needs to render in-app must be mirrored locally (e.g. /public/factions/<id>.png or .svg) with attribution to Leder Games and EwenDC (CC-BY-NC-SA 4.0).",
-    "adsetTextProvenance": "Per-faction `adsetSteps` are first-pass community-knowledge transcriptions, except Lord of the Hundreds (transcribed from the Decimator85 card scan). Each faction carries an `adsetNote` flagging verification needs. The canonical source is the per-faction setup cards / the law page at https://www.therootdatabase.com/law/advanced-setup/en/.",
+    "adsetTextProvenance": "Per-faction `adsetSteps` are transcribed from each faction's official ADSET (Advanced Setup) card image (CSS class `adset-img`) on its therootdatabase.com faction page, fetched 2026-06-14. These use the official homeland advanced-setup variant. Each faction's `adsetNote` records this. The law page at https://www.therootdatabase.com/law/advanced-setup/en/ holds the advanced-setup procedure and homeland rules (A.8) but not the per-faction step lists, which live only on the setup cards; it was used to corroborate the homeland-adjacency wording (A.8.3.II), not the individual steps.",
     "sources": [
+      {
+        "id": "rdb-adset-cards",
+        "label": "therootdatabase.com faction ADSET (Advanced Setup) card images",
+        "url": "https://www.therootdatabase.com/faction/",
+        "note": "Each faction page embeds its official setup card as an <img class=\"adset-img\"> under /media/cards/ or /media/uploads/posts/<slug>/en/card/front.webp. Transcribed 2026-06-14."
+      },
       {
         "id": "user-palette",
         "label": "Canonical faction hex palette (user-supplied, 2026-05-19)"
@@ -1164,7 +1177,7 @@
       ],
       "notes": [
         "All 13 factions have meeple SVGs (EwenDC) + PNG head icons.",
-        "ADSET cards: only marquise, riverfolk, hundreds are surfaced from Decimator85. The per-faction `adsetSteps` are first-pass text and need verification against the rulebook (see `adsetNote` per faction).",
+        "ADSET card scans surfaced from Decimator85: only marquise, riverfolk, hundreds. All 13 `adsetSteps` are now transcribed from the official therootdatabase.com ADSET card images (see `adsetTextProvenance`).",
         "Map / deck assets remain partial; not blocking until the wizard renders them."
       ]
     }
