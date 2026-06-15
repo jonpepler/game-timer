@@ -299,23 +299,25 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
   return pool.slice(0, Math.min(count, pool.length));
 };
 
-// Per-faction character draw (ADSET A.8.2): if Vagabond is dealt, deal
-// 1 character; if Knaves is dealt, deal 4 captains. Pools live on the
-// faction option as `characterPool` / `captainPool` (passthrough).
-interface CharacterDraw {
-  poolField: "characterPool" | "captainPool";
-  count: number;
-}
-const CHARACTER_DRAWS: Record<string, CharacterDraw> = {
-  vagabond: { poolField: "characterPool", count: 1 },
-  knaves: { poolField: "captainPool", count: 4 },
-};
+// Some faction-style options deal accompanying cards on pick (Root's
+// Vagabond character, Knaves' captains). Which pool + how many is
+// declared on the option itself (`characterDraw`), keeping faction ids
+// out of core code. Pools live on the option as the named passthrough
+// array (e.g. `characterPool` / `captainPool`).
+const characterDrawOf = (
+  option: SetupOption | undefined,
+): { poolField: string; count: number } | undefined =>
+  (
+    option as unknown as {
+      characterDraw?: { poolField: string; count: number };
+    }
+  )?.characterDraw;
 
 const labelForCharacter = (
   factionOption: SetupOption,
   characterId: string,
 ): string => {
-  const draw = CHARACTER_DRAWS[factionOption.id];
+  const draw = characterDrawOf(factionOption);
   if (!draw) return characterId;
   const pool = (
     factionOption as unknown as Record<
@@ -334,10 +336,9 @@ const dealCharactersFor = (
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
   for (const id of optionIds) {
-    const draw = CHARACTER_DRAWS[id];
-    if (!draw) continue;
     const option = options.find((o) => o.id === id);
-    if (!option) continue;
+    const draw = characterDrawOf(option);
+    if (!option || !draw) continue;
     const pool = (
       option as unknown as Record<
         string,
@@ -477,7 +478,9 @@ export const GameSetupWizard = forwardRef<
         const step = definition.setupSteps?.find((s) => s.id === stepId);
         const options =
           step?.kind.type === "player-pick" ? step.kind.options : [];
-        const characterDeal = CHARACTER_DRAWS[optionId]
+        const characterDeal = characterDrawOf(
+          options.find((o) => o.id === optionId),
+        )
           ? dealCharactersFor([optionId], options, prev)
           : null;
         return {
@@ -979,10 +982,9 @@ function collectPlayers(
         // own meeple so the chosen Vagabond shows its proper silhouette.
         let meeple = assets?.meepleSvg?.appPath;
         let head = assets?.headIcon?.[0]?.appPath;
-        const drawnCharId =
-          CHARACTER_DRAWS[option.id] && characters[option.id]?.[0];
-        if (drawnCharId) {
-          const draw = CHARACTER_DRAWS[option.id];
+        const draw = characterDrawOf(option);
+        const drawnCharId = draw && characters[option.id]?.[0];
+        if (draw && drawnCharId) {
           const pool = (
             option as unknown as Record<
               string,
@@ -2036,7 +2038,9 @@ function PlayerPickScreen({
       ([s, id]) => Number(s) !== seatIdx && id === optionId,
     );
     if (takenBy) return;
-    const characterDeal = CHARACTER_DRAWS[optionId]
+    const characterDeal = characterDrawOf(
+      options.find((o) => o.id === optionId),
+    )
       ? dealCharactersFor([optionId], options, context)
       : null;
     onChange((curr) => ({

@@ -95,6 +95,17 @@ const SetupOptionSchema = z
     // the structure-vs-content split). This *field* names a single
     // module-as-expansion within that file. Different scopes, same word.
     module: z.string().optional(),
+    // Optional id of a `toggle` step that must be ON for this option to
+    // be offered (in addition to any `module` gate). Lets a variant be
+    // switched off pre-draft — e.g. Root's second Vagabond.
+    requiresToggle: z.string().optional(),
+    // For faction-style options that deal accompanying cards on pick
+    // (Root's Vagabond character, Knaves' captains): which passthrough
+    // array on this option holds the pool, and how many to deal. Read
+    // generically by the wizard — no faction ids baked into core code.
+    characterDraw: z
+      .object({ poolField: z.string(), count: z.number() })
+      .optional(),
   })
   // Passthrough so extra fields supplied by a content modules file
   // (e.g. asset references, custom per-option data the renderers want
@@ -511,9 +522,15 @@ export type SetupContext = Record<string, SetupChoice>;
 // field always show. If the wizard hasn't reached any multi-toggle
 // step yet, everything shows.
 export const optionVisibleUnderContext = (
-  option: { module?: string },
+  option: { module?: string; requiresToggle?: string },
   context: SetupContext,
 ): boolean => {
+  // Variant gate: a referenced toggle step being explicitly off hides
+  // the option regardless of module.
+  if (option.requiresToggle) {
+    const t = context[option.requiresToggle];
+    if (t?.kind === "toggle" && t.value === false) return false;
+  }
   if (!option.module) return true;
   for (const choice of Object.values(context)) {
     if (choice.kind === "multi-toggle") {

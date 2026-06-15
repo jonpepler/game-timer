@@ -197,6 +197,15 @@
       }
     },
     {
+      "id": "two-vagabonds",
+      "label": "Second Vagabond",
+      "description": "Include the second Vagabond (Riverfolk) so two players can each play a Vagabond, each with its own character. Turn off for a single-Vagabond game.",
+      "kind": {
+        "type": "toggle",
+        "defaultValue": true
+      }
+    },
+    {
       "id": "faction",
       "label": "Faction",
       "kind": {
@@ -209,6 +218,7 @@
           "eyrie",
           "alliance",
           "vagabond",
+          "vagabond2",
           "lizards",
           "riverfolk",
           "duchy",
@@ -223,6 +233,10 @@
           {
             "type": "mutually-exclusive",
             "optionIds": ["vagabond", "knaves"]
+          },
+          {
+            "type": "mutually-exclusive",
+            "optionIds": ["vagabond2", "knaves"]
           }
         ]
       }
