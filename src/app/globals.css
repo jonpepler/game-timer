@@ -29,7 +29,9 @@
   /* Foreground */
   --color-text: #ffffff;
   --color-text-muted: rgba(255, 255, 255, 0.6);
-  --color-text-subtle: rgba(255, 255, 255, 0.4);
+  /* 0.55 (not 0.4) so de-emphasised text still clears WCAG AA 4.5:1 on
+     the dark surfaces — at 0.4 it measured 3.82:1 and axe flagged it. */
+  --color-text-subtle: rgba(255, 255, 255, 0.55);
 
   /* Borders */
   --color-border: rgba(255, 255, 255, 0.2);
@@ -42,6 +44,18 @@
 
   /* Player fallback — when a player has no assigned colour */
   --color-player-fallback: #888;
+
+  /* Accent — monochrome theme: the accent IS the foreground white.
+     Drives selection highlights, focus rings/outlines, and solid fills.
+     These were previously referenced but never defined, so accent
+     backgrounds and (critically) keyboard focus indicators silently did
+     nothing. Text sitting on a solid accent fill uses --color-text-inverse. */
+  --color-accent: var(--color-text);
+  --color-text-inverse: var(--color-surface);
+  /* Dimmed secondary text — kept light enough to clear WCAG AA on the
+     dark surfaces. */
+  --color-text-dim: rgba(255, 255, 255, 0.7);
+  --color-danger: #d96565;
 }
 
 * {
