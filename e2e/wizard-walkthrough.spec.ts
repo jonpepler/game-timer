@@ -99,7 +99,7 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   // ADSET steps are now PERMANENTLY rendered on each card (no
   // toggle) — the hero treatment shows them inline, so we just
   // assert the marquise's setup text is visible somewhere.
-  await expect(page.getByText("Place your Keep").first()).toBeVisible();
+  await expect(page.getByText("Put the keep token").first()).toBeVisible();
   await save(page, "11-faction-picker-with-adset");
 
   // Pick factions for all four seats. Each pick is two-step now
