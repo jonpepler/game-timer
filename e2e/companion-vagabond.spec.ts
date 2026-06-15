@@ -32,9 +32,7 @@ async function openCompanion(ctx: BrowserContext, code: string): Promise<Page> {
   return page;
 }
 
-test("companion shows a claimed Vagabond (head art)", async ({
-  context,
-}) => {
+test("companion shows a claimed Vagabond (head art)", async ({ context }) => {
   await context.addInitScript({ content: PEER_TEST_INIT_SCRIPT });
   const host = await context.newPage();
   const code = await startHostAndShare(host);

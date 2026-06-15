@@ -1974,6 +1974,7 @@ function PlayerPickScreen({
     options,
     onChange,
     context,
+    constraints,
   ]);
 
   // Note: previous version dropped dealtIds when draft toggled off,
