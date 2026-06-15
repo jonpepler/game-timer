@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
-import { describePeerError } from "@/lib/peer";
+import { describePeerError } from "@/lib/peerTransport";
 import { normaliseSessionCode, SESSION_CODE_LENGTH } from "@/lib/sessionCode";
 import {
   PEER_PROTOCOL_VERSION,
