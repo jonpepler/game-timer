@@ -95,6 +95,36 @@
       }
     },
     {
+      "id": "landmarks",
+      "label": "Landmarks",
+      "description": "Shuffle the landmarks you're playing with and deal one.",
+      "kind": {
+        "type": "deal-random",
+        "optionCategory": "landmark",
+        "count": 1,
+        "optional": true,
+        "optionIds": [
+          "the-tower",
+          "the-ferry",
+          "black-market",
+          "lost-city",
+          "legendary-forge",
+          "elder-treetop",
+          "mousehold",
+          "foxburrow",
+          "rabbittown"
+        ]
+      }
+    },
+    {
+      "id": "landmark-setup",
+      "label": "Set up landmarks",
+      "description": "The last player in turn order sets up the drawn landmark as shown on its card.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
       "id": "seating",
       "label": "Seat players",
       "kind": {
@@ -114,9 +144,18 @@
         "optional": true,
         "demote": {
           "thresholds": [
-            { "minSeats": 3, "count": 1 },
-            { "minSeats": 4, "count": 2 },
-            { "minSeats": 5, "count": 3 }
+            {
+              "minSeats": 3,
+              "count": 1
+            },
+            {
+              "minSeats": 4,
+              "count": 2
+            },
+            {
+              "minSeats": 5,
+              "count": 3
+            }
           ]
         },
         "optionIds": [
@@ -146,36 +185,6 @@
       "kind": {
         "type": "dealt-resolve",
         "sourceStepId": "hirelings"
-      }
-    },
-    {
-      "id": "landmarks",
-      "label": "Landmarks",
-      "description": "Shuffle the landmarks you're playing with and deal one.",
-      "kind": {
-        "type": "deal-random",
-        "optionCategory": "landmark",
-        "count": 1,
-        "optional": true,
-        "optionIds": [
-          "the-tower",
-          "the-ferry",
-          "black-market",
-          "lost-city",
-          "legendary-forge",
-          "elder-treetop",
-          "mousehold",
-          "foxburrow",
-          "rabbittown"
-        ]
-      }
-    },
-    {
-      "id": "landmark-setup",
-      "label": "Set up landmarks",
-      "description": "The last player in turn order sets up the drawn landmark as shown on its card.",
-      "kind": {
-        "type": "info"
       }
     },
     {

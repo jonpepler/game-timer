@@ -471,16 +471,33 @@ export const GameSetupWizard = forwardRef<
           prev[stepId]?.kind === "player-pick"
             ? (prev[stepId] as Extract<SetupChoice, { kind: "player-pick" }>)
             : { kind: "player-pick" as const, picks: {} };
+        // Deal any character that accompanies this faction (e.g. the
+        // Vagabond's character card), exactly as a local pick does — so a
+        // companion's turn-based pick still gets its character + meeple.
+        const step = definition.setupSteps?.find((s) => s.id === stepId);
+        const options =
+          step?.kind.type === "player-pick" ? step.kind.options : [];
+        const characterDeal = CHARACTER_DRAWS[optionId]
+          ? dealCharactersFor([optionId], options, prev)
+          : null;
         return {
           ...prev,
           [stepId]: {
             ...current,
             picks: { ...current.picks, [seatIndex]: optionId },
+            ...(characterDeal
+              ? {
+                  characters: {
+                    ...(current.characters ?? {}),
+                    ...characterDeal,
+                  },
+                }
+              : {}),
           },
         };
       });
     },
-    [],
+    [definition],
   );
 
   // Imperative dealt-resolve pick (driven by peer SETUP_PICK
@@ -961,6 +978,7 @@ function collectPlayers(
         // dealt with this faction (Vagabond), prefer that character's
         // own meeple so the chosen Vagabond shows its proper silhouette.
         let meeple = assets?.meepleSvg?.appPath;
+        let head = assets?.headIcon?.[0]?.appPath;
         const drawnCharId =
           CHARACTER_DRAWS[option.id] && characters[option.id]?.[0];
         if (drawnCharId) {
@@ -973,9 +991,15 @@ function collectPlayers(
           )[draw.poolField];
           const charMeeple = pool?.find((c) => c.id === drawnCharId)?.meeple
             ?.appPath;
-          if (charMeeple) meeple = charMeeple;
+          // The character has no separate head-crop art, so use its meeple
+          // for BOTH the full icon and the head slot — otherwise the
+          // companion / score panel (which prefer headIconSrc) would fall
+          // back to the generic faction head and lose the character.
+          if (charMeeple) {
+            meeple = charMeeple;
+            head = charMeeple;
+          }
         }
-        const head = assets?.headIcon?.[0]?.appPath;
         metadata[visualKey] = {
           type: "selected-option",
           optionId: option.id,
