@@ -49,10 +49,10 @@ describe("definition registry", () => {
     );
     expect(pickStep).toBeDefined();
     if (pickStep && pickStep.kind.type === "player-pick") {
-      // All 13 official factions across base + four expansions
-      // (Riverfolk, Underworld, Marauders, Homeland). Update if Leder
-      // publishes more.
-      expect(pickStep.kind.options).toHaveLength(13);
+      // 13 official factions across base + four expansions (Riverfolk,
+      // Underworld, Marauders, Homeland), plus the second Vagabond
+      // (Riverfolk variant, gated by the two-vagabonds toggle) = 14.
+      expect(pickStep.kind.options).toHaveLength(14);
       // Option ids must be unique — they're foreign keys for player
       // metadata + the mutex constraint references.
       const ids = pickStep.kind.options.map((o) => o.id);

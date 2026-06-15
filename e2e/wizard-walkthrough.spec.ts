@@ -244,7 +244,11 @@ test("Root faction picker — last seat keeps its metadata", async ({ page }) =>
   await page.getByRole("button", { name: /^Skip draft$/ }).click();
   // Counterclockwise pick order — seat 4 first, seat 1 last.
   const confirm = page.getByRole("button", { name: /^Confirm setup$/ });
-  await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+  // Two "Vagabond" cards (the two-Vagabond variant) — pick either.
+  await page
+    .getByRole("button", { name: "Vagabond", exact: true })
+    .first()
+    .click();
   await confirm.click();
   await page
     .getByRole("button", { name: "Woodland Alliance", exact: true })

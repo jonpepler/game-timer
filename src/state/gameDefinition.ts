@@ -95,6 +95,41 @@ const SetupOptionSchema = z
     // the structure-vs-content split). This *field* names a single
     // module-as-expansion within that file. Different scopes, same word.
     module: z.string().optional(),
+    // Optional id of a `toggle` step that must be ON for this option to
+    // be offered (in addition to any `module` gate). Lets a variant be
+    // switched off pre-draft — e.g. Root's second Vagabond.
+    requiresToggle: z.string().optional(),
+    // For faction-style options that deal accompanying cards on pick
+    // (Root's Vagabond character, Knaves' captains): which passthrough
+    // array on this option holds the pool, and how many to deal. Read
+    // generically by the wizard — no faction ids baked into core code.
+    characterDraw: z
+      .object({
+        poolField: z.string(),
+        count: z.number(),
+        // When true, copies of this option (see `copies`) draw distinct
+        // characters — no two copies share one. `exclusiveGroup` is filled
+        // in at resolution with the base option id that copies share.
+        exclusive: z.boolean().optional(),
+        exclusiveGroup: z.string().optional(),
+      })
+      .optional(),
+    // An option that comes in multiple physical copies (e.g. Root's two
+    // Vagabond pawns). At definition load each entry becomes its own
+    // pickable card — copy 0 keeps the base id, later copies get a
+    // suffixed id — sharing the base's pools/assets but overriding colour
+    // /label/module/requiresToggle. Mutex constraints on the base id are
+    // mirrored onto each copy.
+    copies: z
+      .array(
+        z.object({
+          label: z.string().optional(),
+          color: z.string().optional(),
+          module: z.string().optional(),
+          requiresToggle: z.string().optional(),
+        }),
+      )
+      .optional(),
   })
   // Passthrough so extra fields supplied by a content modules file
   // (e.g. asset references, custom per-option data the renderers want
@@ -109,6 +144,17 @@ const SetupConstraintSchema = z.discriminatedUnion("type", [
   }),
 ]);
 export type SetupConstraint = z.infer<typeof SetupConstraintSchema>;
+
+// Optional demotion rule for a deal-random step: how many of the dealt
+// items start in their demoted state, scaling with the seat count. The
+// wizard reads it generically — the per-game numbers live in the
+// definition, not in app code. `count` applies once seats >= `minSeats`;
+// the highest matching threshold wins, defaulting to 0.
+const DemoteRuleSchema = z
+  .object({
+    thresholds: z.array(z.object({ minSeats: z.number(), count: z.number() })),
+  })
+  .optional();
 
 const SetupStepKindSchema = z.discriminatedUnion("type", [
   z.object({
@@ -145,6 +191,10 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     options: z.array(SetupOptionSchema),
     count: z.number(),
     optional: z.boolean().optional(),
+    demote: DemoteRuleSchema,
+    // When set, the player chooses how many to deal (0..maxCount) rather
+    // than a fixed `count`. Used by Root's landmarks (0, 1, or 2).
+    maxCount: z.number().optional(),
   }),
   // Seat players: the roster + ordering. The wizard renders an editable,
   // reorderable list. Companions can rename / claim seats over PeerJS.
@@ -282,6 +332,8 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     optionIds: z.array(z.string()),
     count: z.number(),
     optional: z.boolean().optional(),
+    demote: DemoteRuleSchema,
+    maxCount: z.number().optional(),
   }),
   z.object({
     type: z.literal("seat-players"),
@@ -374,6 +426,72 @@ export type GameContentModules = z.infer<typeof GameContentModulesSchema>;
 export const parseGameContentModules = (input: unknown): GameContentModules =>
   GameContentModulesSchema.parse(input);
 
+// Expand any option carrying `copies` into one concrete option per copy
+// (copy 0 keeps the base id; later copies get `${id}__${n}`), and mirror
+// the step's mutex constraints from each base id onto its copies. Runs at
+// resolution so the wizard, metadata and companion all see plain options.
+type ResolvedOption = Record<string, unknown> & { id: string };
+const expandOptionCopies = (
+  options: ResolvedOption[],
+  constraints: SetupConstraint[] | undefined,
+): {
+  options: ResolvedOption[];
+  constraints: SetupConstraint[] | undefined;
+} => {
+  const out: ResolvedOption[] = [];
+  const extra: SetupConstraint[] = [];
+  for (const opt of options) {
+    const copies = (
+      opt as {
+        copies?: Array<{
+          label?: string;
+          color?: string;
+          module?: string;
+          requiresToggle?: string;
+        }>;
+      }
+    ).copies;
+    if (!Array.isArray(copies) || copies.length === 0) {
+      out.push(opt);
+      continue;
+    }
+    const { copies: _drop, ...base } = opt;
+    const baseLabel = base.label as string;
+    const cd = (base as { characterDraw?: { exclusive?: boolean } })
+      .characterDraw;
+    copies.forEach((copy, i) => {
+      const id = i === 0 ? opt.id : `${opt.id}__${i + 1}`;
+      const merged: ResolvedOption = {
+        ...base,
+        id,
+        label: copy.label ?? (i === 0 ? baseLabel : `${baseLabel} ${i + 1}`),
+        ...(copy.color ? { color: copy.color } : {}),
+        ...(copy.module ? { module: copy.module } : {}),
+        ...(copy.requiresToggle ? { requiresToggle: copy.requiresToggle } : {}),
+      };
+      if (cd?.exclusive) {
+        merged.characterDraw = { ...cd, exclusiveGroup: opt.id };
+      }
+      out.push(merged);
+      if (i > 0 && constraints) {
+        for (const c of constraints) {
+          if (c.optionIds.includes(opt.id)) {
+            extra.push({
+              ...c,
+              optionIds: c.optionIds.map((x) => (x === opt.id ? id : x)) as [
+                string,
+                string,
+              ],
+            });
+          }
+        }
+      }
+    });
+  }
+  const merged = constraints ? [...constraints, ...extra] : extra;
+  return { options: out, constraints: merged.length ? merged : undefined };
+};
+
 // Resolve a structure + modules pair into a fully-realised, validated
 // GameDefinition. Throws with a path-into-the-document on a missing
 // category or option id.
@@ -413,6 +531,22 @@ export const loadGameDefinitionWithModules = (
       return { id, ...content };
     });
     const { optionIds: _drop, optionCategory: _drop2, ...kindRest } = kind;
+    if (kind.type === "player-pick") {
+      const expanded = expandOptionCopies(
+        options,
+        (kindRest as { constraints?: SetupConstraint[] }).constraints,
+      );
+      return {
+        ...step,
+        kind: {
+          ...kindRest,
+          options: expanded.options,
+          ...(expanded.constraints
+            ? { constraints: expanded.constraints }
+            : {}),
+        },
+      };
+    }
     return { ...step, kind: { ...kindRest, options } };
   });
 
@@ -494,9 +628,15 @@ export type SetupContext = Record<string, SetupChoice>;
 // field always show. If the wizard hasn't reached any multi-toggle
 // step yet, everything shows.
 export const optionVisibleUnderContext = (
-  option: { module?: string },
+  option: { module?: string; requiresToggle?: string },
   context: SetupContext,
 ): boolean => {
+  // Variant gate: a referenced toggle step being explicitly off hides
+  // the option regardless of module.
+  if (option.requiresToggle) {
+    const t = context[option.requiresToggle];
+    if (t?.kind === "toggle" && t.value === false) return false;
+  }
   if (!option.module) return true;
   for (const choice of Object.values(context)) {
     if (choice.kind === "multi-toggle") {

@@ -72,16 +72,11 @@
    carries the faction colour; `mask-image` cuts the silhouette out
    of that colour. Scales with the banner text. */
 .activePlayerMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   width: clamp(48px, 7vmin, 80px);
   height: clamp(48px, 7vmin, 80px);
   display: inline-block;
   flex-shrink: 0;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
 }
 
 .activePlayerSuffix {

@@ -48,3 +48,6 @@ certificates
 # Editor swap files
 *.swp
 *.swo
+
+# Serena tool
+.serena/

@@ -299,23 +299,48 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
   return pool.slice(0, Math.min(count, pool.length));
 };
 
-// Per-faction character draw (ADSET A.8.2): if Vagabond is dealt, deal
-// 1 character; if Knaves is dealt, deal 4 captains. Pools live on the
-// faction option as `characterPool` / `captainPool` (passthrough).
-interface CharacterDraw {
-  poolField: "characterPool" | "captainPool";
-  count: number;
-}
-const CHARACTER_DRAWS: Record<string, CharacterDraw> = {
-  vagabond: { poolField: "characterPool", count: 1 },
-  knaves: { poolField: "captainPool", count: 4 },
+// Deal `count` ids at random, but never deal both members of a
+// mutually-exclusive pair into the same hand (e.g. Vagabond + Knaves):
+// a drafted pool you can't fully use wastes a slot.
+const dealWithoutMutexClashes = (
+  ids: string[],
+  count: number,
+  mutex: [string, string][],
+): string[] => {
+  const clashes = (a: string, b: string) =>
+    mutex.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const out: string[] = [];
+  for (const id of shuffleAndTake(ids, ids.length)) {
+    if (out.length >= count) break;
+    if (out.some((picked) => clashes(picked, id))) continue;
+    out.push(id);
+  }
+  return out;
 };
+
+// Some faction-style options deal accompanying cards on pick (Root's
+// Vagabond character, Knaves' captains). Which pool + how many is
+// declared on the option itself (`characterDraw`), keeping faction ids
+// out of core code. Pools live on the option as the named passthrough
+// array (e.g. `characterPool` / `captainPool`).
+const characterDrawOf = (
+  option: SetupOption | undefined,
+): { poolField: string; count: number; exclusiveGroup?: string } | undefined =>
+  (
+    option as unknown as {
+      characterDraw?: {
+        poolField: string;
+        count: number;
+        exclusiveGroup?: string;
+      };
+    }
+  )?.characterDraw;
 
 const labelForCharacter = (
   factionOption: SetupOption,
   characterId: string,
 ): string => {
-  const draw = CHARACTER_DRAWS[factionOption.id];
+  const draw = characterDrawOf(factionOption);
   if (!draw) return characterId;
   const pool = (
     factionOption as unknown as Record<
@@ -327,24 +352,84 @@ const labelForCharacter = (
   return pool.find((c) => c.id === characterId)?.label ?? characterId;
 };
 
+// The meeple to show for an option: if a character was dealt with it
+// (the Vagabond's character), that character's own meeple; otherwise the
+// option's default meeple. Keeps every surface (card, preview, in-game)
+// showing the chosen character rather than the generic faction pawn.
+const meepleAppPathFor = (
+  option: SetupOption | undefined,
+  characters: Record<string, string[]>,
+): string | undefined => {
+  if (!option) return undefined;
+  const factionMeeple = (
+    option as unknown as { assets?: { meepleSvg?: { appPath?: string } } }
+  ).assets?.meepleSvg?.appPath;
+  const draw = characterDrawOf(option);
+  const charId = draw && characters[option.id]?.[0];
+  if (draw && charId) {
+    const pool = (
+      option as unknown as Record<
+        string,
+        Array<{ id: string; meeple?: { appPath?: string } }> | undefined
+      >
+    )[draw.poolField];
+    const charMeeple = pool?.find((c) => c.id === charId)?.meeple?.appPath;
+    if (charMeeple) return charMeeple;
+  }
+  return factionMeeple;
+};
+
 const dealCharactersFor = (
   optionIds: string[],
   options: SetupOption[],
+  context: SetupContext,
+  // Characters already dealt this game (from the player-pick choice), so
+  // an `exclusive` group (e.g. the two Vagabonds) never repeats a
+  // character across separate picks.
+  existing: Record<string, string[]> = {},
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
+  // Per exclusive-group set of already-used character ids — seeded from
+  // prior picks, then grown as we deal within this call.
+  const usedByGroup: Record<string, Set<string>> = {};
+  for (const [oid, chars] of Object.entries(existing)) {
+    const group = characterDrawOf(
+      options.find((o) => o.id === oid),
+    )?.exclusiveGroup;
+    if (!group) continue;
+    if (!usedByGroup[group]) usedByGroup[group] = new Set();
+    for (const c of chars) usedByGroup[group].add(c);
+  }
   for (const id of optionIds) {
-    const draw = CHARACTER_DRAWS[id];
-    if (!draw) continue;
     const option = options.find((o) => o.id === id);
-    if (!option) continue;
+    const draw = characterDrawOf(option);
+    if (!option || !draw) continue;
     const pool = (
-      option as unknown as Record<string, Array<{ id: string }> | undefined>
+      option as unknown as Record<
+        string,
+        Array<{ id: string; module?: string }> | undefined
+      >
     )[draw.poolField];
     if (!Array.isArray(pool) || pool.length === 0) continue;
-    out[id] = shuffleAndTake(
-      pool.map((c) => c.id),
-      draw.count,
-    );
+    // Gate pool members by their `module` against the enabled
+    // expansions — same rule as faction/map options — so e.g. the
+    // Vagabond Pack characters are only dealt when that module is on.
+    let eligible = pool
+      .filter((c) => optionVisibleUnderContext(c, context))
+      .map((c) => c.id);
+    const group = draw.exclusiveGroup;
+    if (group) {
+      if (!usedByGroup[group]) usedByGroup[group] = new Set();
+      const used = usedByGroup[group];
+      eligible = eligible.filter((cid) => !used.has(cid));
+    }
+    if (eligible.length === 0) continue;
+    const picked = shuffleAndTake(eligible, draw.count);
+    out[id] = picked;
+    if (group) {
+      const used = usedByGroup[group];
+      for (const c of picked) used.add(c);
+    }
   }
   return out;
 };
@@ -462,16 +547,35 @@ export const GameSetupWizard = forwardRef<
           prev[stepId]?.kind === "player-pick"
             ? (prev[stepId] as Extract<SetupChoice, { kind: "player-pick" }>)
             : { kind: "player-pick" as const, picks: {} };
+        // Deal any character that accompanies this faction (e.g. the
+        // Vagabond's character card), exactly as a local pick does — so a
+        // companion's turn-based pick still gets its character + meeple.
+        const step = definition.setupSteps?.find((s) => s.id === stepId);
+        const options =
+          step?.kind.type === "player-pick" ? step.kind.options : [];
+        const characterDeal = characterDrawOf(
+          options.find((o) => o.id === optionId),
+        )
+          ? dealCharactersFor([optionId], options, prev, current.characters)
+          : null;
         return {
           ...prev,
           [stepId]: {
             ...current,
             picks: { ...current.picks, [seatIndex]: optionId },
+            ...(characterDeal
+              ? {
+                  characters: {
+                    ...(current.characters ?? {}),
+                    ...characterDeal,
+                  },
+                }
+              : {}),
           },
         };
       });
     },
-    [],
+    [definition],
   );
 
   // Imperative dealt-resolve pick (driven by peer SETUP_PICK
@@ -925,6 +1029,10 @@ function collectPlayers(
     if (seatChoice?.kind !== "seat-players") return undefined;
     const pickChoice = pickStep ? context[pickStep.id] : undefined;
     const picks = pickChoice?.kind === "player-pick" ? pickChoice.picks : {};
+    // Characters dealt alongside a faction (Vagabond's character card),
+    // keyed by faction option id. Used to pick a per-character meeple.
+    const characters =
+      pickChoice?.kind === "player-pick" ? (pickChoice.characters ?? {}) : {};
     const pickOptions =
       pickStep && pickStep.kind.type === "player-pick"
         ? pickStep.kind.options
@@ -944,7 +1052,11 @@ function collectPlayers(
             };
           }
         ).assets;
-        const meeple = assets?.meepleSvg?.appPath;
+        // Body meeple = the dealt character's meeple when there is one
+        // (Vagabond); HEAD stays the faction's own head art (the generic
+        // Vagabond crest) — the per-character meeple isn't a head crop, so
+        // the character comes through via the body meeple, not the head.
+        const meeple = meepleAppPathFor(option, characters);
         const head = assets?.headIcon?.[0]?.appPath;
         metadata[visualKey] = {
           type: "selected-option",
@@ -1548,13 +1660,18 @@ function SeatPlayersScreen({
   );
 }
 
-// ADSET A.6.2: how many of the dealt hirelings start demoted given
-// the player count. 1-2 players: 0; 3: 1; 4: 2; 5+: 3.
-const demoteCountForSeats = (seats: number): number => {
-  if (seats <= 2) return 0;
-  if (seats === 3) return 1;
-  if (seats === 4) return 2;
-  return 3;
+// Generic: resolve a deal-random step's data-driven demotion rule
+// against the seat count. The per-game numbers live in the definition
+// (see DemoteRuleSchema); this just picks the highest matching threshold.
+const demoteCountForSeats = (
+  rule: { thresholds: Array<{ minSeats: number; count: number }> } | undefined,
+  seats: number,
+): number => {
+  if (!rule) return 0;
+  let n = 0;
+  for (const t of rule.thresholds)
+    if (seats >= t.minSeats) n = Math.max(n, t.count);
+  return n;
 };
 
 function DealRandomScreen({
@@ -1593,12 +1710,24 @@ function DealRandomScreen({
       c.kind === "seat-players",
   );
   const seatCount = seatChoice?.seats.length ?? 0;
-  const demoteN = demoteCountForSeats(seatCount);
+  // Demotion is opt-in per step via the definition's `demote` rule; steps
+  // without one (e.g. landmarks) never demote.
+  const demoteRule =
+    step.kind.type === "deal-random" ? step.kind.demote : undefined;
+  const demoteN = demoteCountForSeats(demoteRule, seatCount);
 
-  const reshuffle = () => {
+  const skip = () => onChange({ kind: "deal-random", skipped: true });
+
+  // Deal exactly `n` (0 = skip). Used both by the fixed-count Shuffle
+  // button and the 0..maxCount chooser below.
+  const dealN = (n: number) => {
+    if (n <= 0) {
+      skip();
+      return;
+    }
     const newDealt = shuffleAndTake(
       visible.map((o) => o.id),
-      count,
+      n,
     );
     const newDemoted = shuffleAndTake(newDealt, demoteN);
     onChange({
@@ -1609,7 +1738,12 @@ function DealRandomScreen({
     });
   };
 
-  const skip = () => onChange({ kind: "deal-random", skipped: true });
+  // When the step sets maxCount, the player picks how many to deal
+  // (0..maxCount, e.g. Root landmarks). Otherwise it's a fixed `count`.
+  const maxCount =
+    step.kind.type === "deal-random" ? step.kind.maxCount : undefined;
+  const selectedCount = isSkipped ? 0 : (dealtIds?.length ?? 0);
+  const reshuffle = () => dealN(selectedCount > 0 ? selectedCount : count);
 
   const cards = dealtIds
     ? dealtIds.map((id) => visible.find((o) => o.id === id)).filter(Boolean)
@@ -1626,15 +1760,14 @@ function DealRandomScreen({
       <div className={styles.deck}>
         {isSkipped && (
           <div className={styles.skipNotice}>
-            Skipped — no hirelings this game.
+            Skipped — no {step.label.toLowerCase()} this game.
           </div>
         )}
         {!isSkipped && dealtIds && (
           <>
             {demoteN > 0 && (
               <span className={styles.help}>
-                Per ADSET A.6.2: {demoteN} of {count} start demoted at{" "}
-                {seatCount} players.
+                {demoteN} of {count} start demoted at {seatCount} players.
               </span>
             )}
             <div className={styles.dealtList}>
@@ -1643,6 +1776,11 @@ function DealRandomScreen({
                 const demoLabel = (
                   o as unknown as { demotedLabel?: string | null }
                 ).demotedLabel;
+                const iconSrc = (
+                  o as unknown as {
+                    assets?: { meepleSvg?: { appPath?: string } };
+                  }
+                ).assets?.meepleSvg?.appPath;
                 return (
                   <div
                     key={o.id}
@@ -1650,6 +1788,14 @@ function DealRandomScreen({
                       isDemoted ? styles.dealtCardDemoted : ""
                     }`}
                   >
+                    {iconSrc && (
+                      <img
+                        src={iconSrc}
+                        alt=""
+                        aria-hidden
+                        className={styles.dealtIcon}
+                      />
+                    )}
                     <span className={styles.dealtLabel}>
                       {isDemoted && demoLabel ? demoLabel : o.label}
                     </span>
@@ -1665,21 +1811,48 @@ function DealRandomScreen({
             </div>
           </>
         )}
-        <div className={styles.actionsLeft}>
-          <button
-            type="button"
-            onClick={reshuffle}
-            className={styles.secondary}
-          >
-            <RefreshCw size={14} aria-hidden /> Shuffle
-            {dealtIds ? " again" : ""}
-          </button>
-          {optional && (
-            <button type="button" onClick={skip} className={styles.ghost}>
-              Skip
+        {maxCount != null ? (
+          <div className={styles.actionsLeft}>
+            {Array.from({ length: maxCount + 1 }, (_, n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => dealN(n)}
+                aria-pressed={selectedCount === n}
+                className={
+                  selectedCount === n ? styles.secondary : styles.ghost
+                }
+              >
+                {n === 0 ? "None" : n}
+              </button>
+            ))}
+            {selectedCount > 0 && (
+              <button
+                type="button"
+                onClick={reshuffle}
+                className={styles.ghost}
+              >
+                <RefreshCw size={14} aria-hidden /> Shuffle again
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={styles.actionsLeft}>
+            <button
+              type="button"
+              onClick={reshuffle}
+              className={styles.secondary}
+            >
+              <RefreshCw size={14} aria-hidden /> Shuffle
+              {dealtIds ? " again" : ""}
             </button>
-          )}
-        </div>
+            {optional && (
+              <button type="button" onClick={skip} className={styles.ghost}>
+                Skip
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
@@ -1790,11 +1963,12 @@ function PlayerPickScreen({
     if (!draftEnabled) return;
     if (dealtIds != null) return;
     if (pool.length === 0 || seats.length === 0) return;
-    const newDealt = shuffleAndTake(
+    const newDealt = dealWithoutMutexClashes(
       pool.map((o) => o.id),
       targetDealCount,
+      constraints,
     );
-    const newCharacters = dealCharactersFor(newDealt, options);
+    const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => {
       if (curr.dealtIds != null) return curr;
       return {
@@ -1811,6 +1985,8 @@ function PlayerPickScreen({
     targetDealCount,
     options,
     onChange,
+    context,
+    constraints,
   ]);
 
   // Note: previous version dropped dealtIds when draft toggled off,
@@ -1821,11 +1997,12 @@ function PlayerPickScreen({
   // wanting a fresh deal use the Shuffle button explicitly.
 
   const reshuffle = () => {
-    const newDealt = shuffleAndTake(
+    const newDealt = dealWithoutMutexClashes(
       pool.map((o) => o.id),
       targetDealCount,
+      constraints,
     );
-    const newCharacters = dealCharactersFor(newDealt, options);
+    const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => ({
       ...curr,
       picks: {},
@@ -1920,8 +2097,10 @@ function PlayerPickScreen({
       ([s, id]) => Number(s) !== seatIdx && id === optionId,
     );
     if (takenBy) return;
-    const characterDeal = CHARACTER_DRAWS[optionId]
-      ? dealCharactersFor([optionId], options)
+    const characterDeal = characterDrawOf(
+      options.find((o) => o.id === optionId),
+    )
+      ? dealCharactersFor([optionId], options, context, characters)
       : null;
     onChange((curr) => ({
       ...curr,
@@ -2035,13 +2214,10 @@ function PlayerPickScreen({
       const previewAdset = previewOption
         ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
         : undefined;
-      const previewMeeple = previewOption
-        ? (
-            previewOption as unknown as {
-              assets?: { meepleSvg?: { appPath?: string } };
-            }
-          ).assets?.meepleSvg?.appPath
-        : undefined;
+      const previewMeeple = meepleAppPathFor(
+        previewOption ?? undefined,
+        characters,
+      );
       const previewColor = previewOption?.color ?? "var(--color-border)";
       const previewLabel = previewOption?.label ?? previewCardId;
       return (
@@ -2148,11 +2324,7 @@ function PlayerPickScreen({
             const leaving = leavingIds.includes(o.id);
             const adsetSteps = (o as unknown as { adsetSteps?: string[] })
               .adsetSteps;
-            const meepleSrc = (
-              o as unknown as {
-                assets?: { meepleSvg?: { appPath?: string } };
-              }
-            ).assets?.meepleSvg?.appPath;
+            const meepleSrc = meepleAppPathFor(o, characters);
             const onActivate = () => {
               if (blocked || leaving) return;
               // Two-step: clicking a card opens a full-screen
@@ -2373,11 +2545,7 @@ function PlayerPickScreen({
           const leaving = leavingIds.includes(o.id);
           const adsetSteps = (o as unknown as { adsetSteps?: string[] })
             .adsetSteps;
-          const meepleSrc = (
-            o as unknown as {
-              assets?: { meepleSvg?: { appPath?: string } };
-            }
-          ).assets?.meepleSvg?.appPath;
+          const meepleSrc = meepleAppPathFor(o, characters);
           // Card is a div, not a button, so it can host the inner
           // "Show setup" button. role="button" + tabIndex keeps it
           // keyboard- and AT-accessible.
@@ -2700,6 +2868,7 @@ function DealtResolveScreen({
               const adsetSteps = (
                 option as unknown as { adsetSteps?: string[] }
               ).adsetSteps;
+              const meepleSrc = meepleAppPathFor(option as SetupOption, {});
               return (
                 <button
                   key={id}
@@ -2713,6 +2882,14 @@ function DealtResolveScreen({
                   }
                   aria-label={`Set up ${option.label}`}
                 >
+                  {meepleSrc && (
+                    <img
+                      src={meepleSrc}
+                      alt=""
+                      aria-hidden
+                      className={styles.dealtIcon}
+                    />
+                  )}
                   <span className={styles.resolveChoiceLabel}>
                     {option.label}
                   </span>

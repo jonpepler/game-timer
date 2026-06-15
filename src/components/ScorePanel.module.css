@@ -187,16 +187,11 @@
    player carries an iconSrc. Solid dark fill via mask so the icon
    reads against any faction colour. */
 .markerIcon {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   display: inline-block;
   width: 80%;
   height: 80%;
   background: rgba(0, 0, 0, 0.75);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
 }
 
 /* Raster head-icon variant — the head PNG fills the marker box,

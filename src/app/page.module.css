@@ -41,29 +41,12 @@
 }
 
 .cta {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
+  composes: primary from "@/styles/buttons.module.css";
+  /* Larger landing-page hero affordance — bumps the shared
+     primary's padding / font / gap up a notch. */
   padding: 14px 28px;
   font-size: 17px;
-  font-weight: 600;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
   gap: 10px;
-  background: var(--color-text);
-  color: var(--color-surface);
-  border: 1px solid var(--color-text);
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.cta:hover {
-  background: var(--color-text-muted);
-  border-color: var(--color-text-muted);
 }
 
 .footer {
