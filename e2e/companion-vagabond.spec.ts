@@ -60,7 +60,11 @@ test("companion shows a claimed Vagabond (head art)", async ({ context }) => {
     name: /Your turn to pick a faction/i,
   });
   await expect(picker).toBeVisible({ timeout: 5000 });
-  await picker.getByRole("button", { name: "Vagabond", exact: true }).click();
+  // Two "Vagabond" cards exist (the two-Vagabond variant) — pick either.
+  await picker
+    .getByRole("button", { name: "Vagabond", exact: true })
+    .first()
+    .click();
   await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
 
   // Seat 1's turn fires on the host — pick any faction.

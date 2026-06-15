@@ -59,7 +59,8 @@
           "marauders",
           "homeland",
           "vagabondPack",
-          "landmarksPack"
+          "landmarksPack",
+          "twoVagabonds"
         ],
         "optionIds": [
           "base",
@@ -68,7 +69,8 @@
           "marauders",
           "homeland",
           "vagabondPack",
-          "landmarksPack"
+          "landmarksPack",
+          "twoVagabonds"
         ]
       }
     },
@@ -186,15 +188,6 @@
       "description": "If you are playing with two players, remove all four dominance cards from the deck. Shuffle the deck. Each player draws five cards.",
       "kind": {
         "type": "info"
-      }
-    },
-    {
-      "id": "two-vagabonds",
-      "label": "Second Vagabond",
-      "description": "Include the second Vagabond (Riverfolk) so two players can each play a Vagabond, each with its own character. Turn off for a single-Vagabond game.",
-      "kind": {
-        "type": "toggle",
-        "defaultValue": true
       }
     },
     {

@@ -23,6 +23,9 @@
       },
       "landmarksPack": {
         "label": "Landmarks Pack"
+      },
+      "twoVagabonds": {
+        "label": "Two Vagabonds"
       }
     },
     "map": {
@@ -1134,10 +1137,9 @@
         "copies": [
           {},
           {
-            "label": "Second Vagabond",
+            "label": "Vagabond",
             "color": "#EBEBEB",
-            "module": "riverfolk",
-            "requiresToggle": "two-vagabonds"
+            "module": "twoVagabonds"
           }
         ]
       },

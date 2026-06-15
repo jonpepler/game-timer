@@ -352,6 +352,33 @@ const labelForCharacter = (
   return pool.find((c) => c.id === characterId)?.label ?? characterId;
 };
 
+// The meeple to show for an option: if a character was dealt with it
+// (the Vagabond's character), that character's own meeple; otherwise the
+// option's default meeple. Keeps every surface (card, preview, in-game)
+// showing the chosen character rather than the generic faction pawn.
+const meepleAppPathFor = (
+  option: SetupOption | undefined,
+  characters: Record<string, string[]>,
+): string | undefined => {
+  if (!option) return undefined;
+  const factionMeeple = (
+    option as unknown as { assets?: { meepleSvg?: { appPath?: string } } }
+  ).assets?.meepleSvg?.appPath;
+  const draw = characterDrawOf(option);
+  const charId = draw && characters[option.id]?.[0];
+  if (draw && charId) {
+    const pool = (
+      option as unknown as Record<
+        string,
+        Array<{ id: string; meeple?: { appPath?: string } }> | undefined
+      >
+    )[draw.poolField];
+    const charMeeple = pool?.find((c) => c.id === charId)?.meeple?.appPath;
+    if (charMeeple) return charMeeple;
+  }
+  return factionMeeple;
+};
+
 const dealCharactersFor = (
   optionIds: string[],
   options: SetupOption[],
@@ -1025,27 +1052,12 @@ function collectPlayers(
             };
           }
         ).assets;
-        // Default to the faction meeple, but if a character card was
-        // dealt with this faction (Vagabond), use that character's own
-        // meeple for the body silhouette. The HEAD stays the faction's
-        // own head art (the generic Vagabond crest) — the per-character
-        // meeple isn't a head crop, so using it in the head slot reads
-        // wrong; the character still comes through via the body meeple.
-        let meeple = assets?.meepleSvg?.appPath;
+        // Body meeple = the dealt character's meeple when there is one
+        // (Vagabond); HEAD stays the faction's own head art (the generic
+        // Vagabond crest) — the per-character meeple isn't a head crop, so
+        // the character comes through via the body meeple, not the head.
+        const meeple = meepleAppPathFor(option, characters);
         const head = assets?.headIcon?.[0]?.appPath;
-        const draw = characterDrawOf(option);
-        const drawnCharId = draw && characters[option.id]?.[0];
-        if (draw && drawnCharId) {
-          const pool = (
-            option as unknown as Record<
-              string,
-              Array<{ id: string; meeple?: { appPath?: string } }> | undefined
-            >
-          )[draw.poolField];
-          const charMeeple = pool?.find((c) => c.id === drawnCharId)?.meeple
-            ?.appPath;
-          if (charMeeple) meeple = charMeeple;
-        }
         metadata[visualKey] = {
           type: "selected-option",
           optionId: option.id,
@@ -2202,13 +2214,10 @@ function PlayerPickScreen({
       const previewAdset = previewOption
         ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
         : undefined;
-      const previewMeeple = previewOption
-        ? (
-            previewOption as unknown as {
-              assets?: { meepleSvg?: { appPath?: string } };
-            }
-          ).assets?.meepleSvg?.appPath
-        : undefined;
+      const previewMeeple = meepleAppPathFor(
+        previewOption ?? undefined,
+        characters,
+      );
       const previewColor = previewOption?.color ?? "var(--color-border)";
       const previewLabel = previewOption?.label ?? previewCardId;
       return (
@@ -2315,11 +2324,7 @@ function PlayerPickScreen({
             const leaving = leavingIds.includes(o.id);
             const adsetSteps = (o as unknown as { adsetSteps?: string[] })
               .adsetSteps;
-            const meepleSrc = (
-              o as unknown as {
-                assets?: { meepleSvg?: { appPath?: string } };
-              }
-            ).assets?.meepleSvg?.appPath;
+            const meepleSrc = meepleAppPathFor(o, characters);
             const onActivate = () => {
               if (blocked || leaving) return;
               // Two-step: clicking a card opens a full-screen
@@ -2540,11 +2545,7 @@ function PlayerPickScreen({
           const leaving = leavingIds.includes(o.id);
           const adsetSteps = (o as unknown as { adsetSteps?: string[] })
             .adsetSteps;
-          const meepleSrc = (
-            o as unknown as {
-              assets?: { meepleSvg?: { appPath?: string } };
-            }
-          ).assets?.meepleSvg?.appPath;
+          const meepleSrc = meepleAppPathFor(o, characters);
           // Card is a div, not a button, so it can host the inner
           // "Show setup" button. role="button" + tabIndex keeps it
           // keyboard- and AT-accessible.
