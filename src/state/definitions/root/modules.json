@@ -1689,11 +1689,11 @@
           "meepleSvg": {
             "source": "rdb-landmark-images",
             "appPath": "games/root/landmarks/mousehold.png",
-            "note": "Card front (no token icon on RDB)."
+            "note": "Landmark token icon."
           },
           "image": {
             "source": "rdb-landmark-images",
-            "url": "https://www.therootdatabase.com/media/uploads/posts/mousehold/en/card/front.webp",
+            "url": "https://www.therootdatabase.com/media/component_pictures/fabb73f388394ead80601ddb65f4ba1f.webp",
             "format": "webp"
           }
         }
