@@ -562,6 +562,11 @@ test.describe("companion multi-screen — game-time interaction", () => {
   test("companion score bump updates the companion's own My-score display", async ({
     context,
   }) => {
+    // The full Root faction-pick round-trip (two turn-based picks + the
+    // dev server compiling each picker screen on a cold start) can exceed
+    // the default 30s test budget, so give it headroom and wait on each
+    // step explicitly rather than racing the compile.
+    test.setTimeout(90_000);
     // Start a Root game (which has score config) so the companion can
     // claim a seat during the SETUP_SEATING phase, then bump its score.
     const host = await context.newPage();
@@ -583,12 +588,12 @@ test.describe("companion multi-screen — game-time interaction", () => {
     // Companion sees the seating panel and claims seat 2 (the last seat,
     // which picks faction FIRST under Root's counterclockwise rule).
     await expect(companion.getByText(/take a seat/i)).toBeVisible({
-      timeout: 5000,
+      timeout: 15_000,
     });
     await companion.getByRole("button", { name: /^Claim seat 2$/ }).click();
     await expect(
       companion.getByRole("textbox", { name: /Rename seat 2/i }),
-    ).toBeVisible({ timeout: 3000 });
+    ).toBeVisible({ timeout: 10_000 });
 
     // Navigate host to faction picker and skip the draft.
     await navigateToScreen(host, /^Faction$/);
@@ -599,45 +604,42 @@ test.describe("companion multi-screen — game-time interaction", () => {
     const pickerPanel = companion.getByRole("region", {
       name: /Your turn to pick a faction/i,
     });
-    await expect(pickerPanel).toBeVisible({ timeout: 5000 });
-    const firstCard = pickerPanel.getByRole("button").first();
-    await firstCard.click();
-    await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
+    await expect(pickerPanel).toBeVisible({ timeout: 15_000 });
+    await pickerPanel.getByRole("button").first().click();
+    const companionConfirm = companion.getByRole("button", {
+      name: /^Confirm setup$/,
+    });
+    await expect(companionConfirm).toBeVisible({ timeout: 15_000 });
+    await companionConfirm.click();
 
-    // Now seat 1's turn fires on the host (no companion for seat 1).
-    // Pick any available faction from the host wizard (first enabled card).
-    const _hostPickerPanel = host
-      .getByRole("region", {
-        name: /Your turn to pick a faction/i,
-      })
-      .or(host.locator(".GameSetupWizard_heroPicker__E08hU"))
-      .first();
-    // Locate all enabled faction cards and click the first one.
-    const _enabledCard = host
-      .locator('[aria-label]:not([aria-disabled="true"])')
-      .filter({
-        hasText: /.+/,
-      })
-      .first();
-    // Simpler: just find any non-disabled button in the hero card area
-    await host
+    // Now seat 1's turn fires on the host (no companion). Pick any enabled
+    // faction card — wait for it to render before clicking so a cold
+    // compile of the picker screen doesn't race the click.
+    const hostCard = host
       .locator('[class*="heroCard"]:not([aria-disabled="true"])')
-      .first()
-      .click();
-    await host.getByRole("button", { name: /^Confirm setup$/ }).click();
+      .first();
+    await expect(hostCard).toBeVisible({ timeout: 15_000 });
+    await hostCard.click();
+    const hostConfirm = host.getByRole("button", { name: /^Confirm setup$/ });
+    await expect(hostConfirm).toBeVisible({ timeout: 15_000 });
+    await hostConfirm.click();
 
     // Click Start Game (Root's post-faction info screen shows this button).
-    const startBtn = host.getByRole("button", { name: /start game/i });
-    await startBtn.click({ timeout: 3000 }).catch(() => {});
+    await host
+      .getByRole("button", { name: /start game/i })
+      .click({ timeout: 15_000 })
+      .catch(() => {});
 
     // Wait for the game to start on the host.
-    await expect(host.getByText(/turns left/i)).toBeVisible({ timeout: 5000 });
+    await expect(host.getByText(/turns left/i)).toBeVisible({
+      timeout: 15_000,
+    });
 
     // The companion should now show score controls (claimedPlayer && scoreConfig).
     const incButton = companion.getByRole("button", {
       name: /Increase my score/i,
     });
-    await expect(incButton).toBeVisible({ timeout: 5000 });
+    await expect(incButton).toBeVisible({ timeout: 15_000 });
 
     // Score starts at Root's min (0). Bump it once via the companion.
     await incButton.click();
@@ -647,6 +649,6 @@ test.describe("companion multi-screen — game-time interaction", () => {
     // fails if the INCREMENT_SCORE round-trip or STATE broadcast is broken.
     await expect(
       companion.getByText("My score").locator("xpath=..").getByText("1"),
-    ).toBeVisible({ timeout: 5000 });
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
