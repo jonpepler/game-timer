@@ -73,6 +73,22 @@ const loadTrystero = () => import("trystero/nostr");
 // at the single outbound boundary — not ingested JSON, so no schema.
 const asPayload = (data: unknown): DataPayload => data as DataPayload;
 
+// Trystero's Nostr strategy uses Web Crypto (crypto.subtle) to derive
+// room keys. Browsers only expose crypto.subtle in a *secure context* —
+// HTTPS or localhost. Over a plain-http LAN URL (e.g. testing on a phone
+// at http://192.168.x.x) it's undefined and joinRoom throws deep inside
+// ("reading 'importKey'"). Fail early with a message the error UI shows
+// (describePeerError passes Error.message through) instead of crashing.
+// PeerJS doesn't hit this — only WebRTC, which works on insecure origins.
+const assertSecureContext = () => {
+  if (typeof window === "undefined") return;
+  if (!window.isSecureContext || !window.crypto?.subtle) {
+    throw new Error(
+      "Sharing needs a secure connection (HTTPS or localhost). A plain http:// address over the local network won't work on a phone — use an HTTPS dev URL (e.g. a tunnel) or the deployed site.",
+    );
+  }
+};
+
 /*
  * Ref-counted room manager. Trystero allows only ONE live instance of a
  * given room per tab — a second joinRoom() for the same id shares relay
@@ -146,6 +162,7 @@ export async function createHost(
 ): Promise<HostSession> {
   const testFactory = getTestFactory();
   if (testFactory) return testFactory.createHost(options);
+  assertSecureContext();
 
   // The room id *is* the session code. No broker hands these out, so
   // the "unavailable-id" collision dance in useSessionHost simply never
@@ -231,6 +248,7 @@ export async function connectToHost(
 ): Promise<CompanionSession> {
   const testFactory = getTestFactory();
   if (testFactory) return testFactory.connectToHost(hostCode, options);
+  assertSecureContext();
 
   const roomId = hostCode;
   const { joinRoom, selfId } = await loadTrystero();
