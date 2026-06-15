@@ -15,6 +15,7 @@ import {
 import { ScorePanel } from "@/components/ScorePanel";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { VictoryBanner } from "@/components/VictoryBanner";
+import { PlayerMeeple } from "@/components/PlayerMeeple";
 import { EventDialog } from "@/components/EventDialog";
 import { FullScreen } from "@/components/FullScreen";
 import { getPlayerStats } from "@/utils/getPlayerStats";
@@ -498,30 +499,20 @@ function CompanionScreen() {
           </span>
           {claimedPlayer && (
             <span className={styles.claimedAs}>
-              {claimedPlayer.headIconSrc ? (
-                <img
-                  src={claimedPlayer.headIconSrc}
-                  alt=""
-                  aria-hidden
-                  className={styles.claimHead}
-                />
-              ) : claimedPlayer.iconSrc ? (
-                <span
-                  className={styles.claimMeeple}
-                  aria-hidden
-                  style={{
-                    background: claimedPlayer.color,
-                    WebkitMaskImage: `url(${claimedPlayer.iconSrc})`,
-                    maskImage: `url(${claimedPlayer.iconSrc})`,
-                  }}
-                />
-              ) : (
-                <span
-                  className={styles.claimSwatch}
-                  style={{ background: claimedPlayer.color }}
-                  aria-hidden
-                />
-              )}
+              <PlayerMeeple
+                iconSrc={claimedPlayer.iconSrc}
+                headIconSrc={claimedPlayer.headIconSrc}
+                color={claimedPlayer.color}
+                headClassName={styles.claimHead}
+                silhouetteClassName={styles.claimMeeple}
+                fallback={
+                  <span
+                    className={styles.claimSwatch}
+                    style={{ background: claimedPlayer.color }}
+                    aria-hidden
+                  />
+                }
+              />
               {claimedPlayer.name}
               <button
                 type="button"
@@ -630,30 +621,20 @@ function CompanionScreen() {
                   className={styles.activePlayer}
                   style={{ color: activePlayer.color }}
                 >
-                  {activePlayer.headIconSrc ? (
-                    <img
-                      src={activePlayer.headIconSrc}
-                      alt=""
-                      aria-hidden
-                      className={styles.activePlayerHead}
-                    />
-                  ) : activePlayer.iconSrc ? (
-                    <span
-                      className={styles.activePlayerMeeple}
-                      aria-hidden
-                      style={{
-                        background: activePlayer.color,
-                        WebkitMaskImage: `url(${activePlayer.iconSrc})`,
-                        maskImage: `url(${activePlayer.iconSrc})`,
-                      }}
-                    />
-                  ) : (
-                    <span
-                      className={styles.activePlayerSwatch}
-                      style={{ background: activePlayer.color }}
-                      aria-hidden
-                    />
-                  )}
+                  <PlayerMeeple
+                    iconSrc={activePlayer.iconSrc}
+                    headIconSrc={activePlayer.headIconSrc}
+                    color={activePlayer.color}
+                    headClassName={styles.activePlayerHead}
+                    silhouetteClassName={styles.activePlayerMeeple}
+                    fallback={
+                      <span
+                        className={styles.activePlayerSwatch}
+                        style={{ background: activePlayer.color }}
+                        aria-hidden
+                      />
+                    }
+                  />
                   <span className={styles.activePlayerText}>
                     <span>
                       {activePlayer.name}

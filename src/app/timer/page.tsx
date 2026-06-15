@@ -19,6 +19,7 @@ import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
+import { PlayerMeeple } from "@/components/PlayerMeeple";
 import { EventDialog } from "@/components/EventDialog";
 import { findDefinition } from "@/state/definitionRegistry";
 import { Plus } from "lucide-react";
@@ -884,21 +885,15 @@ export default function Home() {
               className={styles.activePlayer}
               style={{ color: activePlayer.color }}
             >
-              {activePlayer.iconSrc && (
-                // Faction meeple, tinted to the faction colour
-                // via mask-image. When there's no icon
-                // (Generic / no setup), the player's name
-                // itself carries the colour — no swatch needed.
-                <span
-                  className={styles.activePlayerMeeple}
-                  style={{
-                    background: activePlayer.color,
-                    WebkitMaskImage: `url(${activePlayer.iconSrc})`,
-                    maskImage: `url(${activePlayer.iconSrc})`,
-                  }}
-                  aria-hidden
-                />
-              )}
+              {/* Faction meeple, tinted to the faction colour via
+                  mask-image. When there's no icon (Generic / no
+                  setup), the player's name itself carries the
+                  colour — no swatch needed. */}
+              <PlayerMeeple
+                iconSrc={activePlayer.iconSrc}
+                color={activePlayer.color}
+                silhouetteClassName={styles.activePlayerMeeple}
+              />
               <span className={styles.activePlayerText}>
                 <span>
                   {activePlayer.name}

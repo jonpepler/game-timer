@@ -499,6 +499,16 @@
   gap: 12px;
 }
 
+/* Shared base for every card that hosts an overhanging meeple/token.
+   The meeple is positioned absolutely against the card and pokes past
+   its edge, so the card must establish a positioning context and let
+   the overflow show. Card-specific border / radius / padding / layout
+   stay on the composing classes. */
+.cardShell {
+  position: relative;
+  overflow: visible;
+}
+
 .dealtList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -508,8 +518,7 @@
 }
 
 .dealtCard {
-  position: relative;
-  overflow: visible;
+  composes: cardShell;
   /* Top padding clears the overhanging meeple/token. */
   padding: 46px 14px 14px;
   border: 1px solid var(--color-border);
@@ -651,10 +660,10 @@
      `flex: 1` lets them shrink down on phones rather than forcing
      a horizontal scroll. min-width:0 is essential for the shrink
      to bite; max-width keeps cards readable on wide screens. */
+  composes: cardShell;
   flex: 1 1 0;
   min-width: 0;
   max-width: 260px;
-  position: relative;
   padding: 18px 16px 64px; /* extra bottom padding clears overhanging meeple */
   border-radius: 14px;
   border: 2px solid var(--color-border);
@@ -665,7 +674,6 @@
   font: inherit;
   cursor: pointer;
   text-align: left;
-  overflow: visible;
   transition:
     transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1),
     box-shadow 0.18s ease,
@@ -855,18 +863,13 @@
 /* Meeple silhouette overhangs the bottom edge of the card. Sized
    relative to the card so it scales with the viewport. */
 .heroCardMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   position: absolute;
   bottom: -36px;
   left: 50%;
   transform: translateX(-50%);
   width: 88px;
   height: 88px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   pointer-events: none;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
 }
@@ -943,14 +946,9 @@
 }
 
 .heroPreviewMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   width: clamp(120px, 18vmin, 220px);
   aspect-ratio: 1;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
 }
 
@@ -1078,8 +1076,7 @@
 
 .resolveChoiceCard {
   /* Override the global button 50x40 reset. */
-  position: relative;
-  overflow: visible;
+  composes: cardShell;
   width: 100%;
   height: auto;
   /* Top padding clears the overhanging meeple (matches the deal step). */
@@ -1200,17 +1197,12 @@
 /* Option silhouette pinned to the card's bottom-left corner.
    Tinted via mask-image so it takes the option's colour. */
 .pickCardIcon {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   position: absolute;
   left: 10px;
   bottom: 8px;
   width: 72px;
   height: 72px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   opacity: 0.85;
   pointer-events: none;
 }

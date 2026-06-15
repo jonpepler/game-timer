@@ -107,14 +107,9 @@
 /* Fallback when a head crop isn't available but the meeple SVG is —
    masked silhouette filled with the player's faction color. */
 .activePlayerMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   width: 32px;
   height: 32px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   flex-shrink: 0;
 }
 
@@ -208,28 +203,12 @@
 }
 
 .codeEntrySubmit {
-  width: auto;
-  height: auto;
+  composes: primary from "@/styles/buttons.module.css";
+  /* Taller tap target than the shared primary, with a touch of
+     breathing room above the code field. */
   min-height: 48px;
   padding: 12px 20px;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  /* White-on-black primary affordance (matches styles/buttons .primary).
-     Previously used --color-accent / --color-text-inverse, which are
-     undefined, so it rendered as near-black text on no background over
-     the grey panel — unreadable. */
-  background: var(--color-text);
-  color: var(--color-surface);
-  border: 1px solid var(--color-text);
-  border-radius: 10px;
-  cursor: pointer;
   margin-top: 4px;
-}
-
-.codeEntrySubmit:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .bottomStack {
@@ -305,14 +284,9 @@
 }
 
 .claimMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   width: 20px;
   height: 20px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   flex-shrink: 0;
 }
 
@@ -378,7 +352,10 @@
 }
 
 .endTurnButton {
-  /* Override the global button reset */
+  /* Override the global button reset. Not composing the shared
+     .primary: this button's :disabled state greys the fill rather
+     than dimming via opacity, which would clash with primary's
+     opacity-based disabled rule. */
   width: 100%;
   height: auto;
   padding: 18px 24px;
@@ -606,17 +583,12 @@
 }
 
 .heroCardMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   position: absolute;
   bottom: -28px;
   right: 14px;
   width: 64px;
   height: 64px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   pointer-events: none;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
 }
@@ -669,17 +641,12 @@
 }
 
 .heroPreviewMeeple {
+  composes: maskBase from "@/components/PlayerMeeple.module.css";
   position: absolute;
   bottom: -32px;
   right: 14px;
   width: 96px;
   height: 96px;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
   pointer-events: none;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import styles from "./ScorePanel.module.css";
+import { PlayerMeeple } from "@/components/PlayerMeeple";
 import type { ScoreConfig } from "@/state/gameDefinition";
 
 interface Player {
@@ -320,30 +321,19 @@ export function ScorePanel({
                 aria-label={`${player.name} score ${score}`}
                 title={`${player.name}: ${score}`}
               >
-                {player.headIconSrc ? (
-                  // Head-icon PNG (portrait crop). Rendered as a
-                  // raster image so the artwork's own colours
-                  // come through — no circular crop.
-                  <img
-                    src={player.headIconSrc}
-                    alt=""
-                    aria-hidden
-                    className={styles.markerHead}
-                  />
-                ) : player.iconSrc ? (
-                  // Fallback: silhouette overlaid on the coloured
-                  // chip via mask-image.
-                  <span
-                    className={styles.markerIcon}
-                    style={{
-                      WebkitMaskImage: `url(${player.iconSrc})`,
-                      maskImage: `url(${player.iconSrc})`,
-                    }}
-                    aria-hidden
-                  />
-                ) : (
-                  initial(player.name)
-                )}
+                {/* Head-icon PNG (portrait crop) renders as a raster
+                    image so the artwork's own colours come through.
+                    Falling back to a silhouette overlaid on the
+                    coloured chip via mask-image, then to the initial. */}
+                <PlayerMeeple
+                  iconSrc={player.iconSrc}
+                  headIconSrc={player.headIconSrc}
+                  color={player.color}
+                  headClassName={styles.markerHead}
+                  silhouetteClassName={styles.markerIcon}
+                  silhouetteFill="css"
+                  fallback={initial(player.name)}
+                />
               </button>
             );
           })}
@@ -388,25 +378,15 @@ export function ScorePanel({
                   className={styles.chipSwatch}
                   style={{ background: player.color }}
                 >
-                  {player.headIconSrc ? (
-                    <img
-                      src={player.headIconSrc}
-                      alt=""
-                      aria-hidden
-                      className={styles.markerHead}
-                    />
-                  ) : player.iconSrc ? (
-                    <span
-                      className={styles.markerIcon}
-                      style={{
-                        WebkitMaskImage: `url(${player.iconSrc})`,
-                        maskImage: `url(${player.iconSrc})`,
-                      }}
-                      aria-hidden
-                    />
-                  ) : (
-                    initial(player.name)
-                  )}
+                  <PlayerMeeple
+                    iconSrc={player.iconSrc}
+                    headIconSrc={player.headIconSrc}
+                    color={player.color}
+                    headClassName={styles.markerHead}
+                    silhouetteClassName={styles.markerIcon}
+                    silhouetteFill="css"
+                    fallback={initial(player.name)}
+                  />
                 </span>
                 {player.name}
                 <span className={styles.chipScore}>{score}</span>
