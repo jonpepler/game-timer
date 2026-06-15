@@ -20,6 +20,9 @@
       },
       "vagabondPack": {
         "label": "The Vagabond Pack"
+      },
+      "landmarksPack": {
+        "label": "Landmarks Pack"
       }
     },
     "map": {
@@ -1563,6 +1566,152 @@
           }
         }
       }
+    },
+    "landmark": {
+      "the-tower": {
+        "label": "The Tower",
+        "module": "underworld",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/the-tower.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/2a56745818f14610abd8190bcc9fa840.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "the-ferry": {
+        "label": "The Ferry",
+        "module": "underworld",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/the-ferry.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/0564b356d12f4ca5bb939eef5fcf7445.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "black-market": {
+        "label": "Black Market",
+        "module": "landmarksPack",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/black-market.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/2851af6539c94fe4bac97a3e80b5efbb.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "lost-city": {
+        "label": "Lost City",
+        "module": "landmarksPack",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/lost-city.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/ab1f3749c4e34abab761951b39e8eda0.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "legendary-forge": {
+        "label": "Legendary Forge",
+        "module": "landmarksPack",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/legendary-forge.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/9c510bd6284046d3a25f83acc4d5ff22.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "elder-treetop": {
+        "label": "Elder Treetop",
+        "module": "landmarksPack",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/elder-treetop.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/fac659666fbc419f98a6c081fb9b3d75.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "mousehold": {
+        "label": "Mousehold",
+        "module": "homeland",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/mousehold.png",
+            "note": "Card front (no token icon on RDB)."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/uploads/posts/mousehold/en/card/front.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "foxburrow": {
+        "label": "Foxburrow",
+        "module": "homeland",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/foxburrow.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/28ab8f4606df4ce387d5aa967b02d37f.webp",
+            "format": "webp"
+          }
+        }
+      },
+      "rabbittown": {
+        "label": "Rabbittown",
+        "module": "homeland",
+        "assets": {
+          "meepleSvg": {
+            "source": "rdb-landmark-images",
+            "appPath": "games/root/landmarks/rabbittown.png",
+            "note": "Landmark token icon."
+          },
+          "image": {
+            "source": "rdb-landmark-images",
+            "url": "https://www.therootdatabase.com/media/component_pictures/8f06913bb1624d96b51c78f8d8277c29.webp",
+            "format": "webp"
+          }
+        }
+      }
     }
   },
   "referenceCatalog": {
@@ -1629,6 +1778,12 @@
         "label": "therootdatabase.com hireling tarot card images",
         "url": "https://www.therootdatabase.com/hireling/",
         "note": "Each hireling page embeds its landscape tarot card as the <img class=...zoomable> under /media/boards/. Promoted + demoted sides transcribed 2026-06-15."
+      },
+      {
+        "id": "rdb-landmark-images",
+        "label": "therootdatabase.com landmark token / card images",
+        "url": "https://www.therootdatabase.com/landmark/",
+        "note": "Token icons under /media/component_pictures/, cards under /media/.../card/. Mirrored to public/games/root/landmarks/ (png) 2026-06-15. Official landmarks only."
       }
     ],
     "colourPalette": {

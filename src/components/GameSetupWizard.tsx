@@ -1578,13 +1578,18 @@ function SeatPlayersScreen({
   );
 }
 
-// ADSET A.6.2: how many of the dealt hirelings start demoted given
-// the player count. 1-2 players: 0; 3: 1; 4: 2; 5+: 3.
-const demoteCountForSeats = (seats: number): number => {
-  if (seats <= 2) return 0;
-  if (seats === 3) return 1;
-  if (seats === 4) return 2;
-  return 3;
+// Generic: resolve a deal-random step's data-driven demotion rule
+// against the seat count. The per-game numbers live in the definition
+// (see DemoteRuleSchema); this just picks the highest matching threshold.
+const demoteCountForSeats = (
+  rule: { thresholds: Array<{ minSeats: number; count: number }> } | undefined,
+  seats: number,
+): number => {
+  if (!rule) return 0;
+  let n = 0;
+  for (const t of rule.thresholds)
+    if (seats >= t.minSeats) n = Math.max(n, t.count);
+  return n;
 };
 
 function DealRandomScreen({
@@ -1623,7 +1628,11 @@ function DealRandomScreen({
       c.kind === "seat-players",
   );
   const seatCount = seatChoice?.seats.length ?? 0;
-  const demoteN = demoteCountForSeats(seatCount);
+  // Demotion is opt-in per step via the definition's `demote` rule; steps
+  // without one (e.g. landmarks) never demote.
+  const demoteRule =
+    step.kind.type === "deal-random" ? step.kind.demote : undefined;
+  const demoteN = demoteCountForSeats(demoteRule, seatCount);
 
   const reshuffle = () => {
     const newDealt = shuffleAndTake(
@@ -1656,15 +1665,14 @@ function DealRandomScreen({
       <div className={styles.deck}>
         {isSkipped && (
           <div className={styles.skipNotice}>
-            Skipped — no hirelings this game.
+            Skipped — no {step.label.toLowerCase()} this game.
           </div>
         )}
         {!isSkipped && dealtIds && (
           <>
             {demoteN > 0 && (
               <span className={styles.help}>
-                Per ADSET A.6.2: {demoteN} of {count} start demoted at{" "}
-                {seatCount} players.
+                {demoteN} of {count} start demoted at {seatCount} players.
               </span>
             )}
             <div className={styles.dealtList}>
@@ -1673,6 +1681,11 @@ function DealRandomScreen({
                 const demoLabel = (
                   o as unknown as { demotedLabel?: string | null }
                 ).demotedLabel;
+                const iconSrc = (
+                  o as unknown as {
+                    assets?: { meepleSvg?: { appPath?: string } };
+                  }
+                ).assets?.meepleSvg?.appPath;
                 return (
                   <div
                     key={o.id}
@@ -1680,6 +1693,14 @@ function DealRandomScreen({
                       isDemoted ? styles.dealtCardDemoted : ""
                     }`}
                   >
+                    {iconSrc && (
+                      <img
+                        src={iconSrc}
+                        alt=""
+                        aria-hidden
+                        className={styles.dealtIcon}
+                      />
+                    )}
                     <span className={styles.dealtLabel}>
                       {isDemoted && demoLabel ? demoLabel : o.label}
                     </span>

@@ -15,25 +15,33 @@
     "min": 0,
     "max": 30,
     "increment": 1,
-    "victory": { "type": "firstToMax" },
+    "victory": {
+      "type": "firstToMax"
+    },
     "milestones": [
       {
         "atScore": 4,
         "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
-        "marker": { "display": "H" }
+        "marker": {
+          "display": "H"
+        }
       },
       {
         "atScore": 8,
         "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
-        "marker": { "display": "H" }
+        "marker": {
+          "display": "H"
+        }
       },
       {
         "atScore": 12,
         "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
-        "marker": { "display": "H" }
+        "marker": {
+          "display": "H"
+        }
       }
     ]
   },
@@ -50,7 +58,8 @@
           "underworld",
           "marauders",
           "homeland",
-          "vagabondPack"
+          "vagabondPack",
+          "landmarksPack"
         ],
         "optionIds": [
           "base",
@@ -58,7 +67,8 @@
           "underworld",
           "marauders",
           "homeland",
-          "vagabondPack"
+          "vagabondPack",
+          "landmarksPack"
         ]
       }
     },
@@ -85,17 +95,6 @@
       }
     },
     {
-      "id": "landmarks",
-      "label": "Landmarks",
-      "kind": {
-        "type": "select-count",
-        "min": 0,
-        "max": 2,
-        "defaultValue": 0,
-        "allowRandom": true
-      }
-    },
-    {
       "id": "seating",
       "label": "Seat players",
       "kind": {
@@ -113,6 +112,13 @@
         "optionCategory": "hireling",
         "count": 3,
         "optional": true,
+        "demote": {
+          "thresholds": [
+            { "minSeats": 3, "count": 1 },
+            { "minSeats": 4, "count": 2 },
+            { "minSeats": 5, "count": 3 }
+          ]
+        },
         "optionIds": [
           "patrol",
           "dynasty",
@@ -143,10 +149,42 @@
       }
     },
     {
+      "id": "landmarks",
+      "label": "Landmarks",
+      "description": "Shuffle the landmarks you're playing with and deal one.",
+      "kind": {
+        "type": "deal-random",
+        "optionCategory": "landmark",
+        "count": 1,
+        "optional": true,
+        "optionIds": [
+          "the-tower",
+          "the-ferry",
+          "black-market",
+          "lost-city",
+          "legendary-forge",
+          "elder-treetop",
+          "mousehold",
+          "foxburrow",
+          "rabbittown"
+        ]
+      }
+    },
+    {
+      "id": "landmark-setup",
+      "label": "Set up landmarks",
+      "description": "The last player in turn order sets up the drawn landmark as shown on its card.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
       "id": "draw-hands",
       "label": "Draw 5 cards",
       "description": "If you are playing with two players, remove all four dominance cards from the deck. Shuffle the deck. Each player draws five cards.",
-      "kind": { "type": "info" }
+      "kind": {
+        "type": "info"
+      }
     },
     {
       "id": "faction",
@@ -183,7 +221,9 @@
       "id": "starting-hands",
       "label": "Choose Starting Hands",
       "description": "Each player chooses three cards in their hand to keep and puts the other two cards face down on the shared deck. When finished, shuffle the shared deck.",
-      "kind": { "type": "info" }
+      "kind": {
+        "type": "info"
+      }
     }
   ]
 }

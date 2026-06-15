@@ -110,6 +110,17 @@ const SetupConstraintSchema = z.discriminatedUnion("type", [
 ]);
 export type SetupConstraint = z.infer<typeof SetupConstraintSchema>;
 
+// Optional demotion rule for a deal-random step: how many of the dealt
+// items start in their demoted state, scaling with the seat count. The
+// wizard reads it generically — the per-game numbers live in the
+// definition, not in app code. `count` applies once seats >= `minSeats`;
+// the highest matching threshold wins, defaulting to 0.
+const DemoteRuleSchema = z
+  .object({
+    thresholds: z.array(z.object({ minSeats: z.number(), count: z.number() })),
+  })
+  .optional();
+
 const SetupStepKindSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("select-one"),
@@ -145,6 +156,7 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     options: z.array(SetupOptionSchema),
     count: z.number(),
     optional: z.boolean().optional(),
+    demote: DemoteRuleSchema,
   }),
   // Seat players: the roster + ordering. The wizard renders an editable,
   // reorderable list. Companions can rename / claim seats over PeerJS.
@@ -282,6 +294,7 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     optionIds: z.array(z.string()),
     count: z.number(),
     optional: z.boolean().optional(),
+    demote: DemoteRuleSchema,
   }),
   z.object({
     type: z.literal("seat-players"),

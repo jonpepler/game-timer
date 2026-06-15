@@ -528,6 +528,13 @@
   color: var(--color-text-dim);
 }
 
+.dealtIcon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  align-self: flex-start;
+}
+
 .dealtLabel {
   font-weight: 600;
 }
