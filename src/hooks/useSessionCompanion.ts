@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { connectToHost, type CompanionSession } from "@/lib/peer";
+import { connectToHost, type CompanionSession } from "@/lib/peerTransport";
 import { toPeerId } from "@/lib/sessionCode";
 
 type Status =
