@@ -1071,20 +1071,25 @@
 .resolveChoiceList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  gap: 14px;
+  /* Room for the meeples overhanging the top of each card. */
+  padding-top: 36px;
 }
 
 .resolveChoiceCard {
   /* Override the global button 50x40 reset. */
+  position: relative;
+  overflow: visible;
   width: 100%;
   height: auto;
-  padding: 14px 16px;
+  /* Top padding clears the overhanging meeple (matches the deal step). */
+  padding: 46px 16px 14px;
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   font: inherit;
-  text-align: left;
+  text-align: center;
   display: flex;
   flex-direction: column;
   gap: 8px;

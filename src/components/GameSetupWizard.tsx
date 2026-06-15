@@ -2868,6 +2868,7 @@ function DealtResolveScreen({
               const adsetSteps = (
                 option as unknown as { adsetSteps?: string[] }
               ).adsetSteps;
+              const meepleSrc = meepleAppPathFor(option as SetupOption, {});
               return (
                 <button
                   key={id}
@@ -2881,6 +2882,14 @@ function DealtResolveScreen({
                   }
                   aria-label={`Set up ${option.label}`}
                 >
+                  {meepleSrc && (
+                    <img
+                      src={meepleSrc}
+                      alt=""
+                      aria-hidden
+                      className={styles.dealtIcon}
+                    />
+                  )}
                   <span className={styles.resolveChoiceLabel}>
                     {option.label}
                   </span>
