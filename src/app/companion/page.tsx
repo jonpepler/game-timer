@@ -191,13 +191,17 @@ function CompanionScreen() {
   // wizard's PlayerPickScreen. Tap card → confirm screen → Confirm.
   const [changePreviewId, setChangePreviewId] = useState<string | null>(null);
 
-  // Companion-local display-name override. The host's STATE carries
-  // the seat's name (set in the seat-players step), but the
-  // companion can override what's shown on its own screen — useful
-  // when the host didn't get round to renaming default "Player N"
-  // seats. Persisted per (code, slot) in localStorage. NOTE: this is
-  // local-only — it doesn't propagate to the host's state.
+  // Companion-chosen display name, persisted per (code, slot) in
+  // localStorage so it survives refreshes — and, crucially, across the
+  // host starting a *new* game (which resets seat names to "Player N").
+  // It's the companion's local source of truth and is propagated to the
+  // host (see the sync effect below) so the shared main screen shows
+  // the same name rather than a stale "Player 1".
   const [customName, setCustomName] = useState<string>("");
+  // Distinguishes an active edit (user typing in "Your name") from a
+  // passive load (restored from storage / reclaim). Active edits push
+  // unconditionally; passive loads only fill in a default host name.
+  const customNameEditedRef = useRef(false);
   const customNameKey =
     code && claimedSlot !== null
       ? `companion:name:${code}:${claimedSlot}`
@@ -215,6 +219,7 @@ function CompanionScreen() {
   }, [customNameKey]);
   const saveCustomName = (next: string) => {
     setCustomName(next);
+    customNameEditedRef.current = true;
     if (!customNameKey) return;
     try {
       if (next) window.localStorage.setItem(customNameKey, next);
@@ -223,6 +228,47 @@ function CompanionScreen() {
       // localStorage unavailable — name simply won't persist.
     }
   };
+
+  // Propagate the companion's name to the host so the main screen shows
+  // it too — not just this device. Two triggers:
+  //   • active edit ("Your name") → push immediately, overriding
+  //     whatever the host currently has for our seat;
+  //   • (re)claiming a seat whose host-side name is still a default
+  //     "Player N" → fill in our remembered name. This is the new-game
+  //     case: the host resets seat names, but we still remember "Jon".
+  // A non-default host name we didn't just edit is left alone, so a
+  // name the host deliberately set isn't clobbered. Routed as a seating
+  // rename during setup, or RENAME_PLAYER once the game is running.
+  useEffect(() => {
+    const name = customName.trim();
+    const activeEdit = customNameEditedRef.current;
+    customNameEditedRef.current = false;
+    if (!name || claimedSlot === null) return;
+    const isDefaultName = (n: string | undefined) =>
+      n === undefined || /^Player \d+$/.test(n);
+    if (state?.players) {
+      const hostName = state.players[claimedSlot]?.name;
+      if (hostName === undefined || hostName === name) return;
+      if (activeEdit || isDefaultName(hostName)) {
+        send({
+          type: "RENAME_PLAYER",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          name,
+        } satisfies CompanionToHostMessage);
+      }
+    } else if (pendingSeating) {
+      const seatName = pendingSeating.seats[claimedSlot]?.name;
+      if (seatName === undefined || seatName === name) return;
+      if (activeEdit || isDefaultName(seatName)) {
+        send({
+          type: "SEATING_REQUEST",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          stepId: pendingSeating.stepId,
+          action: { kind: "rename", seatIndex: claimedSlot, name },
+        } satisfies CompanionToHostMessage);
+      }
+    }
+  }, [customName, claimedSlot, state, pendingSeating, send]);
 
   // Restore a previously-claimed slot for this host when we arrive,
   // and re-announce it once we're connected.

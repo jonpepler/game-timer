@@ -669,4 +669,71 @@ test.describe("companion multi-screen — game-time interaction", () => {
       companion.getByText("My score").locator("xpath=..").getByText("1"),
     ).toBeVisible({ timeout: 10_000 });
   });
+
+  test("companion's chosen name propagates to the host's main screen", async ({
+    context,
+  }) => {
+    // Regression: the companion's "Your name" used to be local-only, so
+    // the host (and the shared main screen / score panel) kept showing
+    // the default "Player N" — and a remembered name didn't survive the
+    // host starting a new game. The companion now pushes its name to the
+    // host: on an active edit, and to fill a default host name (the
+    // new-game case). Here we cover the active-edit path end-to-end; the
+    // default-fill path shares the same effect.
+    test.setTimeout(90_000);
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+
+    // Host runs a full 2-seat Root game itself (the companion connects
+    // only AFTER the game starts, so the faction pick is pure host
+    // interaction and the test isolates the in-game name path).
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+    await navigateToScreen(host, /seat players/i);
+    await host.getByRole("button", { name: /Remove seat 4/ }).click();
+    await host.getByRole("button", { name: /Remove seat 3/ }).click();
+    await navigateToScreen(host, /^Faction$/);
+    await host.getByRole("button", { name: /^Skip draft$/ }).click();
+    // Pick two distinct factions by name (counterclockwise: seat 2 then
+    // seat 1). Named, unique cards make this deterministic — no poll
+    // needed since no companion is in the loop here.
+    const factionCard = (name: string) =>
+      host.getByRole("button", { name, exact: true });
+    const hostConfirm = host.getByRole("button", { name: /^Confirm setup$/ });
+    await factionCard("Eyrie Dynasties").click();
+    await expect(hostConfirm).toBeVisible({ timeout: 15_000 });
+    await hostConfirm.click();
+    await factionCard("Marquise de Cat").click();
+    await expect(hostConfirm).toBeVisible({ timeout: 15_000 });
+    await hostConfirm.click();
+    await host
+      .getByRole("button", { name: /start game/i })
+      .click({ timeout: 15_000 })
+      .catch(() => {});
+    await expect(host.getByText(/turns left/i)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The host's main screen starts out calling the seat "Player 2".
+    await expect(
+      host.getByRole("button", { name: /Player 2 score \d+/ }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Now connect the companion, claim player 2 in-game, and name it "Jon".
+    const companion = await openCompanion(context, code);
+    await expect(companion.getByText(/claim a player/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    await companion.locator('[class*="claimRow"]').nth(1).click();
+    const nameInput = companion.getByRole("textbox", { name: /your name/i });
+    await expect(nameInput).toBeVisible({ timeout: 15_000 });
+    await nameInput.fill("Jon");
+
+    // The host's main screen must adopt the name — proving it's no
+    // longer companion-local. The score-panel marker is keyed by the
+    // player's name, so it flips from "Player 2" to "Jon".
+    await expect(
+      host.getByRole("button", { name: /Jon score \d+/ }),
+    ).toBeVisible({ timeout: 15_000 });
+  });
 });
