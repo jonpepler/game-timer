@@ -19,19 +19,19 @@
     "milestones": [
       {
         "atScore": 4,
-        "label": "Trigger your hireling effect.",
+        "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
         "marker": { "display": "H" }
       },
       {
         "atScore": 8,
-        "label": "Trigger your hireling effect.",
+        "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
         "marker": { "display": "H" }
       },
       {
         "atScore": 12,
-        "label": "Trigger your hireling effect.",
+        "label": "Choose a hireling and roll for control.",
         "fireOnce": true,
         "marker": { "display": "H" }
       }

@@ -114,7 +114,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/patrol.svg"
+            "path": "src/images/meeples/patrol.svg",
+            "appPath": "games/root/meeples/patrol.svg"
           }
         },
         "cards": {
@@ -143,7 +144,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#F37021"
       },
       "dynasty": {
         "label": "Last Dynasty",
@@ -153,7 +155,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/dynasty.svg"
+            "path": "src/images/meeples/dynasty.svg",
+            "appPath": "games/root/meeples/dynasty.svg"
           }
         },
         "cards": {
@@ -182,7 +185,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#2862A1"
       },
       "uprising": {
         "label": "Spring Uprising",
@@ -192,7 +196,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/uprising.svg"
+            "path": "src/images/meeples/uprising.svg",
+            "appPath": "games/root/meeples/uprising.svg"
           }
         },
         "cards": {
@@ -223,7 +228,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#4D8C3D"
       },
       "exile": {
         "label": "The Exile",
@@ -233,7 +239,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/exile.svg"
+            "path": "src/images/meeples/exile.svg",
+            "appPath": "games/root/meeples/exile.svg"
           }
         },
         "cards": {
@@ -266,7 +273,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#EBEBEB"
       },
       "prophets": {
         "label": "Warm Sun Prophets",
@@ -276,7 +284,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/prophets.svg"
+            "path": "src/images/meeples/prophets.svg",
+            "appPath": "games/root/meeples/prophets.svg"
           }
         },
         "cards": {
@@ -305,7 +314,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#FCD629"
       },
       "flotilla": {
         "label": "Riverfolk Flotilla",
@@ -315,7 +325,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/flotilla.svg"
+            "path": "src/images/meeples/flotilla.svg",
+            "appPath": "games/root/meeples/flotilla.svg"
           }
         },
         "cards": {
@@ -345,7 +356,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#50B8B4"
       },
       "bandits": {
         "label": "Highway Bandits",
@@ -354,7 +366,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/bandits.svg"
+            "path": "src/images/meeples/bandits.svg",
+            "appPath": "games/root/meeples/bandits.svg"
           }
         },
         "cards": {
@@ -396,7 +409,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/expedition.svg"
+            "path": "src/images/meeples/expedition.svg",
+            "appPath": "games/root/meeples/expedition.svg"
           }
         },
         "cards": {
@@ -425,7 +439,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#E39C76"
       },
       "spies": {
         "label": "Corvid Spies",
@@ -435,7 +450,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/spies.svg"
+            "path": "src/images/meeples/spies.svg",
+            "appPath": "games/root/meeples/spies.svg"
           }
         },
         "cards": {
@@ -464,7 +480,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#6E448F"
       },
       "protector": {
         "label": "Furious Protector",
@@ -473,7 +490,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/protector.svg"
+            "path": "src/images/meeples/protector.svg",
+            "appPath": "games/root/meeples/protector.svg"
           }
         },
         "cards": {
@@ -516,7 +534,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/flameBearers.svg"
+            "path": "src/images/meeples/flameBearers.svg",
+            "appPath": "games/root/meeples/flameBearers.svg"
           }
         },
         "cards": {
@@ -546,7 +565,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#C8232A"
       },
       "vaultKeepers": {
         "label": "Vault Keepers",
@@ -556,7 +576,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/vaultKeepers.svg"
+            "path": "src/images/meeples/vaultKeepers.svg",
+            "appPath": "games/root/meeples/vaultKeepers.svg"
           }
         },
         "cards": {
@@ -586,7 +607,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#969696"
       },
       "band": {
         "label": "Popular Band",
@@ -595,7 +617,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/band.svg"
+            "path": "src/images/meeples/band.svg",
+            "appPath": "games/root/meeples/band.svg"
           }
         },
         "cards": {
@@ -637,7 +660,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/advocates.svg"
+            "path": "src/images/meeples/advocates.svg",
+            "appPath": "games/root/meeples/advocates.svg"
           }
         },
         "cards": {
@@ -666,7 +690,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#4A2E1B"
       },
       "roamers": {
         "label": "River Roamers",
@@ -676,7 +701,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/roamers.svg"
+            "path": "src/images/meeples/roamers.svg",
+            "appPath": "games/root/meeples/roamers.svg"
           }
         },
         "cards": {
@@ -706,7 +732,8 @@
               "format": "webp"
             }
           }
-        }
+        },
+        "color": "#385723"
       },
       "farmers": {
         "label": "Prosperous Farmers",
@@ -715,7 +742,8 @@
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/farmers.svg"
+            "path": "src/images/meeples/farmers.svg",
+            "appPath": "games/root/meeples/farmers.svg"
           }
         },
         "cards": {
@@ -943,8 +971,7 @@
             "meeple": {
               "source": "ewendc-automated-setup",
               "path": "src/images/meeples/vagrant.svg",
-              "appPath": "games/root/meeples/vagabond.svg",
-              "note": "EwenDC's 'vagrant' is the generic Vagabond meeple."
+              "appPath": "games/root/meeples/vagrant.svg"
             }
           },
           {
@@ -1000,6 +1027,39 @@
               "source": "ewendc-automated-setup",
               "path": "src/images/meeples/harrier.svg",
               "appPath": "games/root/meeples/harrier.svg"
+            }
+          },
+          {
+            "id": "cheat",
+            "label": "Cheat",
+            "module": "homeland",
+            "startingItems": ["torch", "tea", "boot", "crossbow"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/cheat.svg",
+              "appPath": "games/root/meeples/cheat.svg"
+            }
+          },
+          {
+            "id": "gladiator",
+            "label": "Gladiator",
+            "module": "homeland",
+            "startingItems": ["torch", "boot", "hammer"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/gladiator.svg",
+              "appPath": "games/root/meeples/gladiator.svg"
+            }
+          },
+          {
+            "id": "jailor",
+            "label": "Jailor",
+            "module": "homeland",
+            "startingItems": ["torch", "boot", "crossbow"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/jailor.svg",
+              "appPath": "games/root/meeples/jailor.svg"
             }
           }
         ],
