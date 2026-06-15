@@ -157,6 +157,9 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     count: z.number(),
     optional: z.boolean().optional(),
     demote: DemoteRuleSchema,
+    // When set, the player chooses how many to deal (0..maxCount) rather
+    // than a fixed `count`. Used by Root's landmarks (0, 1, or 2).
+    maxCount: z.number().optional(),
   }),
   // Seat players: the roster + ordering. The wizard renders an editable,
   // reorderable list. Companions can rename / claim seats over PeerJS.
@@ -295,6 +298,7 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     count: z.number(),
     optional: z.boolean().optional(),
     demote: DemoteRuleSchema,
+    maxCount: z.number().optional(),
   }),
   z.object({
     type: z.literal("seat-players"),

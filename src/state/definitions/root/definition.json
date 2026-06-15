@@ -97,11 +97,12 @@
     {
       "id": "landmarks",
       "label": "Landmarks",
-      "description": "Shuffle the landmarks you're playing with and deal one.",
+      "description": "Choose how many landmarks to play with, then shuffle and deal.",
       "kind": {
         "type": "deal-random",
         "optionCategory": "landmark",
         "count": 1,
+        "maxCount": 2,
         "optional": true,
         "optionIds": [
           "the-tower",

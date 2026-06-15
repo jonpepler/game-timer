@@ -1658,10 +1658,18 @@ function DealRandomScreen({
     step.kind.type === "deal-random" ? step.kind.demote : undefined;
   const demoteN = demoteCountForSeats(demoteRule, seatCount);
 
-  const reshuffle = () => {
+  const skip = () => onChange({ kind: "deal-random", skipped: true });
+
+  // Deal exactly `n` (0 = skip). Used both by the fixed-count Shuffle
+  // button and the 0..maxCount chooser below.
+  const dealN = (n: number) => {
+    if (n <= 0) {
+      skip();
+      return;
+    }
     const newDealt = shuffleAndTake(
       visible.map((o) => o.id),
-      count,
+      n,
     );
     const newDemoted = shuffleAndTake(newDealt, demoteN);
     onChange({
@@ -1672,7 +1680,12 @@ function DealRandomScreen({
     });
   };
 
-  const skip = () => onChange({ kind: "deal-random", skipped: true });
+  // When the step sets maxCount, the player picks how many to deal
+  // (0..maxCount, e.g. Root landmarks). Otherwise it's a fixed `count`.
+  const maxCount =
+    step.kind.type === "deal-random" ? step.kind.maxCount : undefined;
+  const selectedCount = isSkipped ? 0 : (dealtIds?.length ?? 0);
+  const reshuffle = () => dealN(selectedCount > 0 ? selectedCount : count);
 
   const cards = dealtIds
     ? dealtIds.map((id) => visible.find((o) => o.id === id)).filter(Boolean)
@@ -1740,21 +1753,48 @@ function DealRandomScreen({
             </div>
           </>
         )}
-        <div className={styles.actionsLeft}>
-          <button
-            type="button"
-            onClick={reshuffle}
-            className={styles.secondary}
-          >
-            <RefreshCw size={14} aria-hidden /> Shuffle
-            {dealtIds ? " again" : ""}
-          </button>
-          {optional && (
-            <button type="button" onClick={skip} className={styles.ghost}>
-              Skip
+        {maxCount != null ? (
+          <div className={styles.actionsLeft}>
+            {Array.from({ length: maxCount + 1 }, (_, n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => dealN(n)}
+                aria-pressed={selectedCount === n}
+                className={
+                  selectedCount === n ? styles.secondary : styles.ghost
+                }
+              >
+                {n === 0 ? "None" : n}
+              </button>
+            ))}
+            {selectedCount > 0 && (
+              <button
+                type="button"
+                onClick={reshuffle}
+                className={styles.ghost}
+              >
+                <RefreshCw size={14} aria-hidden /> Shuffle again
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={styles.actionsLeft}>
+            <button
+              type="button"
+              onClick={reshuffle}
+              className={styles.secondary}
+            >
+              <RefreshCw size={14} aria-hidden /> Shuffle
+              {dealtIds ? " again" : ""}
             </button>
-          )}
-        </div>
+            {optional && (
+              <button type="button" onClick={skip} className={styles.ghost}>
+                Skip
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
