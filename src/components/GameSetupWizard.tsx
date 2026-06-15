@@ -330,6 +330,7 @@ const labelForCharacter = (
 const dealCharactersFor = (
   optionIds: string[],
   options: SetupOption[],
+  context: SetupContext,
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
   for (const id of optionIds) {
@@ -338,11 +339,19 @@ const dealCharactersFor = (
     const option = options.find((o) => o.id === id);
     if (!option) continue;
     const pool = (
-      option as unknown as Record<string, Array<{ id: string }> | undefined>
+      option as unknown as Record<
+        string,
+        Array<{ id: string; module?: string }> | undefined
+      >
     )[draw.poolField];
     if (!Array.isArray(pool) || pool.length === 0) continue;
+    // Gate pool members by their `module` against the enabled
+    // expansions — same rule as faction/map options — so e.g. the
+    // Vagabond Pack characters are only dealt when that module is on.
+    const eligible = pool.filter((c) => optionVisibleUnderContext(c, context));
+    if (eligible.length === 0) continue;
     out[id] = shuffleAndTake(
-      pool.map((c) => c.id),
+      eligible.map((c) => c.id),
       draw.count,
     );
   }
@@ -925,6 +934,10 @@ function collectPlayers(
     if (seatChoice?.kind !== "seat-players") return undefined;
     const pickChoice = pickStep ? context[pickStep.id] : undefined;
     const picks = pickChoice?.kind === "player-pick" ? pickChoice.picks : {};
+    // Characters dealt alongside a faction (Vagabond's character card),
+    // keyed by faction option id. Used to pick a per-character meeple.
+    const characters =
+      pickChoice?.kind === "player-pick" ? (pickChoice.characters ?? {}) : {};
     const pickOptions =
       pickStep && pickStep.kind.type === "player-pick"
         ? pickStep.kind.options
@@ -944,7 +957,24 @@ function collectPlayers(
             };
           }
         ).assets;
-        const meeple = assets?.meepleSvg?.appPath;
+        // Default to the faction meeple, but if a character card was
+        // dealt with this faction (Vagabond), prefer that character's
+        // own meeple so the chosen Vagabond shows its proper silhouette.
+        let meeple = assets?.meepleSvg?.appPath;
+        const drawnCharId =
+          CHARACTER_DRAWS[option.id] && characters[option.id]?.[0];
+        if (drawnCharId) {
+          const draw = CHARACTER_DRAWS[option.id];
+          const pool = (
+            option as unknown as Record<
+              string,
+              Array<{ id: string; meeple?: { appPath?: string } }> | undefined
+            >
+          )[draw.poolField];
+          const charMeeple = pool?.find((c) => c.id === drawnCharId)?.meeple
+            ?.appPath;
+          if (charMeeple) meeple = charMeeple;
+        }
         const head = assets?.headIcon?.[0]?.appPath;
         metadata[visualKey] = {
           type: "selected-option",
@@ -1794,7 +1824,7 @@ function PlayerPickScreen({
       pool.map((o) => o.id),
       targetDealCount,
     );
-    const newCharacters = dealCharactersFor(newDealt, options);
+    const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => {
       if (curr.dealtIds != null) return curr;
       return {
@@ -1811,6 +1841,7 @@ function PlayerPickScreen({
     targetDealCount,
     options,
     onChange,
+    context,
   ]);
 
   // Note: previous version dropped dealtIds when draft toggled off,
@@ -1825,7 +1856,7 @@ function PlayerPickScreen({
       pool.map((o) => o.id),
       targetDealCount,
     );
-    const newCharacters = dealCharactersFor(newDealt, options);
+    const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => ({
       ...curr,
       picks: {},
@@ -1921,7 +1952,7 @@ function PlayerPickScreen({
     );
     if (takenBy) return;
     const characterDeal = CHARACTER_DRAWS[optionId]
-      ? dealCharactersFor([optionId], options)
+      ? dealCharactersFor([optionId], options, context)
       : null;
     onChange((curr) => ({
       ...curr,

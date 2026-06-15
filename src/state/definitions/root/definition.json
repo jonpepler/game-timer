@@ -49,14 +49,16 @@
           "riverfolk",
           "underworld",
           "marauders",
-          "homeland"
+          "homeland",
+          "vagabondPack"
         ],
         "optionIds": [
           "base",
           "riverfolk",
           "underworld",
           "marauders",
-          "homeland"
+          "homeland",
+          "vagabondPack"
         ]
       }
     },

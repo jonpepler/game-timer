@@ -17,6 +17,9 @@
       },
       "homeland": {
         "label": "Homeland Expansion"
+      },
+      "vagabondPack": {
+        "label": "The Vagabond Pack"
       }
     },
     "map": {
@@ -113,6 +116,33 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/patrol.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Forest Patrol",
+            "setup": "Place a Patrol warrior in each clearing.",
+            "abilities": [
+              "Whenever any Patrol warriors are removed, place one of them on this card, not in the supply.",
+              "You may move, and then you may battle. —OR— Place all Patrol warriors from here into a clearing with any Patrol warriors."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/3ddc42c963cf433a876049b01139c8ac.webp?v=1745720146",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Feline Physicians",
+            "abilities": [
+              "Controller: Whenever any of your faction warriors are removed, you may spend a card matching their clearing to place those warriors in a clearing with your faction pieces, instead of your supply (like Field Hospitals)."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/5e85e520f4144a14b849d99067990af4.webp?v=1745720139",
+              "format": "webp"
+            }
+          }
         }
       },
       "dynasty": {
@@ -124,6 +154,33 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/dynasty.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Last Dynasty",
+            "setup": "Place all 5 Dynasty warriors in a clearing on the map edge.",
+            "abilities": [
+              "If no Dynasty warriors are on the map, place all 5 Dynasty warriors in any edge clearing and battle there. —OR— If they rule their clearing, move all their warriors and then battle with them if able. —OR— If they do not rule their clearing, battle there twice."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/11af0e68552845c0841179e1bd6fc6af.webp?v=1745720120",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Bluebird Nobles",
+            "abilities": [
+              "Controller: You rule clearings when tied for presence (like Lords of the Forest).",
+              "Controller: Score one point for every three clearings you rule."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/d6e43bc9851248e68d831d53b38142c9.webp?v=1745720114",
+              "format": "webp"
+            }
           }
         }
       },
@@ -137,6 +194,35 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/uprising.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Spring Uprising",
+            "setup": "Roll the uprising die twice and place an Uprising warrior in matching clearings.",
+            "abilities": [
+              "If no Uprising warriors are on the map, roll the uprising die and place an Uprising warrior in a matching clearing.",
+              "To battle the Uprising, the attacker must discard a card matching the battle clearing.",
+              "1st You must roll the uprising die.",
+              "2nd You must remove an Uprising warrior and all enemy pieces from a matching clearing. —OR— You must place an Uprising warrior in a matching clearing."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/aefb6bce3fbc4016b5bd2443beabb0f4.webp?v=1745720107",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Rabbit Scouts",
+            "abilities": [
+              "Controller: As defender in battle, before the roll, you may spend a card matching the battle clearing to use the higher roll and make the attacker use the lower roll (like Guerilla Warfare)."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/cd2947b4cb6845e2a0fd8b72cbb180e8.webp?v=1745720100",
+              "format": "webp"
+            }
+          }
         }
       },
       "exile": {
@@ -148,6 +234,37 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/exile.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "The Exile",
+            "setup": "Put the Exile pawn in any forest and the 3 Club items on here.",
+            "abilities": [
+              "Anytime on their turn, a player with faction pieces adjacent to the Exile may place an item from their Crafted Items box on this card to draw a card and score a point.",
+              "Any number of times, you may exhaust one item here to move to an adjacent forest, and may exhaust two items here to battle in an adjacent clearing.",
+              "When done, refresh all items here.",
+              "In battle, you can roll hits up to the number of items here. For each hit taken, exhaust one item, or remove one if you cannot exhaust any."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/5e66a684a664476c9c9793371d622819.webp?v=1745720093",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "The Brigand",
+            "setup": "Place \"R\" items under the ruins as if the Vagabond were in play.",
+            "abilities": [
+              "Controller: You may take an item from a ruin in a clearing with your faction pieces. (As Lord of the Hundreds, put it in your Hoard.) If you took the last item from the ruin, remove the ruin.",
+              "Controller: You may exhaust an item in your Crafted Items box (not Hoard) to take a random card from a player with faction pieces in a clearing with your faction pieces."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/2490426c63c24c3f9ad76548297e64a2.webp?v=1745720072",
+              "format": "webp"
+            }
           }
         }
       },
@@ -161,6 +278,33 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/prophets.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Warm Sun Prophets",
+            "setup": "Place a Prophet warrior in each clearing with a ruin.",
+            "abilities": [
+              "If no Prophet warriors are on the map, place a Prophet warrior in any clearing.",
+              "1: Choose any player (even controller) with faction pieces in a clearing with a Prophet warrior. Force them to battle there, or force them to move as many pieces as they can from there to a clearing you choose and battle in the destination if you want. You choose the defender. —OR— Place a Prophet warrior in a clearing without one."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/ab69781a001643e1a6e3dea6226d36ca.webp?v=1745720065",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Lizard Envoys",
+            "abilities": [
+              "Controller: You may search the top five cards in the discard pile and take a card of the most common suit except an ambush. You cannot count birds as other suits, and you decide on suit ties."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/7a1c6718c3774b1fbea6fad78a6fae6d.webp?v=1745720058",
+              "format": "webp"
+            }
+          }
         }
       },
       "flotilla": {
@@ -173,6 +317,34 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/flotilla.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Riverfolk Flotilla",
+            "setup": "Place the Flotilla pawn in a clearing on the map edge and river.",
+            "abilities": [
+              "The Flotilla cannot be battled or removed. In battle, the Flotilla can roll up to 3 hits.",
+              "1st: Each player with faction pieces at the Flotilla may draw a card.",
+              "2nd: You must move the Flotilla along the river, ignoring rule. Then, the Flotilla may battle."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/07a46dc42e334077a57e66014be15f6b.webp?v=1745720051",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Otter Divers",
+            "abilities": [
+              "Controller: You ignore rule when moving to or from a clearing on the river."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/40a3f6e54e034b9a84e79d0101af886f.webp?v=1745720044",
+              "format": "webp"
+            }
+          }
         }
       },
       "bandits": {
@@ -183,6 +355,36 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/bandits.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Highway Bandits",
+            "setup": "Place 2 bandits, one each on a path without one.",
+            "abilities": [
+              "When an enemy moves on a path with a bandit, they must remove one moving piece or damage one item (if Vagabond).",
+              "Controller: When you move on a path with a bandit, you may place a warrior in the destination clearing.",
+              "Place a bandit on a path without one, linked to a clearing with your faction pieces. If no bandits are in the supply, you may remove one in order to place it."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/3824af57a2e54972a8787d804062051f.webp?v=1745719985",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Bandit Gangs",
+            "abilities": [
+              "If no Bandit warriors are on the map, place one in a clearing with your faction pieces.",
+              "Bandit warriors cannot be battled in clearings with their controller's faction pieces.",
+              "Place a faction warrior of the controller at each Bandit warrior; —OR— Place a Bandit warrior in a clearing with a faction piece of the controller."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/e752c9527b4d41b59d498f9bcb0353ab.webp?v=1745719978",
+              "format": "webp"
+            }
           }
         }
       },
@@ -196,17 +398,71 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/expedition.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Sunward Expedition",
+            "setup": "Place a foothold token and 3 Expedition warriors in any clearing.",
+            "abilities": [
+              "1st: Place a foothold token and up to 3 Expedition warriors in a clearing with no foothold. If no footholds are in the supply, remove one from the map in order to place it.",
+              "2nd: You may move, and then you may battle. —OR— Place a warrior at each foothold."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/21f16884a336485ea1da965f10a6f261.webp?v=1745720038",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Mole Artisans",
+            "abilities": [
+              "Controller: Whenever you craft a card with an item, you may reveal it instead of discarding it. At end of Evening, return the cards you revealed in this way to your hand. (You may end your turn with 6+ cards.)"
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/0ebec25264804d728799c0347f36ceb6.webp?v=1745720032",
+              "format": "webp"
+            }
+          }
         }
       },
       "spies": {
         "label": "Corvid Spies",
-        "demotedLabel": "Raven Sentinels",
+        "demotedLabel": "Raven Sentries",
         "module": "underworld",
         "excludeOptionIds": ["corvids"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/spies.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Corvid Spies",
+            "setup": "Place 2 Spy warriors, one each in two clearings of matching suit.",
+            "abilities": [
+              "1st: Place 2 Spy warriors among any clearings with enemy pieces.",
+              "2nd: Battle in each clearing with any Spy warriors. —OR— In one clearing with any Spy warriors, the controller takes a random card from each enemy with faction pieces there."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/35b9a164daea4280a23328a56e13dff4.webp?v=1745720026",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Raven Sentries",
+            "abilities": [
+              "Controller: In battle, you deal an extra hit if the battle clearing has buildings or tokens of your faction."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/87eb92405ba24b74a6a421c1df8a2725.webp?v=1745720019",
+              "format": "webp"
+            }
           }
         }
       },
@@ -218,6 +474,37 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/protector.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Furious Protector",
+            "setup": "Place the Protector pawn in any clearing.",
+            "abilities": [
+              "The Protector cannot be battled or removed. Enemies cannot place pieces in its clearing.",
+              "1st: You must move the Protector, ignoring rule.",
+              "2nd: You must remove one faction warrior of each player (even you) in the Protector's clearing. (Do not remove hirelings.)"
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/73878bdab9114d17bc822fb03e6e32da.webp?v=1745719922",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Stoic Protector",
+            "abilities": [
+              "If the Protector pawn is not on the map, place it in a clearing with your faction pieces.",
+              "The Protector cannot be battled or removed.",
+              "Controller: Enemies cannot battle or remove your faction pieces at the Protector.",
+              "You must move the Protector, ignoring rule."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/daa8d4ab04d04958aec73c8a79c061a0.webp?v=1745719915",
+              "format": "webp"
+            }
           }
         }
       },
@@ -231,6 +518,34 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/flameBearers.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Flame Bearers",
+            "setup": "Place 2 Bearer warriors among any clearings (even the same).",
+            "abilities": [
+              "If no Bearer warriors are on the map, place 2 Bearer warriors among any clearings.",
+              "1st In each clearing with any Bearer warriors, you must remove one enemy piece per Bearer warrior there, warriors first.",
+              "2nd You must place one Bearer warrior at a Bearer warrior or adjacent to one. If you cannot, place 2 Bearer warriors in any clearings."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/54d0ebaaa5654cd19d4a7f3865b707f3.webp?v=1745719998",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Rat Smugglers",
+            "abilities": [
+              "Controller: Any number of times in Daylight, you may discard a card with an item in order to move or battle. (You do not need to be able to craft it.)"
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/0247fa203b4b4813822e9c42c94de537.webp?v=1745719991",
+              "format": "webp"
+            }
+          }
         }
       },
       "vaultKeepers": {
@@ -243,16 +558,74 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/vaultKeepers.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Vault Keepers",
+            "setup": "Place 2 Keeper warriors and a vault building in any clearing with an open building slot.",
+            "abilities": [
+              "If no Keeper pieces are on the map, place 2 Keeper warriors and a vault building in any clearing.",
+              "1st You may place a vault in a clearing with a vault or adjacent to one. If you cannot, place a warrior and a vault in any clearing.",
+              "2nd You may battle in each clearing with a vault. —OR— You may place a Keeper warrior at each vault."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/fdbae30807c741e8a99d53acbcae3b14.webp?v=1745720012",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Badger Bodyguards",
+            "abilities": [
+              "Controller: In battle, you ignore the first hit you take. (This does not combine with other effects that let you ignore the first hit you take.)"
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/d7ccf4c9a86147e0b953e606f56d1527.webp?v=1745720004",
+              "format": "webp"
+            }
+          }
         }
       },
       "band": {
-        "label": "Street Band",
-        "demotedLabel": "Popular Band",
+        "label": "Popular Band",
+        "demotedLabel": "Street Band",
         "module": "marauders",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/band.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Popular Band",
+            "setup": "Place 2 Band warriors, each in a different clearing.",
+            "abilities": [
+              "If no Band warriors are on the map, place a Band warrior in a clearing with your faction pieces.",
+              "Enemies cannot move from a clearing with a Band warrior on the same turn they moved into it.",
+              "1st: Choose a clearing with a Band warrior. You may force any faction warrior in each adjacent clearing to move into the chosen clearing.",
+              "2nd: You may place a Band warrior in any clearing."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/f3864a770fdb41b7ad7415de539fc7f8.webp?v=1745719971",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Street Band",
+            "abilities": [
+              "Enemies cannot move from a clearing with a Band warrior on the same turn they moved into it.",
+              "Place a Band warrior in any clearing."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/3c2541a83b9f498a905e97d41ce4246f.webp?v=1745719965",
+              "format": "webp"
+            }
           }
         }
       },
@@ -266,6 +639,33 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/advocates.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Sunny Advocates",
+            "setup": "Place 2 Advocate warriors each in a fox, mouse, and rabbit clearing.",
+            "abilities": [
+              "If no Advocate warriors are on the map, place 1 Advocate warrior in any clearing.",
+              "Choose a clearing suit. In each matching clearing with an Advocate warrior, replace 1 enemy warrior with a warrior of your faction. Then, you must place an Advocate warrior at your pieces without one. If you cannot, place 1 Advocate warrior in any clearing."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/e2e5b209d71e42eb815471f568e7d4ef.webp?v=1745720173",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Bat Messengers",
+            "abilities": [
+              "Controller: After defending in battle, you may discard a card matching the battle clearing to make the attacker lose 1 point."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/d6a914d1544246dd99076a9268ef1e39.webp?v=1745720167",
+              "format": "webp"
+            }
+          }
         }
       },
       "roamers": {
@@ -278,6 +678,34 @@
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/roamers.svg"
           }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "River Roamers",
+            "setup": "Place 2 Roamer warriors and 1 lilypad in a river clearing.",
+            "abilities": [
+              "If no lilypads are on the map, place 1 lilypad and 2 Roamer warriors in a river clearing.",
+              "1st Controller: Craft using lilypads.",
+              "2nd Battle at each lilypad. —OR— Place 2 Roamer warriors in a river clearing. Place a lilypad there if it doesn't have one."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/886fa6655f41421f9540693514a8016e.webp?v=1745720159",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Frog Tinkers",
+            "abilities": [
+              "Controller: Draw and reveal the top card of the deck. When crafting, you may spend the revealed card as a crafting icon of its suit. (Count a bird as a suit of your choice.) At end of turn, discard the revealed card."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/0f6dd18c82314307a61c61074f0b75a4.webp?v=1745720152",
+              "format": "webp"
+            }
+          }
         }
       },
       "farmers": {
@@ -288,6 +716,36 @@
           "meepleSvg": {
             "source": "ewendc-automated-setup",
             "path": "src/images/meeples/farmers.svg"
+          }
+        },
+        "cards": {
+          "note": "Transcribed from the official therootdatabase.com hireling tarot card images (landscape). Verbatim card text.",
+          "promoted": {
+            "label": "Prosperous Farmers",
+            "setup": "Place 1 farm and 1 Farmer warrior in two clearings.",
+            "abilities": [
+              "If no farms are on the map, place 1 Farmer warrior and a farm in a clearing with your pieces.",
+              "Players cannot score any points by removing farms.",
+              "1st: If you rule any farms, draw 1 card and place 1 farm in the clearing with the fewest warriors where able.",
+              "2nd: Battle at a farm, or place 1 warrior at each farm."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/184e8d71f8f24ea28eaff9c2075050f9.webp?v=1745720201",
+              "format": "webp"
+            }
+          },
+          "demoted": {
+            "label": "Struggling Farmers",
+            "abilities": [
+              "Players cannot score any points by removing farms.",
+              "You may place a farm and a Farmer warrior in a clearing you rule. If you place both, draw 1 card."
+            ],
+            "image": {
+              "source": "rdb-hireling-cards",
+              "url": "https://www.therootdatabase.com/media/boards/37c1029b8e3340f28b19f8fcf0eaad2d.webp?v=1745720181",
+              "format": "webp"
+            }
           }
         }
       }
@@ -442,51 +900,107 @@
         "military": "insurgent",
         "matchingHireling": "exile",
         "description": "Solo wanderer with a satchel of items, completing quests and aiding (or sabotaging) other factions.",
+        "characterPoolNote2": "Per-character `module` gates which characters can be dealt: base (Thief/Tinker/Ranger), riverfolk (Vagrant/Arbiter/Scoundrel), vagabondPack (Adventurer/Ronin/Harrier). Each character's `meeple.appPath` is rendered when that character is the dealt Vagabond. Meeple SVGs by EwenDC (CC-BY-NC-SA 4.0), mirrored under public/games/root/meeples/.",
         "characterPool": [
           {
             "id": "thief",
             "label": "Thief",
-            "startingItems": ["boot", "torch", "tea", "sword"]
+            "module": "base",
+            "startingItems": ["boot", "torch", "tea", "sword"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/thief.svg",
+              "appPath": "games/root/meeples/thief.svg"
+            }
           },
           {
             "id": "tinker",
             "label": "Tinker",
-            "startingItems": ["boot", "torch", "bag", "hammer"]
+            "module": "base",
+            "startingItems": ["boot", "torch", "bag", "hammer"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/tinker.svg",
+              "appPath": "games/root/meeples/tinker.svg"
+            }
           },
           {
             "id": "ranger",
             "label": "Ranger",
-            "startingItems": ["boot", "torch", "crossbow", "sword"]
+            "module": "base",
+            "startingItems": ["boot", "torch", "crossbow", "sword"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/ranger.svg",
+              "appPath": "games/root/meeples/ranger.svg"
+            }
           },
           {
             "id": "vagrant",
             "label": "Vagrant",
-            "startingItems": ["coin", "torch", "boot"]
+            "module": "riverfolk",
+            "startingItems": ["coin", "torch", "boot"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/vagrant.svg",
+              "appPath": "games/root/meeples/vagabond.svg",
+              "note": "EwenDC's 'vagrant' is the generic Vagabond meeple."
+            }
           },
           {
             "id": "arbiter",
             "label": "Arbiter",
-            "startingItems": ["boot", "torch", "sword", "sword"]
+            "module": "riverfolk",
+            "startingItems": ["boot", "torch", "sword", "sword"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/arbiter.svg",
+              "appPath": "games/root/meeples/arbiter.svg"
+            }
           },
           {
             "id": "scoundrel",
             "label": "Scoundrel",
-            "startingItems": ["boot", "boot", "torch", "crossbow"]
+            "module": "riverfolk",
+            "startingItems": ["boot", "boot", "torch", "crossbow"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/scoundrel.svg",
+              "appPath": "games/root/meeples/scoundrel.svg"
+            }
           },
           {
             "id": "adventurer",
             "label": "Adventurer",
-            "startingItems": ["boot", "torch", "hammer"]
+            "module": "vagabondPack",
+            "startingItems": ["boot", "torch", "hammer"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/adventurer.svg",
+              "appPath": "games/root/meeples/adventurer.svg"
+            }
           },
           {
             "id": "ronin",
             "label": "Ronin",
-            "startingItems": ["boot", "boot", "torch", "sword"]
+            "module": "vagabondPack",
+            "startingItems": ["boot", "boot", "torch", "sword"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/ronin.svg",
+              "appPath": "games/root/meeples/ronin.svg"
+            }
           },
           {
             "id": "harrier",
             "label": "Harrier",
-            "startingItems": ["coin", "torch", "sword", "crossbow"]
+            "module": "vagabondPack",
+            "startingItems": ["coin", "torch", "sword", "crossbow"],
+            "meeple": {
+              "source": "ewendc-automated-setup",
+              "path": "src/images/meeples/harrier.svg",
+              "appPath": "games/root/meeples/harrier.svg"
+            }
           }
         ],
         "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
@@ -1049,6 +1563,12 @@
         "id": "mrmirz-hireling-icons",
         "label": "Hireling Icons (MrMirz)",
         "viewUrl": "https://drive.google.com/drive/folders/1DhIKUKV8SMoTBO625jWe_46DdvqZNL-v?usp=share_link"
+      },
+      {
+        "id": "rdb-hireling-cards",
+        "label": "therootdatabase.com hireling tarot card images",
+        "url": "https://www.therootdatabase.com/hireling/",
+        "note": "Each hireling page embeds its landscape tarot card as the <img class=...zoomable> under /media/boards/. Promoted + demoted sides transcribed 2026-06-15."
       }
     ],
     "colourPalette": {
