@@ -45,3 +45,6 @@ next-env.d.ts
 /playwright/.cache/
 
 certificates
+# Editor swap files
+*.swp
+*.swo
