@@ -299,6 +299,25 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
   return pool.slice(0, Math.min(count, pool.length));
 };
 
+// Deal `count` ids at random, but never deal both members of a
+// mutually-exclusive pair into the same hand (e.g. Vagabond + Knaves):
+// a drafted pool you can't fully use wastes a slot.
+const dealWithoutMutexClashes = (
+  ids: string[],
+  count: number,
+  mutex: [string, string][],
+): string[] => {
+  const clashes = (a: string, b: string) =>
+    mutex.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const out: string[] = [];
+  for (const id of shuffleAndTake(ids, ids.length)) {
+    if (out.length >= count) break;
+    if (out.some((picked) => clashes(picked, id))) continue;
+    out.push(id);
+  }
+  return out;
+};
+
 // Some faction-style options deal accompanying cards on pick (Root's
 // Vagabond character, Knaves' captains). Which pool + how many is
 // declared on the option itself (`characterDraw`), keeping faction ids
@@ -1007,10 +1026,13 @@ function collectPlayers(
           }
         ).assets;
         // Default to the faction meeple, but if a character card was
-        // dealt with this faction (Vagabond), prefer that character's
-        // own meeple so the chosen Vagabond shows its proper silhouette.
+        // dealt with this faction (Vagabond), use that character's own
+        // meeple for the body silhouette. The HEAD stays the faction's
+        // own head art (the generic Vagabond crest) — the per-character
+        // meeple isn't a head crop, so using it in the head slot reads
+        // wrong; the character still comes through via the body meeple.
         let meeple = assets?.meepleSvg?.appPath;
-        let head = assets?.headIcon?.[0]?.appPath;
+        const head = assets?.headIcon?.[0]?.appPath;
         const draw = characterDrawOf(option);
         const drawnCharId = draw && characters[option.id]?.[0];
         if (draw && drawnCharId) {
@@ -1022,14 +1044,7 @@ function collectPlayers(
           )[draw.poolField];
           const charMeeple = pool?.find((c) => c.id === drawnCharId)?.meeple
             ?.appPath;
-          // The character has no separate head-crop art, so use its meeple
-          // for BOTH the full icon and the head slot — otherwise the
-          // companion / score panel (which prefer headIconSrc) would fall
-          // back to the generic faction head and lose the character.
-          if (charMeeple) {
-            meeple = charMeeple;
-            head = charMeeple;
-          }
+          if (charMeeple) meeple = charMeeple;
         }
         metadata[visualKey] = {
           type: "selected-option",
@@ -1936,9 +1951,10 @@ function PlayerPickScreen({
     if (!draftEnabled) return;
     if (dealtIds != null) return;
     if (pool.length === 0 || seats.length === 0) return;
-    const newDealt = shuffleAndTake(
+    const newDealt = dealWithoutMutexClashes(
       pool.map((o) => o.id),
       targetDealCount,
+      constraints,
     );
     const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => {
@@ -1968,9 +1984,10 @@ function PlayerPickScreen({
   // wanting a fresh deal use the Shuffle button explicitly.
 
   const reshuffle = () => {
-    const newDealt = shuffleAndTake(
+    const newDealt = dealWithoutMutexClashes(
       pool.map((o) => o.id),
       targetDealCount,
+      constraints,
     );
     const newCharacters = dealCharactersFor(newDealt, options, context);
     onChange((curr) => ({

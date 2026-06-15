@@ -97,7 +97,7 @@
     {
       "id": "landmarks",
       "label": "Landmarks",
-      "description": "Choose how many landmarks to play with, then shuffle and deal.",
+      "description": "Choose how many landmarks to play with, then shuffle and deal. The last player in turn order sets each up as shown on its card.",
       "kind": {
         "type": "deal-random",
         "optionCategory": "landmark",
@@ -115,14 +115,6 @@
           "foxburrow",
           "rabbittown"
         ]
-      }
-    },
-    {
-      "id": "landmark-setup",
-      "label": "Set up landmarks",
-      "description": "The last player in turn order sets up the drawn landmark as shown on its card.",
-      "kind": {
-        "type": "info"
       }
     },
     {

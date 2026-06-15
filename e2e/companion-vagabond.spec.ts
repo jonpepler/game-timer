@@ -3,11 +3,12 @@ import { PEER_TEST_INIT_SCRIPT } from "./_peer-test-injection";
 import { navigateToScreen } from "./_setup-helpers";
 
 /*
- * Companion view reflects the per-character Vagabond meeple: a companion
- * that claims a seat and picks the Vagabond (which deals a character)
- * should render that character's meeple (games/root/meeples/<char>.svg)
- * rather than the generic faction head — proving the per-character art
- * flows through STATE to the companion. Uses the BroadcastChannel fake.
+ * Companion view reflects a claimed Vagabond: a companion that claims a
+ * seat and picks the Vagabond (which deals a character) should render the
+ * Vagabond's head art in its claim chip — proving the faction + its
+ * dealt character flow through STATE to the companion. (The head uses the
+ * generic Vagabond crest; per-character art shows as the body meeple, not
+ * the head.) Uses the BroadcastChannel fake.
  */
 const BASE = "/game-timer";
 
@@ -31,7 +32,7 @@ async function openCompanion(ctx: BrowserContext, code: string): Promise<Page> {
   return page;
 }
 
-test("companion shows the chosen Vagabond's character meeple", async ({
+test("companion shows a claimed Vagabond (head art)", async ({
   context,
 }) => {
   await context.addInitScript({ content: PEER_TEST_INIT_SCRIPT });
@@ -76,18 +77,19 @@ test("companion shows the chosen Vagabond's character meeple", async ({
     .catch(() => {});
   await expect(host.getByText(/turns left/i)).toBeVisible({ timeout: 5000 });
 
-  // Companion's claimed-player visual is the Vagabond character meeple.
+  // Companion's claim chip shows the Vagabond head art.
   await expect
     .poll(
-      async () => companion.locator('img[src*="games/root/meeples/"]').count(),
+      async () =>
+        companion.locator('img[src*="games/root/heads/vagabond"]').count(),
       { timeout: 5000 },
     )
     .toBeGreaterThan(0);
   const srcs = await companion
-    .locator('img[src*="games/root/meeples/"]')
+    .locator("img")
     .evaluateAll((els) => els.map((e) => e.getAttribute("src")));
   expect(
-    srcs.some((s) => /games\/root\/meeples\/[a-z]+\.svg$/.test(s ?? "")),
-    `companion meeple srcs: ${JSON.stringify(srcs)}`,
+    srcs.some((s) => /games\/root\/heads\/vagabond\.png/.test(s ?? "")),
+    `companion img srcs: ${JSON.stringify(srcs)}`,
   ).toBe(true);
 });
