@@ -3,11 +3,11 @@ import { test, expect, type ConsoleMessage, type Page } from "@playwright/test";
 /*
  * LIVE transport check — intentionally does NOT inject the
  * BroadcastChannel fake, so it drives the real selected transport
- * (Trystero when the dev server runs with NEXT_PUBLIC_USE_TRYSTERO=true)
- * over real public Nostr relays. Not part of the normal suite.
+ * over real public Nostr relays. Trystero is the default transport, so a
+ * plain dev server uses it. Not part of the normal suite.
  *
- *   NEXT_PUBLIC_USE_TRYSTERO=true npm run dev   # (separate terminal)
- *   npx playwright test e2e/trystero-live.spec.ts
+ *   npm run dev                                 # (separate terminal)
+ *   TRYSTERO_LIVE=1 npx playwright test e2e/trystero-live.spec.ts
  */
 
 const BASE = "/game-timer";

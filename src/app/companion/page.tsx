@@ -6,7 +6,7 @@ import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
 import { describePeerError } from "@/lib/peerTransport";
-import { normaliseSessionCode, SESSION_CODE_LENGTH } from "@/lib/sessionCode";
+import { CodeEntryPanel } from "./CodeEntryPanel";
 import {
   PEER_PROTOCOL_VERSION,
   type CompanionToHostMessage,
@@ -1047,60 +1047,6 @@ function SetupTurnPanel({
 // ?code= in the URL (e.g. typed the address by hand, or shared the
 // page URL not the QR link). Lets them paste / type a session code
 // and navigate to ?code=… so the normal connect path takes over.
-function CodeEntryPanel() {
-  const [draft, setDraft] = useState("");
-  // Normalise as the user types so what they see matches what gets
-  // sent — drops whitespace, uppercases, and strips anything outside
-  // the alphabet. Mirrors the toPeerId normalisation server-side.
-  const normalised = normaliseSessionCode(draft);
-  const submit = () => {
-    if (normalised.length === 0) return;
-    // Hand off via the URL so the same page reloads with a code in
-    // place — keeps the rest of the flow (claim restore, connect)
-    // unchanged.
-    window.location.search = `?code=${encodeURIComponent(normalised)}`;
-  };
-  return (
-    <div className={styles.codeEntryBox}>
-      <p className={styles.codeEntryHint}>
-        Open the QR code on the host device, or enter the session code below.
-      </p>
-      <form
-        className={styles.codeEntryForm}
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-      >
-        <label className={styles.nameFieldLabel} htmlFor="companion-code">
-          Session code
-        </label>
-        <input
-          id="companion-code"
-          type="text"
-          inputMode="text"
-          value={normalised}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="e.g. K3WP"
-          maxLength={SESSION_CODE_LENGTH}
-          className={styles.nameInput}
-          autoComplete="off"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-        <button
-          type="submit"
-          disabled={normalised.length === 0}
-          className={styles.codeEntrySubmit}
-        >
-          Connect
-        </button>
-      </form>
-    </div>
-  );
-}
-
 // Escape-hatch player-option swap modal — fullscreen, mirrors the
 // wizard's PlayerPickScreen UX (tap card → preview → Confirm).
 // Excludes options already claimed by other seats so the

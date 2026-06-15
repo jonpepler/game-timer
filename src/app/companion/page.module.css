@@ -215,16 +215,20 @@
   font: inherit;
   font-size: 16px;
   font-weight: 600;
-  background: var(--color-accent);
-  color: var(--color-text-inverse, #0a0a0a);
-  border: 1px solid var(--color-accent);
+  /* White-on-black primary affordance (matches styles/buttons .primary).
+     Previously used --color-accent / --color-text-inverse, which are
+     undefined, so it rendered as near-black text on no background over
+     the grey panel — unreadable. */
+  background: var(--color-text);
+  color: var(--color-surface);
+  border: 1px solid var(--color-text);
   border-radius: 10px;
   cursor: pointer;
   margin-top: 4px;
 }
 
 .codeEntrySubmit:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
