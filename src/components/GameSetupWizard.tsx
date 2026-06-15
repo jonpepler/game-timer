@@ -379,6 +379,50 @@ const meepleAppPathFor = (
   return factionMeeple;
 };
 
+// The setup instructions to print on an option's card. Factions carry an
+// explicit `adsetSteps` list; hirelings transcribe their (single) setup
+// line under `cards.promoted.setup`. Returns [] when neither is present.
+const setupLinesFor = (option: SetupOption | undefined): string[] => {
+  if (!option) return [];
+  const adset = (option as unknown as { adsetSteps?: string[] }).adsetSteps;
+  if (Array.isArray(adset) && adset.length > 0) return adset;
+  const setup = (
+    option as unknown as { cards?: { promoted?: { setup?: string } } }
+  ).cards?.promoted?.setup;
+  return setup ? [setup] : [];
+};
+
+// Project an option for transmission to a companion: bakes the dealt
+// character's meeple onto `assets.meepleSvg.appPath` (so the companion
+// shows the chosen Vagabond's pawn, not the generic faction one) and
+// fills `adsetSteps` from the card's setup line (so hireling setup text
+// renders on the companion using the same code path as faction ADSET).
+// The companion has neither the dealt-characters map nor the card
+// transcription logic, so we resolve both host-side before sending.
+const optionForCompanion = (
+  option: SetupOption,
+  characters: Record<string, string[]>,
+): SetupOption => {
+  const meeple = meepleAppPathFor(option, characters);
+  const lines = setupLinesFor(option);
+  const base = option as unknown as {
+    assets?: { meepleSvg?: { appPath?: string } };
+    adsetSteps?: string[];
+  };
+  return {
+    ...option,
+    ...(meeple
+      ? {
+          assets: {
+            ...(base.assets ?? {}),
+            meepleSvg: { ...(base.assets?.meepleSvg ?? {}), appPath: meeple },
+          },
+        }
+      : {}),
+    ...(lines.length > 0 ? { adsetSteps: lines } : {}),
+  } as unknown as SetupOption;
+};
+
 const dealCharactersFor = (
   optionIds: string[],
   options: SetupOption[],
@@ -553,11 +597,14 @@ export const GameSetupWizard = forwardRef<
         const step = definition.setupSteps?.find((s) => s.id === stepId);
         const options =
           step?.kind.type === "player-pick" ? step.kind.options : [];
-        const characterDeal = characterDrawOf(
-          options.find((o) => o.id === optionId),
-        )
-          ? dealCharactersFor([optionId], options, prev, current.characters)
-          : null;
+        // Preserve a character already dealt for this option (draft mode
+        // deals up front); only deal here when none exists yet.
+        const alreadyDealt = (current.characters?.[optionId]?.length ?? 0) > 0;
+        const characterDeal =
+          !alreadyDealt &&
+          characterDrawOf(options.find((o) => o.id === optionId))
+            ? dealCharactersFor([optionId], options, prev, current.characters)
+            : null;
         return {
           ...prev,
           [stepId]: {
@@ -1802,6 +1849,17 @@ function DealRandomScreen({
                     {isDemoted && (
                       <span className={styles.dealtDemotedTag}>demoted</span>
                     )}
+                    {(() => {
+                      const lines = setupLinesFor(o);
+                      if (lines.length === 0) return null;
+                      return (
+                        <ol className={styles.dealtSetup}>
+                          {lines.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ol>
+                      );
+                    })()}
                     {o.module && (
                       <span className={styles.dealtModule}>{o.module}</span>
                     )}
@@ -2079,13 +2137,27 @@ function PlayerPickScreen({
   const confirmPreview = (optionId: string) => {
     pick(optionId);
     setPreviewCardId(null);
-    // Was this the LAST remaining seat to pick? Count present picks
-    // (excluding the one we're about to write) — if N-1 are already
-    // filled and we just covered the Nth, fire onAllConfirmed.
-    const filledAfter =
-      Object.keys(picks).filter((k) => k !== String(activeSeat)).length + 1;
-    if (filledAfter >= seats.length) onAllConfirmed?.();
   };
+
+  // Fire onAllConfirmed once every seat has a pick — watching the
+  // committed `picks` rather than firing inline from confirmPreview, so
+  // a remote (companion) pick applied via applyPick advances the wizard
+  // exactly like a local one. Guarded by a ref so it fires a single
+  // time even if picks mutate again before the screen unmounts.
+  const allConfirmedFiredRef = useRef(false);
+  const allPicked = seats.length > 0 && seats.every((_, i) => picks[i] != null);
+  useEffect(() => {
+    if (!allPicked) {
+      allConfirmedFiredRef.current = false;
+      return;
+    }
+    if (allConfirmedFiredRef.current) return;
+    allConfirmedFiredRef.current = true;
+    // Tell companions the turn phase is over (clears their picker) and
+    // lets the host stop re-broadcasting the now-stale SETUP_TURN.
+    if (mode === "turn-based") peerHooks?.onTurnEnd?.({ stepId: step.id });
+    onAllConfirmed?.();
+  }, [allPicked, onAllConfirmed, mode, peerHooks, step.id]);
 
   const pick = (optionId: string) => {
     const seatIdx = activeSeat;
@@ -2097,11 +2169,14 @@ function PlayerPickScreen({
       ([s, id]) => Number(s) !== seatIdx && id === optionId,
     );
     if (takenBy) return;
-    const characterDeal = characterDrawOf(
-      options.find((o) => o.id === optionId),
-    )
-      ? dealCharactersFor([optionId], options, context, characters)
-      : null;
+    // Preserve a character already dealt for this option (in draft mode
+    // it was dealt up front, and the preview showed its meeple) — only
+    // deal on pick when none exists yet (skip-draft mode).
+    const alreadyDealt = (characters[optionId]?.length ?? 0) > 0;
+    const characterDeal =
+      !alreadyDealt && characterDrawOf(options.find((o) => o.id === optionId))
+        ? dealCharactersFor([optionId], options, context, characters)
+        : null;
     onChange((curr) => ({
       ...curr,
       picks: { ...curr.picks, [seatIdx]: optionId },
@@ -2156,6 +2231,21 @@ function PlayerPickScreen({
     if (!peerHooks?.onTurnStart) return;
     if (activeSeat < 0 || activeSeat >= seats.length) return;
     if (picks[activeSeat] != null) return; // already filled, no turn
+    // Resolve each option for the companion: dealt-character meeple +
+    // setup text baked in, since the companion has neither the
+    // characters map nor the card-transcription logic of its own.
+    const companionStep =
+      step.kind.type === "player-pick"
+        ? {
+            ...step,
+            kind: {
+              ...step.kind,
+              options: step.kind.options.map((o) =>
+                optionForCompanion(o, characters),
+              ),
+            },
+          }
+        : step;
     peerHooks.onTurnStart({
       stepId: step.id,
       seatIndex: activeSeat,
@@ -2172,7 +2262,7 @@ function PlayerPickScreen({
           name: "Setup",
           defaultExpectedTurns: 0,
           defaultAverageSeconds: 0,
-          setupSteps: [step],
+          setupSteps: [companionStep],
         } as unknown as GameDefinition),
     });
   }, [
@@ -2184,6 +2274,7 @@ function PlayerPickScreen({
     visible,
     blockedForActive,
     step,
+    characters,
   ]);
 
   // All hooks above run unconditionally (the two effects no-op when
@@ -2783,7 +2874,10 @@ function DealtResolveScreen({
             description: step.description,
             kind: {
               type: "player-pick",
-              options: visibleOptions,
+              // Project setup text + meeple onto each option so the
+              // companion shows the hireling's setup line (it has no
+              // card-transcription logic of its own).
+              options: visibleOptions.map((o) => optionForCompanion(o, {})),
               mode: "turn-based",
             },
           },
@@ -2865,9 +2959,7 @@ function DealtResolveScreen({
                 id,
                 label: id,
               };
-              const adsetSteps = (
-                option as unknown as { adsetSteps?: string[] }
-              ).adsetSteps;
+              const adsetSteps = setupLinesFor(option as SetupOption);
               const meepleSrc = meepleAppPathFor(option as SetupOption, {});
               return (
                 <button

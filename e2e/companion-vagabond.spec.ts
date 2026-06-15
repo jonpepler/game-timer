@@ -5,10 +5,11 @@ import { navigateToScreen } from "./_setup-helpers";
 /*
  * Companion view reflects a claimed Vagabond: a companion that claims a
  * seat and picks the Vagabond (which deals a character) should render the
- * Vagabond's head art in its claim chip — proving the faction + its
- * dealt character flow through STATE to the companion. (The head uses the
- * generic Vagabond crest; per-character art shows as the body meeple, not
- * the head.) Uses the BroadcastChannel fake.
+ * dealt character's meeple in its claim chip — proving the faction + its
+ * dealt character flow through STATE to the companion. The claim chip
+ * shows the per-character body meeple as a tinted silhouette (the head
+ * crest is generic across every Vagabond character, so the body meeple
+ * is what identifies the character). Uses the BroadcastChannel fake.
  */
 const BASE = "/game-timer";
 
@@ -32,7 +33,9 @@ async function openCompanion(ctx: BrowserContext, code: string): Promise<Page> {
   return page;
 }
 
-test("companion shows a claimed Vagabond (head art)", async ({ context }) => {
+test("companion shows a claimed Vagabond (character meeple)", async ({
+  context,
+}) => {
   await context.addInitScript({ content: PEER_TEST_INIT_SCRIPT });
   const host = await context.newPage();
   const code = await startHostAndShare(host);
@@ -61,37 +64,73 @@ test("companion shows a claimed Vagabond (head art)", async ({ context }) => {
   });
   await expect(picker).toBeVisible({ timeout: 5000 });
   // Two "Vagabond" cards exist (the two-Vagabond variant) — pick either.
-  await picker
-    .getByRole("button", { name: "Vagabond", exact: true })
-    .first()
-    .click();
-  await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
+  const pickVagabond = async () => {
+    await picker
+      .getByRole("button", { name: "Vagabond", exact: true })
+      .first()
+      .click();
+    await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
+  };
+  await pickVagabond();
 
-  // Seat 1's turn fires on the host — pick any faction.
+  // The companion's pick must reach the host and advance the picker to
+  // seat 1. If the SETUP_PICK is dropped the host heartbeat re-sends
+  // seat 2's turn and the companion's picker reappears — re-pick until
+  // the host has advanced.
+  await expect
+    .poll(
+      async () => {
+        if (await host.getByText(/seat 1 of 2/i).isVisible()) return true;
+        if (await picker.isVisible().catch(() => false)) {
+          await pickVagabond().catch(() => {});
+        }
+        return host.getByText(/seat 1 of 2/i).isVisible();
+      },
+      { timeout: 20_000, intervals: [500, 1000, 2000] },
+    )
+    .toBe(true);
+
+  // Seat 1's turn fires on the host — pick the Marquise (not mutex with
+  // the Vagabond, and distinct from it).
   await host
-    .locator('[class*="heroCard"]:not([aria-disabled="true"])')
-    .first()
+    .getByRole("button", { name: "Marquise de Cat", exact: true })
     .click();
   await host.getByRole("button", { name: /^Confirm setup$/ }).click();
   await host
     .getByRole("button", { name: /start game/i })
-    .click({ timeout: 3000 })
+    .click({ timeout: 5000 })
     .catch(() => {});
   await expect(host.getByText(/turns left/i)).toBeVisible({ timeout: 5000 });
 
-  // Companion's claim chip shows the Vagabond head art.
+  // Companion's claim chip shows the dealt character's meeple as a
+  // masked silhouette (a span with mask-image, not an <img>). It must
+  // reference a per-character meeple under games/root/meeples/, and NOT
+  // the generic vagabond.svg pawn — proving the dealt character (not the
+  // faction default) reached the companion.
   await expect
     .poll(
       async () =>
-        companion.locator('img[src*="games/root/heads/vagabond"]').count(),
+        companion
+          .locator('[class*="claimMeeple"]')
+          .first()
+          .evaluate(
+            (el) =>
+              getComputedStyle(el).maskImage ||
+              getComputedStyle(el).webkitMaskImage ||
+              "",
+          )
+          .catch(() => ""),
       { timeout: 5000 },
     )
-    .toBeGreaterThan(0);
-  const srcs = await companion
-    .locator("img")
-    .evaluateAll((els) => els.map((e) => e.getAttribute("src")));
-  expect(
-    srcs.some((s) => /games\/root\/heads\/vagabond\.png/.test(s ?? "")),
-    `companion img srcs: ${JSON.stringify(srcs)}`,
-  ).toBe(true);
+    .toMatch(/games\/root\/meeples\//);
+  const mask = await companion
+    .locator('[class*="claimMeeple"]')
+    .first()
+    .evaluate(
+      (el) =>
+        getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage,
+    );
+  expect(mask, `claim meeple mask-image: ${mask}`).not.toMatch(
+    /meeples\/vagabond\.svg/,
+  );
 });

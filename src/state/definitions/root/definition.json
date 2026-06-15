@@ -48,7 +48,7 @@
   "setupSteps": [
     {
       "id": "expansions",
-      "label": "Expansions in this game",
+      "label": "Modules",
       "kind": {
         "type": "multi-toggle",
         "optionCategory": "expansion",
