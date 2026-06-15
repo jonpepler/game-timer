@@ -94,7 +94,7 @@ test("trystero: companion connects to host, then reconnects after a fresh join",
     const relevant = logs.filter((l) =>
       /peer-trystero|peer\]|nostr|relay|websocket|PAGEERROR|RTC|ICE/i.test(l),
     );
-    console.log("\n===== TRANSPORT LOGS =====\n" + relevant.join("\n"));
+    console.log(`\n===== TRANSPORT LOGS =====\n${relevant.join("\n")}`);
     await hostCtx.close().catch(() => {});
     await compCtx.close().catch(() => {});
     if (comp2Ctx) await comp2Ctx.close().catch(() => {});

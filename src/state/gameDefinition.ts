@@ -104,7 +104,31 @@ const SetupOptionSchema = z
     // array on this option holds the pool, and how many to deal. Read
     // generically by the wizard — no faction ids baked into core code.
     characterDraw: z
-      .object({ poolField: z.string(), count: z.number() })
+      .object({
+        poolField: z.string(),
+        count: z.number(),
+        // When true, copies of this option (see `copies`) draw distinct
+        // characters — no two copies share one. `exclusiveGroup` is filled
+        // in at resolution with the base option id that copies share.
+        exclusive: z.boolean().optional(),
+        exclusiveGroup: z.string().optional(),
+      })
+      .optional(),
+    // An option that comes in multiple physical copies (e.g. Root's two
+    // Vagabond pawns). At definition load each entry becomes its own
+    // pickable card — copy 0 keeps the base id, later copies get a
+    // suffixed id — sharing the base's pools/assets but overriding colour
+    // /label/module/requiresToggle. Mutex constraints on the base id are
+    // mirrored onto each copy.
+    copies: z
+      .array(
+        z.object({
+          label: z.string().optional(),
+          color: z.string().optional(),
+          module: z.string().optional(),
+          requiresToggle: z.string().optional(),
+        }),
+      )
       .optional(),
   })
   // Passthrough so extra fields supplied by a content modules file
@@ -402,6 +426,72 @@ export type GameContentModules = z.infer<typeof GameContentModulesSchema>;
 export const parseGameContentModules = (input: unknown): GameContentModules =>
   GameContentModulesSchema.parse(input);
 
+// Expand any option carrying `copies` into one concrete option per copy
+// (copy 0 keeps the base id; later copies get `${id}__${n}`), and mirror
+// the step's mutex constraints from each base id onto its copies. Runs at
+// resolution so the wizard, metadata and companion all see plain options.
+type ResolvedOption = Record<string, unknown> & { id: string };
+const expandOptionCopies = (
+  options: ResolvedOption[],
+  constraints: SetupConstraint[] | undefined,
+): {
+  options: ResolvedOption[];
+  constraints: SetupConstraint[] | undefined;
+} => {
+  const out: ResolvedOption[] = [];
+  const extra: SetupConstraint[] = [];
+  for (const opt of options) {
+    const copies = (
+      opt as {
+        copies?: Array<{
+          label?: string;
+          color?: string;
+          module?: string;
+          requiresToggle?: string;
+        }>;
+      }
+    ).copies;
+    if (!Array.isArray(copies) || copies.length === 0) {
+      out.push(opt);
+      continue;
+    }
+    const { copies: _drop, ...base } = opt;
+    const baseLabel = base.label as string;
+    const cd = (base as { characterDraw?: { exclusive?: boolean } })
+      .characterDraw;
+    copies.forEach((copy, i) => {
+      const id = i === 0 ? opt.id : `${opt.id}__${i + 1}`;
+      const merged: ResolvedOption = {
+        ...base,
+        id,
+        label: copy.label ?? (i === 0 ? baseLabel : `${baseLabel} ${i + 1}`),
+        ...(copy.color ? { color: copy.color } : {}),
+        ...(copy.module ? { module: copy.module } : {}),
+        ...(copy.requiresToggle ? { requiresToggle: copy.requiresToggle } : {}),
+      };
+      if (cd?.exclusive) {
+        merged.characterDraw = { ...cd, exclusiveGroup: opt.id };
+      }
+      out.push(merged);
+      if (i > 0 && constraints) {
+        for (const c of constraints) {
+          if (c.optionIds.includes(opt.id)) {
+            extra.push({
+              ...c,
+              optionIds: c.optionIds.map((x) => (x === opt.id ? id : x)) as [
+                string,
+                string,
+              ],
+            });
+          }
+        }
+      }
+    });
+  }
+  const merged = constraints ? [...constraints, ...extra] : extra;
+  return { options: out, constraints: merged.length ? merged : undefined };
+};
+
 // Resolve a structure + modules pair into a fully-realised, validated
 // GameDefinition. Throws with a path-into-the-document on a missing
 // category or option id.
@@ -441,6 +531,22 @@ export const loadGameDefinitionWithModules = (
       return { id, ...content };
     });
     const { optionIds: _drop, optionCategory: _drop2, ...kindRest } = kind;
+    if (kind.type === "player-pick") {
+      const expanded = expandOptionCopies(
+        options,
+        (kindRest as { constraints?: SetupConstraint[] }).constraints,
+      );
+      return {
+        ...step,
+        kind: {
+          ...kindRest,
+          options: expanded.options,
+          ...(expanded.constraints
+            ? { constraints: expanded.constraints }
+            : {}),
+        },
+      };
+    }
     return { ...step, kind: { ...kindRest, options } };
   });
 

@@ -306,10 +306,14 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
 // array (e.g. `characterPool` / `captainPool`).
 const characterDrawOf = (
   option: SetupOption | undefined,
-): { poolField: string; count: number } | undefined =>
+): { poolField: string; count: number; exclusiveGroup?: string } | undefined =>
   (
     option as unknown as {
-      characterDraw?: { poolField: string; count: number };
+      characterDraw?: {
+        poolField: string;
+        count: number;
+        exclusiveGroup?: string;
+      };
     }
   )?.characterDraw;
 
@@ -333,8 +337,23 @@ const dealCharactersFor = (
   optionIds: string[],
   options: SetupOption[],
   context: SetupContext,
+  // Characters already dealt this game (from the player-pick choice), so
+  // an `exclusive` group (e.g. the two Vagabonds) never repeats a
+  // character across separate picks.
+  existing: Record<string, string[]> = {},
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
+  // Per exclusive-group set of already-used character ids — seeded from
+  // prior picks, then grown as we deal within this call.
+  const usedByGroup: Record<string, Set<string>> = {};
+  for (const [oid, chars] of Object.entries(existing)) {
+    const group = characterDrawOf(
+      options.find((o) => o.id === oid),
+    )?.exclusiveGroup;
+    if (!group) continue;
+    if (!usedByGroup[group]) usedByGroup[group] = new Set();
+    for (const c of chars) usedByGroup[group].add(c);
+  }
   for (const id of optionIds) {
     const option = options.find((o) => o.id === id);
     const draw = characterDrawOf(option);
@@ -349,12 +368,22 @@ const dealCharactersFor = (
     // Gate pool members by their `module` against the enabled
     // expansions — same rule as faction/map options — so e.g. the
     // Vagabond Pack characters are only dealt when that module is on.
-    const eligible = pool.filter((c) => optionVisibleUnderContext(c, context));
+    let eligible = pool
+      .filter((c) => optionVisibleUnderContext(c, context))
+      .map((c) => c.id);
+    const group = draw.exclusiveGroup;
+    if (group) {
+      if (!usedByGroup[group]) usedByGroup[group] = new Set();
+      const used = usedByGroup[group];
+      eligible = eligible.filter((cid) => !used.has(cid));
+    }
     if (eligible.length === 0) continue;
-    out[id] = shuffleAndTake(
-      eligible.map((c) => c.id),
-      draw.count,
-    );
+    const picked = shuffleAndTake(eligible, draw.count);
+    out[id] = picked;
+    if (group) {
+      const used = usedByGroup[group];
+      for (const c of picked) used.add(c);
+    }
   }
   return out;
 };
@@ -481,7 +510,7 @@ export const GameSetupWizard = forwardRef<
         const characterDeal = characterDrawOf(
           options.find((o) => o.id === optionId),
         )
-          ? dealCharactersFor([optionId], options, prev)
+          ? dealCharactersFor([optionId], options, prev, current.characters)
           : null;
         return {
           ...prev,
@@ -2041,7 +2070,7 @@ function PlayerPickScreen({
     const characterDeal = characterDrawOf(
       options.find((o) => o.id === optionId),
     )
-      ? dealCharactersFor([optionId], options, context)
+      ? dealCharactersFor([optionId], options, context, characters)
       : null;
     onChange((curr) => ({
       ...curr,

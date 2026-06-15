@@ -238,7 +238,7 @@
         "label": "The Exile",
         "demotedLabel": "The Brigand",
         "module": "marauders",
-        "excludeOptionIds": ["vagabond", "knaves", "vagabond2"],
+        "excludeOptionIds": ["vagabond", "knaves"],
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -1128,216 +1128,18 @@
         },
         "characterDraw": {
           "poolField": "characterPool",
-          "count": 1
-        }
-      },
-      "vagabond2": {
-        "label": "Second Vagabond",
-        "color": "#EBEBEB",
-        "module": "riverfolk",
-        "military": "insurgent",
-        "matchingHireling": "exile",
-        "description": "A second Vagabond (Riverfolk variant) with its own character — the white pawn.",
-        "characterPoolNote2": "Per-character `module` gates which characters can be dealt: base (Thief/Tinker/Ranger), riverfolk (Vagrant/Arbiter/Scoundrel), vagabondPack (Adventurer/Ronin/Harrier). Each character's `meeple.appPath` is rendered when that character is the dealt Vagabond. Meeple SVGs by EwenDC (CC-BY-NC-SA 4.0), mirrored under public/games/root/meeples/.",
-        "characterPool": [
-          {
-            "id": "thief",
-            "label": "Thief",
-            "module": "base",
-            "startingItems": ["boot", "torch", "tea", "sword"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/thief.svg",
-              "appPath": "games/root/meeples/thief.svg"
-            }
-          },
-          {
-            "id": "tinker",
-            "label": "Tinker",
-            "module": "base",
-            "startingItems": ["boot", "torch", "bag", "hammer"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/tinker.svg",
-              "appPath": "games/root/meeples/tinker.svg"
-            }
-          },
-          {
-            "id": "ranger",
-            "label": "Ranger",
-            "module": "base",
-            "startingItems": ["boot", "torch", "crossbow", "sword"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/ranger.svg",
-              "appPath": "games/root/meeples/ranger.svg"
-            }
-          },
-          {
-            "id": "vagrant",
-            "label": "Vagrant",
-            "module": "riverfolk",
-            "startingItems": ["coin", "torch", "boot"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/vagrant.svg",
-              "appPath": "games/root/meeples/vagrant.svg"
-            }
-          },
-          {
-            "id": "arbiter",
-            "label": "Arbiter",
-            "module": "riverfolk",
-            "startingItems": ["boot", "torch", "sword", "sword"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/arbiter.svg",
-              "appPath": "games/root/meeples/arbiter.svg"
-            }
-          },
-          {
-            "id": "scoundrel",
-            "label": "Scoundrel",
-            "module": "riverfolk",
-            "startingItems": ["boot", "boot", "torch", "crossbow"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/scoundrel.svg",
-              "appPath": "games/root/meeples/scoundrel.svg"
-            }
-          },
-          {
-            "id": "adventurer",
-            "label": "Adventurer",
-            "module": "vagabondPack",
-            "startingItems": ["boot", "torch", "hammer"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/adventurer.svg",
-              "appPath": "games/root/meeples/adventurer.svg"
-            }
-          },
-          {
-            "id": "ronin",
-            "label": "Ronin",
-            "module": "vagabondPack",
-            "startingItems": ["boot", "boot", "torch", "sword"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/ronin.svg",
-              "appPath": "games/root/meeples/ronin.svg"
-            }
-          },
-          {
-            "id": "harrier",
-            "label": "Harrier",
-            "module": "vagabondPack",
-            "startingItems": ["coin", "torch", "sword", "crossbow"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/harrier.svg",
-              "appPath": "games/root/meeples/harrier.svg"
-            }
-          },
-          {
-            "id": "cheat",
-            "label": "Cheat",
-            "module": "homeland",
-            "startingItems": ["torch", "tea", "boot", "crossbow"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/cheat.svg",
-              "appPath": "games/root/meeples/cheat.svg"
-            }
-          },
-          {
-            "id": "gladiator",
-            "label": "Gladiator",
-            "module": "homeland",
-            "startingItems": ["torch", "boot", "hammer"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/gladiator.svg",
-              "appPath": "games/root/meeples/gladiator.svg"
-            }
-          },
-          {
-            "id": "jailor",
-            "label": "Jailor",
-            "module": "homeland",
-            "startingItems": ["torch", "boot", "crossbow"],
-            "meeple": {
-              "source": "ewendc-automated-setup",
-              "path": "src/images/meeples/jailor.svg",
-              "appPath": "games/root/meeples/jailor.svg"
-            }
-          }
-        ],
-        "characterPoolNote": "One character card is dealt face-up alongside the Vagabond setup card; the player uses that character.",
-        "adsetNote": "Transcribed from the official therootdatabase.com ADSET (Advanced Setup) card.",
-        "adsetSteps": [
-          "Put your pawn in any forest.",
-          "Shuffle the quest deck. Draw 3 quests to deal out nearby.",
-          "Put 4 \"R\" items under the ruins randomly, unless a non-Vagabond has done so.",
-          "Put your assigned character card in your Character Card slot. Put the listed \"S\" items in your Satchel and on their matching tracks, as needed.",
-          "Put relationship markers for non-Vagabond factions in play on the Indifferent space of your Relationships (after setup)."
-        ],
-        "assets": {
-          "meepleSvg": {
-            "source": "ewendc-automated-setup",
-            "path": "src/images/meeples/vagrant.svg",
-            "note": "EwenDC names the Vagabond meeple 'vagrant'.",
-            "appPath": "games/root/meeples/vagabond.svg"
-          },
-          "headIcon": [
-            {
-              "source": "mrmirz-head-icons",
-              "fileId": "1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs",
-              "originalName": "faction-vagabond.png",
-              "viewUrl": "https://drive.google.com/file/d/1EfQ5yrozjgLxGadZ-JKJn_KCP6_rJpTs/view?usp=drivesdk",
-              "bytes": 59851,
-              "format": "png",
-              "appPath": "games/root/heads/vagabond.png"
-            }
-          ],
-          "vpMarkers": [
-            {
-              "source": "decimator85-assets",
-              "fileId": "1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp",
-              "originalName": "VP Marker 1.png",
-              "viewUrl": "https://drive.google.com/file/d/1PZUH0kRCKSUakx4tT4rVakK_2ZxeJnxp/view?usp=drivesdk",
-              "bytes": 195181,
-              "format": "png"
-            },
-            {
-              "source": "decimator85-assets",
-              "fileId": "1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF",
-              "originalName": "VP Marker 2.png",
-              "viewUrl": "https://drive.google.com/file/d/1PQrX1GarBXTuOuirgH8JjBfH4MrTDpKF/view?usp=drivesdk",
-              "bytes": 156031,
-              "format": "png"
-            }
-          ],
-          "characterClassMeeplesSvg": {
-            "source": "ewendc-automated-setup",
-            "paths": [
-              "src/images/meeples/adventurer.svg",
-              "src/images/meeples/arbiter.svg",
-              "src/images/meeples/harrier.svg",
-              "src/images/meeples/ranger.svg",
-              "src/images/meeples/ronin.svg",
-              "src/images/meeples/scoundrel.svg",
-              "src/images/meeples/thief.svg",
-              "src/images/meeples/tinker.svg"
-            ],
-            "note": "Vagabond character classes (cards). Useful if we ever model character selection."
-          }
+          "count": 1,
+          "exclusive": true
         },
-        "characterDraw": {
-          "poolField": "characterPool",
-          "count": 1
-        },
-        "requiresToggle": "two-vagabonds"
+        "copies": [
+          {},
+          {
+            "label": "Second Vagabond",
+            "color": "#EBEBEB",
+            "module": "riverfolk",
+            "requiresToggle": "two-vagabonds"
+          }
+        ]
       },
       "lizards": {
         "label": "Lizard Cult",
