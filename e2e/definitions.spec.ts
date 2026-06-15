@@ -19,10 +19,10 @@ test.describe("game definitions (wizard)", () => {
     await page.getByLabel(/^Game$/).selectOption("root");
     await page.getByRole("button", { name: /^Next/ }).click();
     // Root's turnsPerPlayer = 8 derives expectedTurns from seats at
-    // submit; no Expected-turns screen — Next from Game lands at
-    // Expansions.
+    // submit; no Expected-turns screen — Next from Game lands at the
+    // Modules screen.
     await expect(
-      page.getByRole("heading", { name: /expansions in this game/i }),
+      page.getByRole("heading", { name: /^Modules$/i }),
     ).toBeVisible();
   });
 
@@ -94,8 +94,12 @@ test.describe("Root setup wizard surface", () => {
     // draft mode only deals n+1).
     await page.getByRole("button", { name: /^Skip draft$/ }).click();
     // First seat picks Vagabond — two-step now (preview, then
-    // Confirm setup commits the pick).
-    await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+    // Confirm setup commits the pick). Two "Vagabond" cards exist
+    // (the two-Vagabond variant); picking either excludes Knaves.
+    await page
+      .getByRole("button", { name: "Vagabond", exact: true })
+      .first()
+      .click();
     await page.getByRole("button", { name: /^Confirm setup$/ }).click();
     // The Knaves card should now be visually disabled (aria-disabled)
     // for the next seat — mutex-excluded by Vagabond's pick.

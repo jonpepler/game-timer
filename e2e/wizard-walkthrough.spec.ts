@@ -40,7 +40,7 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   await save(page, "01-game-root");
 
   // ── Expansions ───────────────────────────────────────────
-  await navigateToScreen(page, /expansions in this game/i);
+  await navigateToScreen(page, /^Modules$/i);
   // All expansions checked by default.
   await expect(page.getByLabel("Base game", { exact: false })).toBeChecked();
   await expect(page.getByLabel("Riverfolk Expansion")).toBeChecked();

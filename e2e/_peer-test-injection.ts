@@ -31,6 +31,13 @@ export const PEER_TEST_INIT_SCRIPT = `
       let connectHandlers = [];
       let disconnectHandlers = [];
       let messageHandlers = [];
+      // Buffer inbound data that arrives while no handler is attached —
+      // e.g. in the window between the app unsubscribing and
+      // re-subscribing onMessage when its deps churn. Mirrors the
+      // companion side; without it a companion→host message (a
+      // SETUP_PICK) landing in that window is silently dropped, which
+      // no real ordered transport would do once connected.
+      let pendingMessages = [];
 
       channel.addEventListener("message", (ev) => {
         const m = ev.data;
@@ -44,7 +51,11 @@ export const PEER_TEST_INIT_SCRIPT = `
           });
           connectHandlers.forEach((h) => h(m.from));
         } else if (m.type === "data") {
-          messageHandlers.forEach((h) => h(m.from, m.data));
+          if (messageHandlers.length === 0) {
+            pendingMessages.push({ from: m.from, data: m.data });
+          } else {
+            messageHandlers.forEach((h) => h(m.from, m.data));
+          }
         } else if (m.type === "disconnect") {
           if (conns.delete(m.from)) {
             disconnectHandlers.forEach((h) => h(m.from));
@@ -73,6 +84,10 @@ export const PEER_TEST_INIT_SCRIPT = `
         },
         onMessage: (h) => {
           messageHandlers.push(h);
+          if (pendingMessages.length > 0) {
+            const buffered = pendingMessages.splice(0);
+            buffered.forEach((m) => h(m.from, m.data));
+          }
           return () => {
             messageHandlers = messageHandlers.filter((x) => x !== h);
           };

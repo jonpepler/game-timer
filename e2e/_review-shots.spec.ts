@@ -28,7 +28,10 @@ test("review: milestone dialog at 4 VP", async ({ page }) => {
   await page.getByRole("button", { name: /^Skip draft$/ }).click();
   const confirm = page.getByRole("button", { name: /^Confirm setup$/ });
   // 4 quick picks in counterclockwise order.
-  await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Vagabond", exact: true })
+    .first()
+    .click();
   await confirm.click();
   await page
     .getByRole("button", { name: "Woodland Alliance", exact: true })
@@ -80,7 +83,10 @@ test("review: timer running with player arcs around the ring", async ({
   await navigateToScreen(page, /^Faction$/);
   await page.getByRole("button", { name: /^Skip draft$/ }).click();
   const confirm = page.getByRole("button", { name: /^Confirm setup$/ });
-  await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Vagabond", exact: true })
+    .first()
+    .click();
   await confirm.click();
   await page
     .getByRole("button", { name: "Woodland Alliance", exact: true })
@@ -109,7 +115,10 @@ test("review: track after fire-once milestone has fired", async ({ page }) => {
   await navigateToScreen(page, /^Faction$/);
   await page.getByRole("button", { name: /^Skip draft$/ }).click();
   const confirm = page.getByRole("button", { name: /^Confirm setup$/ });
-  await page.getByRole("button", { name: "Vagabond", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Vagabond", exact: true })
+    .first()
+    .click();
   await confirm.click();
   await page
     .getByRole("button", { name: "Woodland Alliance", exact: true })

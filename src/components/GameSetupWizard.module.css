@@ -562,6 +562,18 @@
   font-weight: 600;
 }
 
+.dealtSetup {
+  margin: 0;
+  padding-left: 18px;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .dealtModule {
   font-size: 11px;
   color: var(--color-text-dim);

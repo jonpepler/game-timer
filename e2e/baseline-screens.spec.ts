@@ -54,7 +54,8 @@ test("timer view baseline (Root, scores in play)", async ({ page }) => {
   const factionCard = (name: string) =>
     page.getByRole("button", { name, exact: true });
   const confirmButton = page.getByRole("button", { name: /^Confirm setup$/ });
-  await factionCard("Vagabond").click();
+  // Two "Vagabond" cards exist (the two-Vagabond variant) — pick either.
+  await factionCard("Vagabond").first().click();
   await confirmButton.click();
   await factionCard("Woodland Alliance").click();
   await confirmButton.click();

@@ -28,6 +28,47 @@ export function useSessionCompanion<TMessage>(
   const [peerId, setPeerId] = useState<string | null>(null);
   const sessionRef = useRef<CompanionSession | null>(null);
 
+  // Inbound messages are surfaced one at a time through `lastMessage`,
+  // which consumers read in a `[lastMessage]` effect. Several messages
+  // can arrive in a single tick — e.g. the transport buffers them while
+  // a handler (re)attaches, then flushes synchronously, and the host
+  // sends STATE + SETUP_SEATING back-to-back on connect. If we called
+  // setLastMessage() for each synchronously, React would batch them and
+  // the consumer's effect would only ever see the LAST one, silently
+  // dropping the rest (e.g. a connecting companion would process the
+  // stale seating snapshot but miss the STATE behind it). So we queue
+  // and drain one per commit, each on its own task, guaranteeing the
+  // consumer's effect fires for every message.
+  const queueRef = useRef<TMessage[]>([]);
+  const pumpingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const pump = useCallback(() => {
+    if (!mountedRef.current) return;
+    const next = queueRef.current.shift();
+    if (next === undefined) {
+      pumpingRef.current = false;
+      return;
+    }
+    pumpingRef.current = true;
+    setLastMessage(next);
+    // Deliver the next message on a fresh task so this one commits (and
+    // the consumer effect runs) before the next setLastMessage lands.
+    setTimeout(pump, 0);
+  }, []);
+  const enqueueMessage = useCallback(
+    (data: TMessage) => {
+      queueRef.current.push(data);
+      if (!pumpingRef.current) pump();
+    },
+    [pump],
+  );
+
   useEffect(() => {
     if (!hostCode) {
       setStatus("error");
@@ -37,6 +78,9 @@ export function useSessionCompanion<TMessage>(
     let cancelled = false;
     setStatus("connecting");
     setError(null);
+    // Drop any messages queued from a prior host code.
+    queueRef.current = [];
+    pumpingRef.current = false;
 
     connectToHost(toPeerId(hostCode))
       .then((session) => {
@@ -48,7 +92,7 @@ export function useSessionCompanion<TMessage>(
         setStatus("connected");
         setPeerId(session.peerId);
         session.onMessage((data) => {
-          setLastMessage(data as TMessage);
+          enqueueMessage(data as TMessage);
         });
         session.onConnectionStateChange((next) => {
           // Map the session's three-state lifecycle to the hook's
@@ -76,7 +120,7 @@ export function useSessionCompanion<TMessage>(
       sessionRef.current?.close();
       sessionRef.current = null;
     };
-  }, [hostCode]);
+  }, [hostCode, enqueueMessage]);
 
   // Stable identity so consumers can safely list `send` in useEffect
   // dep arrays without re-firing on every render. Without this, the

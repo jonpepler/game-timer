@@ -92,6 +92,18 @@ function CompanionScreen() {
     HostToCompanionMessage,
     { type: "SETUP_SEATING" }
   > | null>(null);
+  // A pick we've sent and are waiting on the host to acknowledge (by
+  // advancing the turn). Drives a "submitting…" state instead of
+  // optimistically blanking the picker — and lets us resend if the
+  // host's heartbeat shows it's still waiting on this same seat (i.e.
+  // our SETUP_PICK was dropped). Held as both state (for render) and a
+  // ref (so the message effect reads the latest without re-subscribing).
+  const [submitting, setSubmitting] = useState(false);
+  const submittedPickRef = useRef<{
+    stepId: string;
+    seatIndex: number;
+    optionId: string;
+  } | null>(null);
   // Trail the inter-arrival time of host messages so we can correlate
   // companion sluggishness with the rate of inbound STATE updates.
   // Refs (not state) so the diagnostic doesn't itself trigger a
@@ -135,11 +147,37 @@ function CompanionScreen() {
           playersLog.info("roster", { players: slim });
         }
       }
-    } else if (lastMessage.type === "SETUP_TURN") setPendingTurn(lastMessage);
-    else if (lastMessage.type === "SETUP_DONE") setPendingTurn(null);
-    else if (lastMessage.type === "SETUP_SEATING")
+    } else if (lastMessage.type === "SETUP_TURN") {
+      setPendingTurn(lastMessage);
+      const submitted = submittedPickRef.current;
+      if (submitted) {
+        if (
+          lastMessage.stepId === submitted.stepId &&
+          lastMessage.seatIndex === submitted.seatIndex
+        ) {
+          // Host is still on the seat we picked for — our SETUP_PICK
+          // was dropped. The host re-broadcasts on a heartbeat, so we
+          // use each re-arrival as a retry tick and resend the pick.
+          send({
+            type: "SETUP_PICK",
+            protocolVersion: PEER_PROTOCOL_VERSION,
+            stepId: submitted.stepId,
+            seatIndex: submitted.seatIndex,
+            optionId: submitted.optionId,
+          } satisfies CompanionToHostMessage);
+        } else {
+          // Host advanced to a different seat/step — our pick landed.
+          submittedPickRef.current = null;
+          setSubmitting(false);
+        }
+      }
+    } else if (lastMessage.type === "SETUP_DONE") {
+      setPendingTurn(null);
+      submittedPickRef.current = null;
+      setSubmitting(false);
+    } else if (lastMessage.type === "SETUP_SEATING")
       setPendingSeating(lastMessage);
-  }, [lastMessage]);
+  }, [lastMessage, send]);
 
   const state = lastState?.state ?? null;
   const definition = pendingTurn?.definition ?? lastState?.definition;
@@ -153,13 +191,17 @@ function CompanionScreen() {
   // wizard's PlayerPickScreen. Tap card → confirm screen → Confirm.
   const [changePreviewId, setChangePreviewId] = useState<string | null>(null);
 
-  // Companion-local display-name override. The host's STATE carries
-  // the seat's name (set in the seat-players step), but the
-  // companion can override what's shown on its own screen — useful
-  // when the host didn't get round to renaming default "Player N"
-  // seats. Persisted per (code, slot) in localStorage. NOTE: this is
-  // local-only — it doesn't propagate to the host's state.
+  // Companion-chosen display name, persisted per (code, slot) in
+  // localStorage so it survives refreshes — and, crucially, across the
+  // host starting a *new* game (which resets seat names to "Player N").
+  // It's the companion's local source of truth and is propagated to the
+  // host (see the sync effect below) so the shared main screen shows
+  // the same name rather than a stale "Player 1".
   const [customName, setCustomName] = useState<string>("");
+  // Distinguishes an active edit (user typing in "Your name") from a
+  // passive load (restored from storage / reclaim). Active edits push
+  // unconditionally; passive loads only fill in a default host name.
+  const customNameEditedRef = useRef(false);
   const customNameKey =
     code && claimedSlot !== null
       ? `companion:name:${code}:${claimedSlot}`
@@ -177,6 +219,7 @@ function CompanionScreen() {
   }, [customNameKey]);
   const saveCustomName = (next: string) => {
     setCustomName(next);
+    customNameEditedRef.current = true;
     if (!customNameKey) return;
     try {
       if (next) window.localStorage.setItem(customNameKey, next);
@@ -185,6 +228,47 @@ function CompanionScreen() {
       // localStorage unavailable — name simply won't persist.
     }
   };
+
+  // Propagate the companion's name to the host so the main screen shows
+  // it too — not just this device. Two triggers:
+  //   • active edit ("Your name") → push immediately, overriding
+  //     whatever the host currently has for our seat;
+  //   • (re)claiming a seat whose host-side name is still a default
+  //     "Player N" → fill in our remembered name. This is the new-game
+  //     case: the host resets seat names, but we still remember "Jon".
+  // A non-default host name we didn't just edit is left alone, so a
+  // name the host deliberately set isn't clobbered. Routed as a seating
+  // rename during setup, or RENAME_PLAYER once the game is running.
+  useEffect(() => {
+    const name = customName.trim();
+    const activeEdit = customNameEditedRef.current;
+    customNameEditedRef.current = false;
+    if (!name || claimedSlot === null) return;
+    const isDefaultName = (n: string | undefined) =>
+      n === undefined || /^Player \d+$/.test(n);
+    if (state?.players) {
+      const hostName = state.players[claimedSlot]?.name;
+      if (hostName === undefined || hostName === name) return;
+      if (activeEdit || isDefaultName(hostName)) {
+        send({
+          type: "RENAME_PLAYER",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          name,
+        } satisfies CompanionToHostMessage);
+      }
+    } else if (pendingSeating) {
+      const seatName = pendingSeating.seats[claimedSlot]?.name;
+      if (seatName === undefined || seatName === name) return;
+      if (activeEdit || isDefaultName(seatName)) {
+        send({
+          type: "SEATING_REQUEST",
+          protocolVersion: PEER_PROTOCOL_VERSION,
+          stepId: pendingSeating.stepId,
+          action: { kind: "rename", seatIndex: claimedSlot, name },
+        } satisfies CompanionToHostMessage);
+      }
+    }
+  }, [customName, claimedSlot, state, pendingSeating, send]);
 
   // Restore a previously-claimed slot for this host when we arrive,
   // and re-announce it once we're connected.
@@ -314,9 +398,17 @@ function CompanionScreen() {
       seatIndex: claimedSlot,
       optionId,
     } satisfies CompanionToHostMessage);
-    // Clear locally — host will broadcast the next SETUP_TURN (or
-    // SETUP_DONE) shortly. Optimistic to avoid flicker.
-    setPendingTurn(null);
+    // Show a "submitting…" state rather than blanking the picker.
+    // Cleared (or resent) when the host's next SETUP_TURN/SETUP_DONE
+    // arrives — see the message effect above. This is what makes a
+    // dropped pick recover gracefully instead of leaving the player
+    // staring at an empty screen.
+    submittedPickRef.current = {
+      stepId: pendingTurn.stepId,
+      seatIndex: claimedSlot,
+      optionId,
+    };
+    setSubmitting(true);
   };
 
   // Seating-step edits — the companion can claim, rename, add, and
@@ -499,9 +591,13 @@ function CompanionScreen() {
           </span>
           {claimedPlayer && (
             <span className={styles.claimedAs}>
+              {/* Silhouette (body meeple) rather than the head crest:
+                  for the Vagabond the head is a single generic crest
+                  shared by every character, so the distinguishing art
+                  is the per-character body meeple. Matches the host
+                  timer's active-player banner. */}
               <PlayerMeeple
                 iconSrc={claimedPlayer.iconSrc}
-                headIconSrc={claimedPlayer.headIconSrc}
                 color={claimedPlayer.color}
                 headClassName={styles.claimHead}
                 silhouetteClassName={styles.claimMeeple}
@@ -570,6 +666,7 @@ function CompanionScreen() {
             pendingTurn={pendingTurn}
             claimedSlot={claimedSlot}
             onPick={sendSetupPick}
+            submitting={submitting}
           />
         )}
 
@@ -623,7 +720,6 @@ function CompanionScreen() {
                 >
                   <PlayerMeeple
                     iconSrc={activePlayer.iconSrc}
-                    headIconSrc={activePlayer.headIconSrc}
                     color={activePlayer.color}
                     headClassName={styles.activePlayerHead}
                     silhouetteClassName={styles.activePlayerMeeple}
@@ -821,10 +917,12 @@ function SetupTurnPanel({
   pendingTurn,
   claimedSlot,
   onPick,
+  submitting,
 }: {
   pendingTurn: Extract<HostToCompanionMessage, { type: "SETUP_TURN" }>;
   claimedSlot: number | null;
   onPick: (optionId: string) => void;
+  submitting: boolean;
 }) {
   const myTurn = claimedSlot === pendingTurn.seatIndex;
   const pick = pendingTurn.definition
@@ -867,6 +965,18 @@ function SetupTurnPanel({
   }
 
   const pickLabel = pick?.step.label.toLowerCase() ?? "card";
+
+  // We've sent a pick and are waiting for the host to confirm by
+  // advancing the turn. Show a quiet pending state rather than the
+  // picker — if the pick was dropped the host's heartbeat re-arrives
+  // and we resend (see the message effect), so this resolves itself.
+  if (submitting) {
+    return (
+      <div className={styles.empty} aria-live="polite">
+        Submitting your {pickLabel}…
+      </div>
+    );
+  }
 
   if (previewCardId != null) {
     const previewOption =

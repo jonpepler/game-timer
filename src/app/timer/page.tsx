@@ -95,6 +95,15 @@ export default function Home() {
   // and SETUP_PICK is a no-op.
   const wizardHandleRef = useRef<GameSetupWizardHandle | null>(null);
 
+  // The SETUP_TURN currently in flight (the seat whose pick we're
+  // waiting on), or null between turns. Held so we can RE-broadcast it:
+  // a setup message dropped in either direction (host→companion
+  // SETUP_TURN, or companion→host SETUP_PICK) otherwise wedges the
+  // wizard — the companion clears its picker optimistically and the
+  // host never re-emits. Re-sending on a heartbeat + on every fresh
+  // connect lets a dropped turn self-heal.
+  const pendingSetupTurnRef = useRef<HostToCompanionMessage | null>(null);
+
   const handleCompanionMessage = (peerId: string, data: unknown) => {
     const msg = data as CompanionToHostMessage;
     if (!msg || typeof msg !== "object" || !("type" in msg)) {
@@ -299,12 +308,41 @@ export default function Home() {
           peerLog.warn("SETUP_PICK dropped — wizard not mounted", { peerId });
           return;
         }
-        const claimed = claimMap[peerId];
+        let claimed = claimMap[peerId];
         if (claimed === undefined) {
-          peerLog.warn("SETUP_PICK rejected — peer hasn't claimed a seat", {
+          // The peer's earlier CLAIM / SEATING_REQUEST may have been
+          // dropped (e.g. on a flaky link during the brief seating
+          // window). Rather than wedge the pick — leaving the host
+          // stuck on this seat forever — honour an implicit claim when
+          // the seat it's picking for is free. If the seat is held by
+          // someone else, still reject (identity protection).
+          const seatCount = seatingSnapshotRef.current?.seats.length;
+          if (
+            msg.seatIndex < 0 ||
+            (seatCount !== undefined && msg.seatIndex >= seatCount)
+          ) {
+            peerLog.warn("SETUP_PICK rejected — seatIndex out of range", {
+              peerId,
+              seatIndex: msg.seatIndex,
+            });
+            return;
+          }
+          const seatTaken = Object.entries(claimMap).some(
+            ([otherPeer, idx]) => idx === msg.seatIndex && otherPeer !== peerId,
+          );
+          if (seatTaken) {
+            peerLog.warn("SETUP_PICK rejected — seat claimed by another peer", {
+              peerId,
+              seatIndex: msg.seatIndex,
+            });
+            return;
+          }
+          peerLog.info("SETUP_PICK implicit-claim — recovering dropped claim", {
             peerId,
+            seatIndex: msg.seatIndex,
           });
-          return;
+          setClaimMap((prev) => ({ ...prev, [peerId]: msg.seatIndex }));
+          claimed = msg.seatIndex;
         }
         if (claimed !== msg.seatIndex) {
           peerLog.warn("SETUP_PICK rejected — seatIndex mismatch with claim", {
@@ -496,6 +534,11 @@ export default function Home() {
     onConnect: () => {
       broadcastState(-1);
       broadcastSeatingRef.current();
+      // A companion connecting mid-pick (or reconnecting after a drop)
+      // needs the active turn re-sent or it can't pick.
+      if (pendingSetupTurnRef.current) {
+        sessionHostSendRefForState.current(pendingSetupTurnRef.current);
+      }
     },
   });
 
@@ -631,6 +674,24 @@ export default function Home() {
     broadcastSeating();
   }, [peerCount, sessionHost.status, broadcastSeating]);
 
+  // Heartbeat: while a turn-based pick is in flight, re-broadcast it on
+  // a low cadence so a dropped SETUP_TURN (or a dropped companion
+  // SETUP_PICK that left the host stuck on the same seat) self-heals —
+  // the companion re-receives the turn and can pick again. No-ops
+  // between turns (ref is null) and once the game starts (onTurnEnd
+  // clears it). Re-sending an identical turn is safe: the companion
+  // keeps any open preview, and a duplicate pick is idempotent on the
+  // host. The 2s cadence only runs during the short setup window.
+  useEffect(() => {
+    if (sessionHost.status !== "open") return;
+    const id = window.setInterval(() => {
+      if (pendingSetupTurnRef.current) {
+        sessionHostSendRef.current(pendingSetupTurnRef.current);
+      }
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [sessionHost.status]);
+
   const wizardPeerHooks = useMemo(
     () => ({
       onTurnStart: (info: {
@@ -642,7 +703,7 @@ export default function Home() {
         definition: ReturnType<typeof findDefinition>;
       }) => {
         if (!info.definition) return;
-        sessionHostSendRef.current({
+        const message: HostToCompanionMessage = {
           type: "SETUP_TURN",
           protocolVersion: PEER_PROTOCOL_VERSION,
           stepId: info.stepId,
@@ -650,9 +711,14 @@ export default function Home() {
           optionIds: info.optionIds,
           excludedOptionIds: info.excludedOptionIds,
           definition: info.definition,
-        });
+        };
+        // Remember the in-flight turn so the heartbeat / onConnect can
+        // re-send it if it (or the companion's reply) is dropped.
+        pendingSetupTurnRef.current = message;
+        sessionHostSendRef.current(message);
       },
       onTurnEnd: (info: { stepId: string }) => {
+        pendingSetupTurnRef.current = null;
         sessionHostSendRef.current({
           type: "SETUP_DONE",
           protocolVersion: PEER_PROTOCOL_VERSION,
