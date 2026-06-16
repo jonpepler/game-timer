@@ -82,6 +82,19 @@ export type CompanionToHostMessage =
       type: "RELEASE";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
     }
+  // First-sync pull. The host pushes STATE (+ seating + any in-flight
+  // setup turn) when a peer connects, but that push is best-effort: the
+  // WebRTC data channel carrying it may not be open yet at the instant
+  // the host fires it, so the snapshot is silently dropped — and once a
+  // game has started there is no STATE heartbeat to recover it, leaving
+  // the companion hung with no UI. A freshly-(re)connected companion
+  // therefore asks for the snapshot itself, retrying until one arrives.
+  // The host replies exactly as it does on connect. Feature-agnostic:
+  // recovers any companion's first sync, not just a specific action.
+  | {
+      type: "REQUEST_STATE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
   | {
       type: "END_TURN";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;

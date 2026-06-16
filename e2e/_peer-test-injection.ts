@@ -157,6 +157,10 @@ export const PEER_TEST_INIT_SCRIPT = `
             closeHandlers = closeHandlers.filter((x) => x !== h);
           };
         },
+        // The fake delivers in-process and never half-opens, so a
+        // forced reconnect is a no-op — it just needs to exist to
+        // satisfy the CompanionSession contract.
+        reconnect: () => {},
         onConnectionStateChange: (h) => {
           // Fake never reconnects — fire 'connected' immediately so
           // the hook lands on "connected" status, mirroring the

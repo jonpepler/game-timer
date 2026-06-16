@@ -73,7 +73,7 @@ function CompanionScreen() {
   const params = useSearchParams();
   const code = params.get("code");
 
-  const { status, lastMessage, error, send, peerId } =
+  const { status, lastMessage, error, send, reconnect, peerId } =
     useSessionCompanion<HostToCompanionMessage>(code);
 
   // Track the most recent message of each type. STATE arrives during
@@ -179,6 +179,62 @@ function CompanionScreen() {
     } else if (lastMessage.type === "SETUP_SEATING")
       setPendingSeating(lastMessage);
   }, [lastMessage, send]);
+
+  // First-sync safety net. The host pushes STATE the moment we connect,
+  // but that push is best-effort: the WebRTC data channel carrying it
+  // may not be open yet at that instant, so the snapshot is dropped —
+  // and once the game has started the host has no STATE heartbeat to
+  // recover it, leaving us stuck on "connecting" with no claim UI. So
+  // once connected we pull the snapshot ourselves, retrying on a short
+  // cadence until one actually arrives. Stops on the first STATE; resets
+  // per (re)connection so a dropped re-sync after a reconnect also heals.
+  //
+  // Escalation: relay presence can be live (we received the host's role
+  // announce → status "connected") while the data channel is actually
+  // dead in the host→companion direction — our REQUEST_STATEs reach the
+  // host and it re-broadcasts, but nothing comes back. Pulling forever
+  // can't fix a dead channel, so after a few unanswered attempts we
+  // force a transport reconnect, which tears the peer connection down
+  // and re-pairs with a fresh channel. Counted per connection.
+  const ATTEMPTS_BEFORE_RECONNECT = 4;
+  const stateSeenRef = useRef(false);
+  useEffect(() => {
+    if (lastState) stateSeenRef.current = true;
+  }, [lastState]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lastState is a deliberate re-run trigger — when STATE finally arrives the effect re-evaluates, sees stateSeenRef set, and clears the pull interval at once rather than on its next tick.
+  useEffect(() => {
+    if (status !== "connected") {
+      // A fresh (re)connection must re-establish state from scratch.
+      stateSeenRef.current = false;
+      return;
+    }
+    if (stateSeenRef.current) return;
+    let attempts = 0;
+    const requestState = () =>
+      send({ type: "REQUEST_STATE", protocolVersion: PEER_PROTOCOL_VERSION });
+    requestState(); // ask immediately on connect
+    const id = window.setInterval(() => {
+      if (stateSeenRef.current) {
+        window.clearInterval(id);
+        return;
+      }
+      attempts += 1;
+      if (attempts % ATTEMPTS_BEFORE_RECONNECT === 0) {
+        // Pulls are going unanswered — the channel is likely dead.
+        // Rebuild it; the fresh connection's onConnect re-pushes STATE
+        // and our pulls resume against a live channel.
+        stateLog.warn("no STATE after repeated requests — forcing reconnect", {
+          attempts,
+        });
+        reconnect();
+        return;
+      }
+      requestState();
+    }, 1000);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [status, lastState, send, reconnect]);
 
   const state = lastState?.state ?? null;
   const definition = pendingTurn?.definition ?? lastState?.definition;

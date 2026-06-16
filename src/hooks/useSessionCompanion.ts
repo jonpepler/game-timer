@@ -14,6 +14,10 @@ export interface UseSessionCompanionReturn<TMessage> {
   lastMessage: TMessage | null;
   error: Error | null;
   send: (data: unknown) => void;
+  // Force the transport to rebuild its connection. The page calls this
+  // as a last resort when connected but no data is arriving (a dead
+  // data channel). Stable identity, safe in effect deps.
+  reconnect: () => void;
   // The companion's own broker peer id once connected. Used to
   // identify itself in the host's per-seat claimedBy[] array.
   peerId: string | null;
@@ -132,5 +136,9 @@ export function useSessionCompanion<TMessage>(
     sessionRef.current?.send(data);
   }, []);
 
-  return { status, lastMessage, error, send, peerId };
+  const reconnect = useCallback(() => {
+    sessionRef.current?.reconnect();
+  }, []);
+
+  return { status, lastMessage, error, send, reconnect, peerId };
 }

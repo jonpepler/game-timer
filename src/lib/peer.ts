@@ -35,6 +35,14 @@ export interface CompanionSession {
   send: (data: unknown) => void;
   onMessage(handler: (data: unknown) => void): () => void;
   onClose(handler: () => void): () => void;
+  // Force the underlying connection to be rebuilt from scratch. The
+  // app calls this as a last resort when it's connected (relay
+  // presence is live) yet no application data is flowing — e.g. a
+  // half-open WebRTC data channel where our sends reach the host but
+  // the host's replies never arrive. Tearing the peer connection down
+  // and re-pairing re-negotiates a fresh data channel. Identity is
+  // stable across this, so a prior seat claim still matches.
+  reconnect(): void;
   // Tracks connection lifecycle so the UI can distinguish "connected
   // and working" from "connection dropped, retrying" from "session
   // ended for real". Fires on every transition.
@@ -409,6 +417,22 @@ export function connectToHost(
               return () => {
                 closeHandlers.delete(h);
               };
+            },
+            reconnect: () => {
+              if (destroyed || peer.destroyed) return;
+              log.info("companion forced reconnect — redialing host", {
+                hostCode,
+              });
+              emitState("reconnecting");
+              // Drop the current conn and dial fresh. The existing
+              // close handler's re-dial path is for unexpected drops;
+              // this is an explicit app-driven rebuild.
+              try {
+                currentConn?.close();
+              } catch {
+                // Already closing/closed — the redial below is what matters.
+              }
+              dialHost();
             },
             onConnectionStateChange: (h) => {
               stateHandlers.add(h);

@@ -54,11 +54,30 @@ const APP_ID = "game-timer";
 const ACTION_MSG = "msg";
 const ACTION_ROLE = "role";
 
-// Single place to tune discovery + ICE. `relayConfig.urls` pins
-// specific Nostr relays; `turnConfig` / `rtcConfig` would add a TURN
-// server — left empty on purpose (no infra). manualReconnection is off,
-// so Trystero auto-reconnects its relay sockets.
-const ROOM_CONFIG: JoinRoomConfig = { appId: APP_ID };
+// Discovery relays. Trystero otherwise derives a *fixed* 5-relay subset
+// of its defaults by hashing appId — so every session we ever open uses
+// the identical set, and any flaky member (we repeatedly saw
+// `koru.bitcointxoko.org` return 502 on the WebSocket handshake) degrades
+// signalling for *every* session the same way. Worse signalling means
+// incomplete ICE/SDP exchange, which is what produces the half-open data
+// channel that strands a joining companion (relay presence is live, but
+// the host's messages never arrive). So we pin our own curated set of
+// high-uptime relays — all drawn from Trystero's vetted default list, so
+// they're known to relay the ephemeral signalling events it uses — and
+// drop the flaky ones. Host and companion must share the set to find
+// each other. `turnConfig` / `rtcConfig` (TURN) stay empty: no infra.
+const RELAY_URLS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.mostr.pub",
+  "wss://relay.froth.zone",
+  "wss://purplerelay.com",
+  "wss://strfry.openhoofd.nl",
+];
+const ROOM_CONFIG: JoinRoomConfig = {
+  appId: APP_ID,
+  relayConfig: { urls: RELAY_URLS },
+};
 
 // Lazy, client-only load. A static import would pull Trystero (and its
 // WebSocket/window refs) into the SSR/prerender pass of the static
@@ -315,17 +334,60 @@ export async function connectToHost(
 
   bindRoom(acquireRoom(roomId, joinRoom));
 
-  // Mobile suspend safety net. Trystero usually re-pairs on its own once
-  // its relay socket reconnects, but if we return to the foreground
-  // still isolated (no host id), tear the room down and rejoin fresh to
-  // force rediscovery. selfId is stable across this, so the host re-pairs
-  // us to the same identity and our persisted seat claim still matches.
+  // Soft rejoin used by the mobile-suspend safety net: only act if we're
+  // currently isolated (no host id). Trystero usually re-pairs on its own
+  // once its relay socket reconnects; this just nudges rediscovery if we
+  // came back to the foreground still alone. Synchronous because we're
+  // not holding the room (refs already 0 in the isolated case is rare —
+  // it's a best-effort nudge).
   const rejoin = () => {
     if (destroyed || hostId) return;
-    log.info("companion forcing room rejoin", { roomId });
+    log.info("companion nudging room rejoin", { roomId });
     releaseRoom(roomId);
     hostId = null;
     bindRoom(acquireRoom(roomId, joinRoom));
+  };
+
+  // Hard reconnect: fully tear the room down, WAIT for Trystero's leave
+  // to settle, then rejoin with a fresh peer connection. Used when relay
+  // presence is live but the data channel is dead (the host's role
+  // announce reached us, yet its STATE replies never do). The leave must
+  // complete before we rejoin the same id — Trystero allows only one live
+  // instance of a room per tab, so a rejoin that races the async leave
+  // gets orphaned and never re-pairs. selfId is stable across this, so
+  // the host re-pairs us to the same identity and our seat claim holds.
+  let reconnecting = false;
+  const hardReconnect = async () => {
+    if (destroyed || reconnecting) return;
+    reconnecting = true;
+    log.info("companion hard reconnect — leaving room", { roomId });
+    hostId = null;
+    emitState("reconnecting");
+    const entry = liveRooms.get(roomId);
+    if (entry) {
+      // Drop every ref so the room actually leaves (companion holds the
+      // only ref in practice), then await the leave before rejoining.
+      liveRooms.delete(roomId);
+      entry.refs = 0;
+      try {
+        await entry.room.leave();
+      } catch (err) {
+        log.warn("leave during hard reconnect threw", { error: String(err) });
+      }
+    }
+    if (destroyed) {
+      reconnecting = false;
+      return;
+    }
+    // Small settle gap so the relay sockets fully release the old room.
+    await new Promise((res) => setTimeout(res, 300));
+    if (destroyed) {
+      reconnecting = false;
+      return;
+    }
+    log.info("companion hard reconnect — rejoining room", { roomId });
+    bindRoom(acquireRoom(roomId, joinRoom));
+    reconnecting = false;
   };
   const onVisible = () => {
     if (typeof document === "undefined") return;
@@ -351,6 +413,9 @@ export async function connectToHost(
         asPayload(data),
         hostId ? { target: hostId } : undefined,
       );
+    },
+    reconnect: () => {
+      void hardReconnect();
     },
     onMessage: (h) => {
       messageHandlers.add(h);

@@ -150,9 +150,16 @@ test("trystero: companion at the active seat seizes the initiative, live", async
 
     // Advance so Player 2 (seat index 1) is active with a turn recorded
     // (keyboard avoids the score-panel overlay intercepting ring taps).
+    // Focus the ring and wait for the start press to register before
+    // advancing — pressing Enter twice in a row can land while the ring
+    // is still mounting, so the first press only focuses it and the
+    // advance is swallowed, leaving Player 1 active.
     const ring = host.getByRole("button", { name: "Advance turn" });
     const banner = host.locator('[class*="activePlayer__"]');
+    await ring.focus();
     await ring.press("Enter"); // start
+    await expect(banner).toContainText("Player 1"); // start registered
+    await ring.focus();
     await ring.press("Enter"); // record Player 1's turn → Player 2 active
     await expect(banner).toContainText("Player 2");
 
@@ -190,7 +197,7 @@ test("trystero: companion at the active seat seizes the initiative, live", async
     await expect(banner).toContainText("Player 2");
   } finally {
     const relevant = logs.filter((l) =>
-      /peer-trystero|peer\]|nostr|relay|websocket|PAGEERROR|RTC|ICE|SEIZE|seiz/i.test(
+      /peer-trystero|peer\]|state\]|nostr|relay|websocket|PAGEERROR|RTC|ICE|SEIZE|seiz|STATE|REQUEST|reconnect/i.test(
         l,
       ),
     );

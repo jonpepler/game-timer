@@ -113,6 +113,12 @@ export default function Home() {
   // connect lets a dropped turn self-heal.
   const pendingSetupTurnRef = useRef<HostToCompanionMessage | null>(null);
 
+  // Re-send the full snapshot (STATE + seating + any in-flight setup
+  // turn) to all peers. Wired further down once broadcastState /
+  // broadcastSeating exist; called both on a peer connecting and when a
+  // peer explicitly asks via REQUEST_STATE (its first-sync safety net).
+  const resyncPeersRef = useRef<() => void>(() => {});
+
   const handleCompanionMessage = (peerId: string, data: unknown) => {
     const msg = data as CompanionToHostMessage;
     if (!msg || typeof msg !== "object" || !("type" in msg)) {
@@ -149,6 +155,13 @@ export default function Home() {
           delete next[peerId];
           return next;
         });
+        return;
+      }
+      case "REQUEST_STATE": {
+        // A (re)connecting companion didn't receive our connect-time
+        // push (data channel wasn't open yet). Re-send the snapshot.
+        peerLog.info("REQUEST_STATE — resyncing peer", { peerId });
+        resyncPeersRef.current();
         return;
       }
       case "END_TURN": {
@@ -563,6 +576,16 @@ export default function Home() {
     // conn, so the freshly-attached peer gets it alongside
     // existing peers.
     onConnect: () => {
+      resyncPeersRef.current();
+    },
+  });
+
+  // Single resync routine, shared by onConnect (push) and REQUEST_STATE
+  // (companion pull). Re-sends STATE + seating + any in-flight setup
+  // turn. The real/fake host's send() fans out to every open conn, so
+  // the freshly-attached peer gets it alongside existing peers.
+  useEffect(() => {
+    resyncPeersRef.current = () => {
       broadcastState(-1);
       broadcastSeatingRef.current();
       // A companion connecting mid-pick (or reconnecting after a drop)
@@ -570,8 +593,8 @@ export default function Home() {
       if (pendingSetupTurnRef.current) {
         sessionHostSendRefForState.current(pendingSetupTurnRef.current);
       }
-    },
-  });
+    };
+  }, [broadcastState]);
 
   // Keep the broadcastState's send-ref pointed at the latest
   // sessionHost.send so onConnect always sees the live sender.
