@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "id": "arcs",
+  "name": "Arcs",
+  "description": "A sci-fi game of bitter ambition for 2–4 players, played with the Leaders & Lore mode. Win by reaching the Power threshold for your player count.",
+  "contentSource": "./modules.json",
+  "defaultExpectedTurns": 96,
+  "turnsPerPlayer": 24,
+  "defaultAverageSeconds": 90,
+  "maxPlayers": 4,
+  "playerVisualFrom": "leader",
+  "playerSubheadingFrom": "leader",
+  "turnOrder": {
+    "mode": "lead-relative",
+    "interrupt": {
+      "id": "seize",
+      "label": "Seize the Initiative",
+      "effect": "claim-next-lead",
+      "oncePerRound": true
+    },
+    "roundEnd": {
+      "type": "prompt-lead",
+      "label": "Who took the initiative this round?",
+      "default": "none"
+    }
+  },
+  "score": {
+    "displayStyle": "linearTrack",
+    "min": 0,
+    "max": 30,
+    "increment": 1,
+    "maxBySeatCount": [
+      { "seats": 2, "max": 33 },
+      { "seats": 3, "max": 30 },
+      { "seats": 4, "max": 27 }
+    ],
+    "victory": {
+      "type": "firstToMax"
+    }
+  },
+  "setupSteps": [
+    {
+      "id": "modules",
+      "label": "Modules",
+      "kind": {
+        "type": "multi-toggle",
+        "optionCategory": "expansion",
+        "defaultSelectedIds": ["base", "leadersLorePack"],
+        "optionIds": ["base", "leadersLorePack"]
+      }
+    },
+    {
+      "id": "seating",
+      "label": "Seat players",
+      "kind": {
+        "type": "seat-players",
+        "minPlayers": 2,
+        "maxPlayers": 4,
+        "defaultPlayerCount": 4
+      }
+    },
+    {
+      "id": "initiative",
+      "label": "Initiative",
+      "description": "Choose which player starts with the initiative marker. Randomise it for a fair opening.",
+      "kind": {
+        "type": "select-lead",
+        "allowRandom": true
+      }
+    },
+    {
+      "id": "map-setup",
+      "label": "Set up the map",
+      "description": "Shuffle the setup cards for your player count and draw one. Cover the out-of-play clusters it shows (2 clusters for 2–3 players, 1 for 4). Going clockwise from the initiative player, place each player's starting ships, city, and starport on their A / B / C systems, and take the 2 starting resources shown.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "draft-leaders",
+      "label": "Lay out Leaders & Lore",
+      "description": "Lay out a face-up row of Leaders and a face-up row of Lore, each with one more card than the number of players. Starting to the right of the initiative player and going counter-clockwise, take turns drafting one Leader or one Lore at a time until everyone has exactly one of each.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "leader",
+      "label": "Leader",
+      "description": "Each player records the Leader they drafted. This sets your name graphic and your portrait on the score track.",
+      "kind": {
+        "type": "player-pick",
+        "mode": "turn-based",
+        "optionCategory": "leader",
+        "allowRandom": true,
+        "optionIds": [
+          "elder",
+          "mystic",
+          "fuel-drinker",
+          "upstart",
+          "rebel",
+          "warrior",
+          "feastbringer",
+          "demagogue",
+          "archivist",
+          "overseer",
+          "corsair",
+          "noble",
+          "anarchist",
+          "shaper",
+          "agitator",
+          "quartermaster"
+        ]
+      }
+    },
+    {
+      "id": "place-leader",
+      "label": "Set up your Leader",
+      "description": "Place your starting pieces in the A / B / C boxes on your Leader card and take the 2 resources it shows, in the two leftmost slots. Then, in turn order, resolve any extra setup steps your Leader lists.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "deal-cards",
+      "label": "Court & action cards",
+      "description": "Shuffle the Court deck and deal a face-up row of 3 cards (2 players) or 4 cards (3–4 players). Shuffle the action deck — values 2–6, adding the 1s and 7s for 4 players — and deal each player a hand of 6.",
+      "kind": {
+        "type": "info"
+      }
+    }
+  ]
+}

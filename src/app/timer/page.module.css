@@ -85,6 +85,41 @@
   font-size: clamp(18px, 2.8vmin, 28px);
 }
 
+/* Interrupt action for lead-relative turn order (Arcs' "Seize the
+   Initiative"). Sits between the active-player banner and the timer
+   ring, outside the tap-to-advance ring so pressing it can't double
+   as a turn advance. */
+.seizeButton {
+  align-self: center;
+  white-space: nowrap;
+  margin-bottom: clamp(10px, 1.8vh, 22px);
+  padding: 10px 20px;
+  border: 2px solid var(--color-timer-active);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-timer-active) 14%, transparent);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  font-size: clamp(15px, 2.2vmin, 20px);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease;
+}
+
+.seizeButton:hover,
+.seizeButton:focus-visible {
+  filter: brightness(1.12);
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.seizeButton:active {
+  transform: scale(0.97);
+}
+
 .activePlayerText {
   display: inline-flex;
   flex-direction: column;

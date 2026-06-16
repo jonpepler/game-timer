@@ -62,6 +62,14 @@ const ScoreConfigSchema = z.object({
   displayStyle: ScoreDisplayStyleSchema,
   min: z.number(),
   max: z.number().optional(),
+  // Per-seat-count overrides of `max` (the victory threshold). Some
+  // games scale the target score with player count (e.g. Arcs wins at
+  // 33 / 30 / 27 Power for 2 / 3 / 4 players). Resolved by exact seat
+  // match via `effectiveScoreMax`, falling back to `max`. Game-agnostic
+  // — the numbers live in the definition, not in app code.
+  maxBySeatCount: z
+    .array(z.object({ seats: z.number(), max: z.number() }))
+    .optional(),
   increment: z.number(),
   victory: z
     .object({
@@ -223,6 +231,15 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     type: z.literal("dealt-resolve"),
     sourceStepId: z.string(),
   }),
+  // Choose which seat starts as the turn-order lead (e.g. Arcs'
+  // initiative marker). Reads the upstream seat-players roster and
+  // records the chosen seat index. `allowRandom` offers a randomise
+  // button. Only meaningful when the definition's turnOrder is
+  // "lead-relative"; harmless otherwise.
+  z.object({
+    type: z.literal("select-lead"),
+    allowRandom: z.boolean().optional(),
+  }),
   // Instructional screen with no input — the wizard renders the
   // step's label + description and a Next button. Useful for
   // single-shot table-side instructions that don't fit naturally
@@ -242,6 +259,45 @@ const SetupStepSchema = z.object({
   kind: SetupStepKindSchema,
 });
 export type SetupStep = z.infer<typeof SetupStepSchema>;
+
+// ── Turn order ────────────────────────────────────────────────────
+// How the runtime advances the active player. Absent (or "round-robin")
+// keeps the default fixed rotation (active seat = turns % seatCount).
+// "lead-relative" anchors each round to a movable lead seat: a round is
+// one turn per seat starting from the lead, and an optional `interrupt`
+// lets the acting seat claim the lead for the *next* round (Arcs' "seize
+// the initiative"). Every user-facing string lives in `interrupt.label`
+// — no game vocabulary in code.
+const TurnOrderSchema = z.object({
+  mode: z.enum(["round-robin", "lead-relative"]),
+  interrupt: z
+    .object({
+      id: z.string(),
+      label: z.string(),
+      // The acting seat becomes the lead for the next round. The only
+      // effect supported today; named so future effects can join the union.
+      effect: z.literal("claim-next-lead"),
+      // When true (default), the interrupt can fire at most once per
+      // round — after one seat seizes, the lead is locked for the round.
+      oncePerRound: z.boolean().optional(),
+    })
+    .optional(),
+  // What happens when a round completes and the `interrupt` did NOT fire.
+  // "prompt-lead" shows a full-screen picker asking the table who leads
+  // next — needed when the lead can change by a means the timer can't
+  // observe (Arcs: the highest surpasser takes initiative). If the
+  // interrupt fired, the next lead is already known and no prompt shows.
+  // `default` controls the picker's pre-selection: "none" forces an
+  // explicit tap; "current-lead" pre-highlights the standing lead.
+  roundEnd: z
+    .object({
+      type: z.literal("prompt-lead"),
+      label: z.string(),
+      default: z.enum(["none", "current-lead"]).optional(),
+    })
+    .optional(),
+});
+export type TurnOrder = z.infer<typeof TurnOrderSchema>;
 
 // ── GameDefinition ───────────────────────────────────────────────
 export const GameDefinitionSchema = z.object({
@@ -267,6 +323,8 @@ export const GameDefinitionSchema = z.object({
   // Metadata key whose label renders as a small subheading beneath
   // each player's name. Suppressed when it'd duplicate the name.
   playerSubheadingFrom: z.string().optional(),
+  // How the runtime advances turns. Absent = round-robin. See TurnOrderSchema.
+  turnOrder: TurnOrderSchema.optional(),
   // Optional path (relative to the deployment basePath) to a laurel
   // wreath asset wrapping the leading player's head icon in the
   // VictoryBanner. Resolved from the modules file's referenceCatalog
@@ -285,6 +343,19 @@ export const parseGameDefinition = (input: unknown): GameDefinition =>
 
 export const safeParseGameDefinition = (input: unknown) =>
   GameDefinitionSchema.safeParse(input);
+
+// Resolve a game's victory threshold for a given seat count: an exact
+// `maxBySeatCount` match wins, else the flat `max`. Game-agnostic — used
+// by the score/victory logic so player-count-scaled targets (Arcs) work
+// without any game-specific branching in the runtime.
+export const effectiveScoreMax = (
+  score: ScoreConfig | undefined,
+  seatCount: number,
+): number | undefined => {
+  if (!score) return undefined;
+  const override = score.maxBySeatCount?.find((e) => e.seats === seatCount);
+  return override?.max ?? score.max;
+};
 
 // ── Structure + content modules split ────────────────────────────
 // A definition can ship as either:
@@ -358,6 +429,12 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     type: z.literal("dealt-resolve"),
     sourceStepId: z.string(),
   }),
+  // Choose the starting turn-order lead — passes through unchanged to
+  // the resolved schema. See the post-resolve SetupStepKindSchema.
+  z.object({
+    type: z.literal("select-lead"),
+    allowRandom: z.boolean().optional(),
+  }),
   // Instructional screen — passes through unchanged to the resolved
   // schema. See the post-resolve SetupStepKindSchema for full
   // semantics.
@@ -386,6 +463,7 @@ export const GameDefinitionStructureSchema = z.object({
   setupSteps: z.array(StructureSetupStepSchema).optional(),
   playerVisualFrom: z.string().optional(),
   playerSubheadingFrom: z.string().optional(),
+  turnOrder: TurnOrderSchema.optional(),
   // Sibling content modules file. Relative path purely for human
   // readability — the loader doesn't fetch it; the importer threads
   // both JSONs in.
@@ -616,7 +694,10 @@ export type SetupChoice =
       picks: Record<number, string>;
       dealtIds?: string[];
       characters?: Record<string, string[]>;
-    };
+    }
+  // The seat (index into the seat-players roster) chosen to start as
+  // the turn-order lead. The page seeds the runtime lead anchor from it.
+  | { kind: "select-lead"; seatIndex: number };
 
 export type SetupContext = Record<string, SetupChoice>;
 

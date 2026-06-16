@@ -383,6 +383,31 @@
   text-align: center;
 }
 
+/* Seize-the-initiative action. Outlined (not filled) so it reads as
+   secondary to the solid End-my-turn button it sits above. */
+.seizeButton {
+  width: 100%;
+  height: auto;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--color-timer-active) 16%, transparent);
+  color: var(--color-text);
+  border: 2px solid var(--color-timer-active);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
+}
+
+.seizeButton:hover,
+.seizeButton:focus-visible {
+  filter: brightness(1.12);
+}
+
 .endTurnButton:disabled {
   background: var(--color-surface-muted);
   color: var(--color-text-subtle);

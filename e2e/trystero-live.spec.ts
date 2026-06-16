@@ -1,4 +1,5 @@
 import { test, expect, type ConsoleMessage, type Page } from "@playwright/test";
+import { navigateToScreen } from "./_setup-helpers";
 
 /*
  * LIVE transport check — intentionally does NOT inject the
@@ -98,5 +99,103 @@ test("trystero: companion connects to host, then reconnects after a fresh join",
     await hostCtx.close().catch(() => {});
     await compCtx.close().catch(() => {});
     if (comp2Ctx) await comp2Ctx.close().catch(() => {});
+  }
+});
+
+test("trystero: companion at the active seat seizes the initiative, live", async ({
+  browser,
+}) => {
+  test.skip(
+    process.env.TRYSTERO_LIVE !== "1",
+    "live relay test — run with TRYSTERO_LIVE=1 against a trystero dev server",
+  );
+  test.setTimeout(180_000);
+  const logs: string[] = [];
+
+  const hostCtx = await browser.newContext();
+  const compCtx = await browser.newContext();
+
+  try {
+    // --- Host: a 2-player Arcs game (lead-relative turn order) ---
+    const host = await hostCtx.newPage();
+    collect(host, "host", logs);
+    await host.goto(`${BASE}/timer`);
+    await host.getByLabel(/^Game$/).selectOption("arcs");
+
+    await navigateToScreen(host, /seat players/i);
+    await host.getByRole("button", { name: /Remove seat 4/ }).click();
+    await host.getByRole("button", { name: /Remove seat 3/ }).click();
+
+    await navigateToScreen(host, /^Leader$/);
+    await host.getByRole("button", { name: /^Skip draft$/ }).click();
+    for (const leader of ["Elder", "Mystic"]) {
+      await host.getByRole("button", { name: leader, exact: true }).click();
+      await host.getByRole("button", { name: /^Confirm setup$/ }).click();
+    }
+    const startBtn = host.getByRole("button", { name: /start game/i });
+    for (let i = 0; i < 4; i++) {
+      if (await startBtn.isVisible().catch(() => false)) break;
+      await host.getByRole("button", { name: /^Next/ }).click();
+    }
+    await startBtn.click();
+    await expect(host.getByText(/turns left/i)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Read the live session code.
+    const shareBtn = host.getByRole("button", { name: /^Sharing session / });
+    const label = (await shareBtn.getAttribute("aria-label")) ?? "";
+    const code = label.match(/Sharing session\s+([A-Z0-9]{4})/i)?.[1] ?? "";
+    expect(code, `code from "${label}"`).toMatch(/^[A-Z0-9]{4}$/);
+
+    // Advance so Player 2 (seat index 1) is active with a turn recorded
+    // (keyboard avoids the score-panel overlay intercepting ring taps).
+    const ring = host.getByRole("button", { name: "Advance turn" });
+    const banner = host.locator('[class*="activePlayer__"]');
+    await ring.press("Enter"); // start
+    await ring.press("Enter"); // record Player 1's turn → Player 2 active
+    await expect(banner).toContainText("Player 2");
+
+    // --- Companion joins over the live transport and claims seat 2 ---
+    const comp = await compCtx.newPage();
+    collect(comp, "comp", logs);
+    await comp.goto(`${BASE}/companion?code=${code}`);
+    await expect
+      .poll(() => hasLog(logs, "companion joined"), {
+        timeout: HANDSHAKE_TIMEOUT,
+      })
+      .toBe(true);
+
+    await expect(comp.getByText(/claim a player/i)).toBeVisible({
+      timeout: HANDSHAKE_TIMEOUT,
+    });
+    await comp.locator('[class*="claimRow"]').nth(1).click();
+
+    // The companion holds the active seat → it gets the seize action.
+    const seize = comp.getByRole("button", { name: /Seize the Initiative/i });
+    await expect(seize).toBeVisible({ timeout: 15_000 });
+    await seize.click();
+
+    // Live round-trip: SEIZE travels companion → host over Trystero, the
+    // host validates + dispatches, and the echoed STATE flips canSeize
+    // false — so the companion's button disappears.
+    await expect(seize).toBeHidden({ timeout: 15_000 });
+
+    // Close the round on the host: because Player 2 seized, the lead
+    // auto-advances to it with NO round-end picker.
+    await ring.press("Enter");
+    await expect(
+      host.getByRole("alertdialog", { name: /Who took the initiative/i }),
+    ).toBeHidden();
+    await expect(banner).toContainText("Player 2");
+  } finally {
+    const relevant = logs.filter((l) =>
+      /peer-trystero|peer\]|nostr|relay|websocket|PAGEERROR|RTC|ICE|SEIZE|seiz/i.test(
+        l,
+      ),
+    );
+    console.log(`\n===== TRANSPORT LOGS =====\n${relevant.join("\n")}`);
+    await hostCtx.close().catch(() => {});
+    await compCtx.close().catch(() => {});
   }
 });

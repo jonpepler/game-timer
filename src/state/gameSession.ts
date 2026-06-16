@@ -1,5 +1,5 @@
 import { createLogger } from "@/lib/logger";
-import type { ScoreConfig } from "./gameDefinition";
+import type { ScoreConfig, TurnOrder } from "./gameDefinition";
 
 const log = createLogger("session");
 
@@ -82,6 +82,29 @@ export interface GameSessionState {
   // dismissed the queue advances. Persisted so a reload doesn't drop
   // a milestone that fired but wasn't acknowledged.
   pendingMilestones: PendingMilestone[];
+
+  // ── Lead-relative turn order (optional) ─────────────────────────
+  // Only meaningful when `turnOrder.mode === "lead-relative"`; absent /
+  // ignored for the default round-robin. All optional so older
+  // persisted sessions (and round-robin games) load without migration.
+  turnOrder?: TurnOrder;
+  // The seat that leads the CURRENT round. Active seat is computed
+  // relative to it (see activePlayerIndex).
+  leadIndex?: number;
+  // turns.length at the moment the current round began. Active offset
+  // within the round is turns.length - roundStartTurnCount.
+  roundStartTurnCount?: number;
+  // The seat that has claimed the lead for the NEXT round via the
+  // interrupt (Arcs' seize). Null until someone seizes; locks the round
+  // when turnOrder.interrupt.oncePerRound is set.
+  seizedNextLead?: number | null;
+  // True when a round completed with no seize and the definition asks
+  // to prompt the table for who took the lead. The page renders a
+  // full-screen picker; resolving it dispatches SET_LEAD.
+  pendingLeadPrompt?: boolean;
+  // One level of lead-anchor history, captured when a round advances,
+  // so a single UNDO across a round boundary restores the prior lead.
+  prevLeadAnchor?: { leadIndex: number; roundStartTurnCount: number } | null;
 }
 
 export interface PendingMilestone {
@@ -103,6 +126,13 @@ export type GameSessionAction =
   | { type: "END_GAME"; victor: number | null }
   | { type: "SET_DEFINITION_ID"; definitionId: string | undefined }
   | { type: "DISMISS_MILESTONE" }
+  // Lead-relative turn order. SET_TURN_ORDER installs the mode (and
+  // resets round state); SEIZE_LEAD claims the next round for the
+  // acting seat; SET_LEAD resolves the round-end prompt (or seeds the
+  // initial lead) by naming the seat that now leads.
+  | { type: "SET_TURN_ORDER"; turnOrder: TurnOrder | undefined }
+  | { type: "SEIZE_LEAD" }
+  | { type: "SET_LEAD"; seatIndex: number }
   | { type: "RESET" };
 
 export interface GameSessionInit {
@@ -111,6 +141,9 @@ export interface GameSessionInit {
   players?: Player[];
   scoreConfig?: ScoreConfig;
   definitionId?: string;
+  turnOrder?: TurnOrder;
+  // Seat chosen to lead the opening round (Arcs' initial initiative).
+  leadIndex?: number;
 }
 
 export const createInitialGameSessionState = (
@@ -129,6 +162,12 @@ export const createInitialGameSessionState = (
   definitionId: params.definitionId,
   firedMilestones: {},
   pendingMilestones: [],
+  turnOrder: params.turnOrder,
+  leadIndex: params.leadIndex ?? 0,
+  roundStartTurnCount: 0,
+  seizedNextLead: null,
+  pendingLeadPrompt: false,
+  prevLeadAnchor: null,
 });
 
 const averageOf = (turns: TurnRecord[], fallback: number): number => {
@@ -143,6 +182,22 @@ const nextPlayerIndexFor = (
 ): number | null => {
   if (!playerCount) return null;
   return turnsTaken % playerCount;
+};
+
+// Whose turn it is right now. Round-robin (the default) is purely
+// positional: turns taken modulo seat count. Lead-relative anchors each
+// round to a movable lead seat — the active seat is the lead plus the
+// number of turns already taken in the current round. Game-agnostic:
+// driven by state.turnOrder, which the definition supplies.
+const activePlayerIndex = (state: GameSessionState): number | null => {
+  const playerCount = state.players?.length;
+  if (!playerCount) return null;
+  if (state.turnOrder?.mode === "lead-relative") {
+    const lead = state.leadIndex ?? 0;
+    const offset = state.turns.length - (state.roundStartTurnCount ?? 0);
+    return (((lead + offset) % playerCount) + playerCount) % playerCount;
+  }
+  return nextPlayerIndexFor(state.turns.length, playerCount);
 };
 
 // Pure helper exposed so the timer hook can compute the post-NEXT_TURN
@@ -254,10 +309,7 @@ export const gameSessionReducer = (
       };
     }
     case "NEXT_TURN": {
-      const playerIndex = nextPlayerIndexFor(
-        state.turns.length,
-        state.players?.length,
-      );
+      const playerIndex = activePlayerIndex(state);
       const turn: TurnRecord = {
         playerIndex,
         elapsedSeconds: action.elapsedSeconds,
@@ -270,12 +322,49 @@ export const gameSessionReducer = (
         elapsedSeconds: action.elapsedSeconds,
         averageSeconds,
       });
+
+      // Lead-relative round bookkeeping. A round is one turn per seat;
+      // when it completes we either auto-advance the lead to whoever
+      // seized, or (if no one did) flag a prompt for the table.
+      const playerCount = state.players?.length;
+      let leadIndex = state.leadIndex ?? 0;
+      let roundStartTurnCount = state.roundStartTurnCount ?? 0;
+      let seizedNextLead = state.seizedNextLead ?? null;
+      let pendingLeadPrompt = state.pendingLeadPrompt ?? false;
+      let prevLeadAnchor = state.prevLeadAnchor ?? null;
+      if (
+        state.turnOrder?.mode === "lead-relative" &&
+        playerCount &&
+        turns.length - roundStartTurnCount >= playerCount
+      ) {
+        if (seizedNextLead != null) {
+          prevLeadAnchor = { leadIndex, roundStartTurnCount };
+          leadIndex = seizedNextLead;
+          roundStartTurnCount = turns.length;
+          seizedNextLead = null;
+        } else if (state.turnOrder.roundEnd) {
+          // Pause for the table to name the next lead (the timer page
+          // overlays a full-screen picker until SET_LEAD resolves it).
+          pendingLeadPrompt = true;
+        } else {
+          // No interrupt fired and no prompt configured: lead stays,
+          // round simply rolls over.
+          prevLeadAnchor = { leadIndex, roundStartTurnCount };
+          roundStartTurnCount = turns.length;
+        }
+      }
+
       return {
         ...state,
         started: true,
         turns,
         averageSeconds,
         currentTurnStartedAt: action.at,
+        leadIndex,
+        roundStartTurnCount,
+        seizedNextLead,
+        pendingLeadPrompt,
+        prevLeadAnchor,
       };
     }
     case "UNDO": {
@@ -290,11 +379,35 @@ export const gameSessionReducer = (
         restoredPlayerIndex: popped.playerIndex,
         averageSeconds,
       });
+
+      // Lead-relative: a seize or round-end resolution that hadn't been
+      // confirmed is reverted, and a single step back across a round
+      // boundary restores the prior lead anchor (one level of history).
+      let leadIndex = state.leadIndex ?? 0;
+      let roundStartTurnCount = state.roundStartTurnCount ?? 0;
+      let prevLeadAnchor = state.prevLeadAnchor ?? null;
+      if (state.turnOrder?.mode === "lead-relative") {
+        if (turns.length < roundStartTurnCount) {
+          if (prevLeadAnchor) {
+            leadIndex = prevLeadAnchor.leadIndex;
+            roundStartTurnCount = prevLeadAnchor.roundStartTurnCount;
+          } else {
+            roundStartTurnCount = turns.length;
+          }
+          prevLeadAnchor = null;
+        }
+      }
+
       return {
         ...state,
         turns,
         averageSeconds,
         currentTurnStartedAt: popped.startedAt,
+        leadIndex,
+        roundStartTurnCount,
+        seizedNextLead: null,
+        pendingLeadPrompt: false,
+        prevLeadAnchor,
       };
     }
     case "SET_EXPECTED_TURNS":
@@ -330,6 +443,46 @@ export const gameSessionReducer = (
         ...state,
         pendingMilestones: state.pendingMilestones.slice(1),
       };
+    case "SET_TURN_ORDER":
+      // Installing a turn order resets all round state — a fresh
+      // game's opening round starts from the seeded lead (seat 0
+      // until a later SET_LEAD overrides it).
+      return {
+        ...state,
+        turnOrder: action.turnOrder,
+        leadIndex: 0,
+        roundStartTurnCount: state.turns.length,
+        seizedNextLead: null,
+        pendingLeadPrompt: false,
+        prevLeadAnchor: null,
+      };
+    case "SEIZE_LEAD": {
+      if (state.turnOrder?.mode !== "lead-relative") return state;
+      if (!state.turnOrder.interrupt) return state;
+      // Once-per-round (the default): ignore a second seize this round.
+      const oncePerRound = state.turnOrder.interrupt.oncePerRound ?? true;
+      if (oncePerRound && state.seizedNextLead != null) return state;
+      const active = activePlayerIndex(state);
+      if (active == null) return state;
+      log.info("lead seized", { seat: active });
+      return { ...state, seizedNextLead: active };
+    }
+    case "SET_LEAD":
+      // Resolves the round-end prompt (or seeds the opening lead):
+      // the named seat leads from here, starting a fresh round.
+      return {
+        ...state,
+        leadIndex: action.seatIndex,
+        roundStartTurnCount: state.turns.length,
+        seizedNextLead: null,
+        pendingLeadPrompt: false,
+        prevLeadAnchor: state.pendingLeadPrompt
+          ? {
+              leadIndex: state.leadIndex ?? 0,
+              roundStartTurnCount: state.roundStartTurnCount ?? 0,
+            }
+          : (state.prevLeadAnchor ?? null),
+      };
     case "SET_SCORE":
       return applyScore(state, action.playerIndex, action.value);
     case "INCREMENT_SCORE": {
@@ -347,6 +500,7 @@ export const gameSessionReducer = (
         players: state.players,
         scoreConfig: state.scoreConfig,
         definitionId: state.definitionId,
+        turnOrder: state.turnOrder,
       });
   }
 };
@@ -358,8 +512,18 @@ export const selectRemainingTurns = (state: GameSessionState): number =>
 
 export const selectCurrentPlayerIndex = (
   state: GameSessionState,
-): number | null =>
-  nextPlayerIndexFor(state.turns.length, state.players?.length);
+): number | null => activePlayerIndex(state);
+
+// Whether the acting seat may still seize this round (interrupt
+// configured, lead-relative, and not already seized when once-per-round).
+export const selectCanSeize = (state: GameSessionState): boolean => {
+  if (state.turnOrder?.mode !== "lead-relative") return false;
+  const interrupt = state.turnOrder.interrupt;
+  if (!interrupt) return false;
+  if (state.pendingLeadPrompt) return false;
+  const oncePerRound = interrupt.oncePerRound ?? true;
+  return !(oncePerRound && state.seizedNextLead != null);
+};
 
 export const selectTurnElapsedSecondsList = (
   state: GameSessionState,

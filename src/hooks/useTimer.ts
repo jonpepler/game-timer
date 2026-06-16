@@ -11,6 +11,7 @@ import {
   createInitialGameSessionState,
   gameSessionReducer,
   projectAverageAfterTurn,
+  selectCanSeize,
   selectCurrentPlayerIndex,
   selectRemainingTurns,
   selectTurnElapsedSecondsList,
@@ -18,7 +19,7 @@ import {
   type Player,
   type TurnRecord,
 } from "@/state/gameSession";
-import type { ScoreConfig } from "@/state/gameDefinition";
+import type { ScoreConfig, TurnOrder } from "@/state/gameDefinition";
 import { loadSession, saveSession } from "@/state/sessionPersistence";
 
 type UseTimerProps = {
@@ -157,6 +158,11 @@ export const useTimer = ({
   const endGame = (victor: number | null) =>
     dispatch({ type: "END_GAME", victor });
   const dismissMilestone = () => dispatch({ type: "DISMISS_MILESTONE" });
+  const setTurnOrder = (turnOrder: TurnOrder | undefined) =>
+    dispatch({ type: "SET_TURN_ORDER", turnOrder });
+  const seizeLead = () => dispatch({ type: "SEIZE_LEAD" });
+  const setLead = (seatIndex: number) =>
+    dispatch({ type: "SET_LEAD", seatIndex });
 
   return {
     state,
@@ -192,5 +198,12 @@ export const useTimer = ({
     scoreConfig: state.scoreConfig,
     victor: state.victor,
     definitionId: state.definitionId,
+    setTurnOrder,
+    seizeLead,
+    setLead,
+    turnOrder: state.turnOrder,
+    leadIndex: state.leadIndex ?? 0,
+    pendingLeadPrompt: state.pendingLeadPrompt ?? false,
+    canSeize: selectCanSeize(state),
   };
 };

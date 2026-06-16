@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "definitionId": "arcs",
+  "categories": {
+    "expansion": {
+      "base": {
+        "label": "Base game"
+      },
+      "leadersLorePack": {
+        "label": "Leaders & Lore Pack"
+      }
+    },
+    "leader": {
+      "elder": {
+        "label": "Elder",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD01",
+              "format": "png",
+              "appPath": "games/arcs/leaders/elder.png"
+            }
+          ]
+        }
+      },
+      "mystic": {
+        "label": "Mystic",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD02",
+              "format": "png",
+              "appPath": "games/arcs/leaders/mystic.png"
+            }
+          ]
+        }
+      },
+      "fuel-drinker": {
+        "label": "Fuel-Drinker",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD03",
+              "format": "png",
+              "appPath": "games/arcs/leaders/fuel-drinker.png"
+            }
+          ]
+        }
+      },
+      "upstart": {
+        "label": "Upstart",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD04",
+              "format": "png",
+              "appPath": "games/arcs/leaders/upstart.png"
+            }
+          ]
+        }
+      },
+      "rebel": {
+        "label": "Rebel",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD05",
+              "format": "png",
+              "appPath": "games/arcs/leaders/rebel.png"
+            }
+          ]
+        }
+      },
+      "warrior": {
+        "label": "Warrior",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD06",
+              "format": "png",
+              "appPath": "games/arcs/leaders/warrior.png"
+            }
+          ]
+        }
+      },
+      "feastbringer": {
+        "label": "Feastbringer",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD07",
+              "format": "png",
+              "appPath": "games/arcs/leaders/feastbringer.png"
+            }
+          ]
+        }
+      },
+      "demagogue": {
+        "label": "Demagogue",
+        "module": "base",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD08",
+              "format": "png",
+              "appPath": "games/arcs/leaders/demagogue.png"
+            }
+          ]
+        }
+      },
+      "archivist": {
+        "label": "Archivist",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD09",
+              "format": "png",
+              "appPath": "games/arcs/leaders/archivist.png"
+            }
+          ]
+        }
+      },
+      "overseer": {
+        "label": "Overseer",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD10",
+              "format": "png",
+              "appPath": "games/arcs/leaders/overseer.png"
+            }
+          ]
+        }
+      },
+      "corsair": {
+        "label": "Corsair",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD11",
+              "format": "png",
+              "appPath": "games/arcs/leaders/corsair.png"
+            }
+          ]
+        }
+      },
+      "noble": {
+        "label": "Noble",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD12",
+              "format": "png",
+              "appPath": "games/arcs/leaders/noble.png"
+            }
+          ]
+        }
+      },
+      "anarchist": {
+        "label": "Anarchist",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD13",
+              "format": "png",
+              "appPath": "games/arcs/leaders/anarchist.png"
+            }
+          ]
+        }
+      },
+      "shaper": {
+        "label": "Shaper",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD14",
+              "format": "png",
+              "appPath": "games/arcs/leaders/shaper.png"
+            }
+          ]
+        }
+      },
+      "agitator": {
+        "label": "Agitator",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD15",
+              "format": "png",
+              "appPath": "games/arcs/leaders/agitator.png"
+            }
+          ]
+        }
+      },
+      "quartermaster": {
+        "label": "Quartermaster",
+        "module": "leadersLorePack",
+        "assets": {
+          "headIcon": [
+            {
+              "source": "buriedgiant-card-cdn",
+              "card": "LEAD16",
+              "format": "png",
+              "appPath": "games/arcs/leaders/quartermaster.png"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "referenceCatalog": {
+    "status": "leaders mirrored as cropped portraits; resource/ambition icons not yet sourced",
+    "sources": {
+      "buriedgiant-card-cdn": {
+        "note": "Official Buried Giant Studios card CDN. Leader portraits cropped from full card art (827x1417 WebP).",
+        "imageUrlPattern": "https://cardcdn.buriedgiant.com/cards/arcs/en-US/{CARD}.webp",
+        "cors": "Access-Control-Allow-Origin: *",
+        "licence": "No explicit redistribution licence; mirrored for a personal fan tool. Confirm with Buried Giant before any wide publication."
+      }
+    },
+    "gaps": [
+      "Resource icons (Material/Fuel/Weapon/Relic/Psionic) and ambition icons (Tycoon/Tyrant/Warlord/Keeper/Empath) not yet mirrored — source from the official Arcs Development Kit (Dropbox).",
+      "Lore cards are not modelled: the physical draft happens at the table; the app captures only the Leader for player identity."
+    ]
+  }
+}

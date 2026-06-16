@@ -20,6 +20,7 @@ import { EventDialog } from "@/components/EventDialog";
 import { FullScreen } from "@/components/FullScreen";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
+  selectCanSeize,
   selectCurrentPlayerIndex,
   selectRemainingTurns,
 } from "@/state/gameSession";
@@ -383,6 +384,12 @@ function CompanionScreen() {
       delta,
     } satisfies CompanionToHostMessage);
 
+  const seizeInitiative = () =>
+    send({
+      type: "SEIZE",
+      protocolVersion: PEER_PROTOCOL_VERSION,
+    } satisfies CompanionToHostMessage);
+
   // Wizard-time pick response. Sent in answer to a SETUP_TURN from
   // the host; the host applies it to the wizard's setupContext.
   // Player-pick is identity-bound: the companion can only pick for
@@ -520,6 +527,14 @@ function CompanionScreen() {
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
+  // Seize is offered to the active seat under lead-relative turn order,
+  // while it's still available this round. The host re-validates.
+  const seizeLabel =
+    state?.turnOrder?.mode === "lead-relative"
+      ? (state.turnOrder.interrupt?.label ?? null)
+      : null;
+  const canSeize =
+    isMyTurn && seizeLabel !== null && !!state && selectCanSeize(state);
   // Lift the End-my-turn optimistic lock once the host has
   // rotated us off the active seat.
   useEffect(() => {
@@ -851,6 +866,15 @@ function CompanionScreen() {
               IS spare room. */}
             {claimedPlayer && !victorPlayer && (
               <div className={styles.endTurnSlot}>
+                {gameStarted && canSeize && seizeLabel && (
+                  <button
+                    type="button"
+                    onClick={seizeInitiative}
+                    className={styles.seizeButton}
+                  >
+                    {seizeLabel}
+                  </button>
+                )}
                 {gameStarted ? (
                   <button
                     type="button"

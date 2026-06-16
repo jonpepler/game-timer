@@ -886,6 +886,21 @@
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
 }
 
+/* Portrait art for options with a headIcon but no silhouette meeple
+   (Arcs leaders). Fills the card body below the label as a plain,
+   un-masked image rather than a tinted silhouette. */
+.heroCardPortrait {
+  position: absolute;
+  top: 48px;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  object-fit: contain;
+  border-radius: 10px;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .heroCard,
   .heroPickerInstruction {
@@ -961,6 +976,15 @@
   composes: maskBase from "@/components/PlayerMeeple.module.css";
   width: clamp(120px, 18vmin, 220px);
   aspect-ratio: 1;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
+}
+
+/* Portrait fallback for the confirm-pick preview (Arcs leaders). */
+.heroPreviewPortrait {
+  width: clamp(140px, 22vmin, 260px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 12px;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
 }
 

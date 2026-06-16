@@ -1,4 +1,5 @@
 import type { GameDefinition } from "./gameDefinition";
+import { arcsDefinition } from "./definitions/arcs";
 import { genericDefinition } from "./definitions/generic";
 import { rootDefinition } from "./definitions/root";
 import { listCustomDefinitions } from "./customDefinitions";
@@ -7,6 +8,7 @@ import { listCustomDefinitions } from "./customDefinitions";
 const BUILT_INS: readonly GameDefinition[] = Object.freeze([
   genericDefinition,
   rootDefinition,
+  arcsDefinition,
 ]);
 
 export const DEFAULT_DEFINITION_ID = genericDefinition.id;

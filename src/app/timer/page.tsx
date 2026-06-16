@@ -21,7 +21,9 @@ import { ScorePanel } from "@/components/ScorePanel";
 import { VictoryBanner } from "@/components/VictoryBanner";
 import { PlayerMeeple } from "@/components/PlayerMeeple";
 import { EventDialog } from "@/components/EventDialog";
+import { LeadPrompt } from "@/components/LeadPrompt";
 import { findDefinition } from "@/state/definitionRegistry";
+import { effectiveScoreMax } from "@/state/gameDefinition";
 import { Plus } from "lucide-react";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
 import { SharePanel } from "@/components/SharePanel";
@@ -78,6 +80,13 @@ export default function Home() {
     definitionId,
     dismissMilestone,
     pendingMilestones,
+    setTurnOrder,
+    setLead,
+    seizeLead,
+    turnOrder,
+    leadIndex,
+    pendingLeadPrompt,
+    canSeize,
   } = useTimer({
     initialTime,
     initialExpectedTurns: defaultExpectedTurns,
@@ -168,6 +177,28 @@ export default function Home() {
           return;
         }
         incrementScore(claimed, msg.delta);
+        return;
+      }
+      case "SEIZE": {
+        // Only the active seat may seize — same identity gate as
+        // END_TURN. The reducer also re-checks canSeize (once-per-round
+        // / lead-relative), so a stale request is harmless.
+        const claimed = claimMap[peerId];
+        if (claimed === undefined) {
+          peerLog.warn("SEIZE rejected — peer hasn't claimed a slot", {
+            peerId,
+          });
+          return;
+        }
+        if (claimed !== currentPlayerIndex) {
+          peerLog.warn("SEIZE rejected — not this peer's turn", {
+            peerId,
+            claimed,
+            currentPlayerIndex,
+          });
+          return;
+        }
+        seizeLead();
         return;
       }
       case "SET_PLAYER_OPTION": {
@@ -593,7 +624,26 @@ export default function Home() {
     const definition = findDefinition(incoming.definitionId);
     // Score is only meaningful when player tracking is on — clear the
     // subsystem otherwise so victories can't fire against an empty roster.
-    setScoreConfig(incoming.players ? definition?.score : undefined);
+    // Resolve any per-seat-count victory threshold (e.g. Arcs 33/30/27)
+    // into a concrete `max` up front so the existing score/victory logic
+    // and the score-track rendering work unchanged.
+    const baseScore = incoming.players ? definition?.score : undefined;
+    const seatCount = incoming.players?.length ?? 0;
+    setScoreConfig(
+      baseScore
+        ? { ...baseScore, max: effectiveScoreMax(baseScore, seatCount) }
+        : undefined,
+    );
+    // Install the turn-order model and seed the opening lead from the
+    // select-lead setup step (if the game declared one). Round-robin
+    // games pass undefined and keep the default rotation.
+    setTurnOrder(incoming.players ? definition?.turnOrder : undefined);
+    const leadChoice = incoming.setupContext
+      ? Object.values(incoming.setupContext).find(
+          (c) => c.kind === "select-lead",
+        )
+      : undefined;
+    if (leadChoice?.kind === "select-lead") setLead(leadChoice.seatIndex);
     // When the wizard sets autoStart (last seat just confirmed
     // their faction pick), kick the timer running immediately so
     // the table doesn't have to tap the screen to begin.
@@ -973,6 +1023,23 @@ export default function Home() {
               </span>
             </div>
           )}
+          {turnOrder?.mode === "lead-relative" &&
+            turnOrder.interrupt &&
+            state.started &&
+            !victor &&
+            canSeize &&
+            currentPlayerIndex !== null && (
+              <button
+                type="button"
+                className={styles.seizeButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  seizeLead();
+                }}
+              >
+                {turnOrder.interrupt.label}
+              </button>
+            )}
           <div
             className={styles.timerRingWrapper}
             role="button"
@@ -1074,6 +1141,22 @@ export default function Home() {
             />
           );
         })()}
+      {pendingLeadPrompt &&
+        !victor &&
+        turnOrder?.roundEnd &&
+        playerViews &&
+        playerViews.length > 0 && (
+          <LeadPrompt
+            label={turnOrder.roundEnd.label}
+            players={playerViews.map((pv) => ({
+              name: pv.name,
+              color: pv.color,
+              headIconSrc: pv.headIconSrc,
+              iconSrc: pv.iconSrc,
+            }))}
+            onPick={(seatIndex) => setLead(seatIndex)}
+          />
+        )}
       {(scoresVisible || playerStats.length > 0) && (
         <div className={styles.playerOverlay}>
           {scoresVisible && playerViews && scoreConfig && (

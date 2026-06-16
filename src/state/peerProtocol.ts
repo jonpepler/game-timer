@@ -91,6 +91,14 @@ export type CompanionToHostMessage =
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       delta: number;
     }
+  // Lead-relative turn order: the active seat seizes the lead for the
+  // next round (Arcs' "Seize the Initiative"). Identity-bound — the
+  // host validates that the sending peer's claimed seat is the active
+  // seat before dispatching, the same gate END_TURN uses.
+  | {
+      type: "SEIZE";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
   // Mid-game change to the option attached to the claiming companion
   // (e.g. swap faction on the fly). `stepId` names the player-pick
   // step on the active definition; the host looks the option up

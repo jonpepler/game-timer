@@ -274,6 +274,11 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
       case "dealt-resolve":
         ctx[step.id] = { kind: "dealt-resolve", confirmedIds: [] };
         break;
+      case "select-lead":
+        // Default the starting lead to the first seat; the screen lets
+        // the user reassign or randomise.
+        ctx[step.id] = { kind: "select-lead", seatIndex: 0 };
+        break;
     }
   }
   return ctx;
@@ -289,6 +294,9 @@ const makeSeatId = (): string => {
   }
   return `seat-${Math.random().toString(36).slice(2, 11)}`;
 };
+
+const randomIndex = (length: number): number =>
+  length > 0 ? Math.floor(Math.random() * length) : 0;
 
 const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
   const pool = [...items];
@@ -1401,9 +1409,93 @@ function StepScreen({
         />
       );
     }
+    case "select-lead": {
+      const seatStep = steps.find((s) => s.kind.type === "seat-players");
+      const seatChoice = seatStep ? context[seatStep.id] : undefined;
+      const seats = seatChoice?.kind === "seat-players" ? seatChoice.seats : [];
+      const current =
+        context[step.id]?.kind === "select-lead"
+          ? (context[step.id] as Extract<SetupChoice, { kind: "select-lead" }>)
+              .seatIndex
+          : 0;
+      return (
+        <SelectLeadScreen
+          step={step}
+          seats={seats}
+          allowRandom={step.kind.allowRandom ?? false}
+          selectedIndex={current}
+          onChange={(seatIndex) =>
+            setContext((prev) => ({
+              ...prev,
+              [step.id]: { kind: "select-lead", seatIndex },
+            }))
+          }
+        />
+      );
+    }
     case "info":
       return <InfoScreen step={step} />;
   }
+}
+
+// Pick which seat starts as the turn-order lead (e.g. Arcs' initiative
+// marker). Lists the seated roster as chips; an optional Randomise
+// button rolls a fair starting lead. The chosen seat index is stored
+// generically — the timer page seeds its lead anchor from it.
+function SelectLeadScreen({
+  step,
+  seats,
+  allowRandom,
+  selectedIndex,
+  onChange,
+}: {
+  step: SetupStep;
+  seats: Array<{ id: string; name: string }>;
+  allowRandom: boolean;
+  selectedIndex: number;
+  onChange: (seatIndex: number) => void;
+}) {
+  return (
+    <>
+      <h3 className={styles.screenTitle} id="screen-title">
+        {step.label}
+      </h3>
+      {step.description && (
+        <p className={styles.screenSubtitle}>{step.description}</p>
+      )}
+      {seats.length === 0 ? (
+        <p className={styles.screenSubtitle}>Seat players first.</p>
+      ) : (
+        <>
+          <div className={styles.chipGrid}>
+            {seats.map((seat, i) => (
+              <button
+                key={seat.id}
+                type="button"
+                className={`${styles.chip} ${
+                  i === selectedIndex ? styles.chipActive : ""
+                }`}
+                onClick={() => onChange(i)}
+                aria-pressed={i === selectedIndex}
+                aria-label={seat.name}
+              >
+                <span className={styles.chipLabel}>{seat.name}</span>
+              </button>
+            ))}
+          </div>
+          {allowRandom && (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => onChange(randomIndex(seats.length))}
+            >
+              <Dices size={14} aria-hidden /> Randomise
+            </button>
+          )}
+        </>
+      )}
+    </>
+  );
 }
 
 // Pure-text instructional screen — renders the step's label as the
@@ -2311,6 +2403,13 @@ function PlayerPickScreen({
       );
       const previewColor = previewOption?.color ?? "var(--color-border)";
       const previewLabel = previewOption?.label ?? previewCardId;
+      const previewPortrait = previewMeeple
+        ? undefined
+        : (
+            previewOption as unknown as {
+              assets?: { headIcon?: Array<{ appPath?: string }> };
+            }
+          )?.assets?.headIcon?.[0]?.appPath;
       return (
         <div className={styles.heroPreview}>
           <h3 className={styles.heroPickerSrOnly} id="screen-title">
@@ -2331,7 +2430,7 @@ function PlayerPickScreen({
               } as React.CSSProperties
             }
           >
-            {previewMeeple && (
+            {previewMeeple ? (
               <img
                 src={previewMeeple}
                 alt=""
@@ -2343,7 +2442,14 @@ function PlayerPickScreen({
                   maskImage: `url(${previewMeeple})`,
                 }}
               />
-            )}
+            ) : previewPortrait ? (
+              <img
+                src={previewPortrait}
+                alt=""
+                aria-hidden
+                className={styles.heroPreviewPortrait}
+              />
+            ) : null}
             {previewAdset && previewAdset.length > 0 && (
               <ol className={styles.heroPreviewSteps}>
                 {previewAdset.map((s, i) => (
@@ -2416,6 +2522,16 @@ function PlayerPickScreen({
             const adsetSteps = (o as unknown as { adsetSteps?: string[] })
               .adsetSteps;
             const meepleSrc = meepleAppPathFor(o, characters);
+            // Fallback art for options that ship a portrait (headIcon)
+            // but no silhouette meeple — e.g. Arcs leaders. Rendered as
+            // a plain image, not a tinted mask.
+            const portraitSrc = meepleSrc
+              ? undefined
+              : (
+                  o as unknown as {
+                    assets?: { headIcon?: Array<{ appPath?: string }> };
+                  }
+                ).assets?.headIcon?.[0]?.appPath;
             const onActivate = () => {
               if (blocked || leaving) return;
               // Two-step: clicking a card opens a full-screen
@@ -2490,7 +2606,7 @@ function PlayerPickScreen({
                     </ul>
                   </div>
                 )}
-                {meepleSrc && (
+                {meepleSrc ? (
                   <img
                     src={meepleSrc}
                     alt=""
@@ -2502,7 +2618,14 @@ function PlayerPickScreen({
                       maskImage: `url(${meepleSrc})`,
                     }}
                   />
-                )}
+                ) : portraitSrc ? (
+                  <img
+                    src={portraitSrc}
+                    alt=""
+                    aria-hidden
+                    className={styles.heroCardPortrait}
+                  />
+                ) : null}
               </div>
             );
           })}
