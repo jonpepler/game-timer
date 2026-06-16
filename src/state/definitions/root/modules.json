@@ -18,6 +18,18 @@
       "homeland": {
         "label": "Homeland Expansion"
       },
+      "riverfolkHirelings": {
+        "label": "Riverfolk Hirelings Pack"
+      },
+      "underworldHirelings": {
+        "label": "Underworld Hirelings Pack"
+      },
+      "marauderHirelings": {
+        "label": "Marauder Hirelings Pack"
+      },
+      "homelandHirelings": {
+        "label": "Homeland Hireling Pack"
+      },
       "vagabondPack": {
         "label": "The Vagabond Pack"
       },
@@ -285,7 +297,7 @@
       "prophets": {
         "label": "Warm Sun Prophets",
         "demotedLabel": "Lizard Envoys",
-        "module": "riverfolk",
+        "module": "riverfolkHirelings",
         "excludeOptionIds": ["lizards"],
         "assets": {
           "meepleSvg": {
@@ -326,7 +338,7 @@
       "flotilla": {
         "label": "Riverfolk Flotilla",
         "demotedLabel": "Otter Divers",
-        "module": "riverfolk",
+        "module": "riverfolkHirelings",
         "excludeOptionIds": ["riverfolk"],
         "assets": {
           "meepleSvg": {
@@ -368,7 +380,7 @@
       "bandits": {
         "label": "Highway Bandits",
         "demotedLabel": "Bandit Gangs",
-        "module": "riverfolk",
+        "module": "riverfolkHirelings",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -410,7 +422,7 @@
       "expedition": {
         "label": "Sunward Expedition",
         "demotedLabel": "Mole Artisans",
-        "module": "underworld",
+        "module": "underworldHirelings",
         "excludeOptionIds": ["duchy"],
         "assets": {
           "meepleSvg": {
@@ -451,7 +463,7 @@
       "spies": {
         "label": "Corvid Spies",
         "demotedLabel": "Raven Sentries",
-        "module": "underworld",
+        "module": "underworldHirelings",
         "excludeOptionIds": ["corvids"],
         "assets": {
           "meepleSvg": {
@@ -492,7 +504,7 @@
       "protector": {
         "label": "Furious Protector",
         "demotedLabel": "Stoic Protector",
-        "module": "underworld",
+        "module": "underworldHirelings",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -535,7 +547,7 @@
       "flameBearers": {
         "label": "Flame Bearers",
         "demotedLabel": "Rat Smugglers",
-        "module": "marauders",
+        "module": "marauderHirelings",
         "excludeOptionIds": ["hundreds"],
         "assets": {
           "meepleSvg": {
@@ -577,7 +589,7 @@
       "vaultKeepers": {
         "label": "Vault Keepers",
         "demotedLabel": "Badger Bodyguards",
-        "module": "marauders",
+        "module": "marauderHirelings",
         "excludeOptionIds": ["keepers"],
         "assets": {
           "meepleSvg": {
@@ -619,7 +631,7 @@
       "band": {
         "label": "Popular Band",
         "demotedLabel": "Street Band",
-        "module": "marauders",
+        "module": "marauderHirelings",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -661,7 +673,7 @@
       "advocates": {
         "label": "Sunny Advocates",
         "demotedLabel": "Bat Messengers",
-        "module": "homeland",
+        "module": "homelandHirelings",
         "excludeOptionIds": ["twilight"],
         "assets": {
           "meepleSvg": {
@@ -702,7 +714,7 @@
       "roamers": {
         "label": "River Roamers",
         "demotedLabel": "Frog Tinkers",
-        "module": "homeland",
+        "module": "homelandHirelings",
         "excludeOptionIds": ["lilypad"],
         "assets": {
           "meepleSvg": {
@@ -744,7 +756,7 @@
       "farmers": {
         "label": "Prosperous Farmers",
         "demotedLabel": "Struggling Farmers",
-        "module": "homeland",
+        "module": "homelandHirelings",
         "assets": {
           "meepleSvg": {
             "source": "ewendc-automated-setup",
@@ -1933,7 +1945,8 @@
       "notes": [
         "All 13 factions have meeple SVGs (EwenDC) + PNG head icons.",
         "ADSET card scans surfaced from Decimator85: only marquise, riverfolk, hundreds. All 13 `adsetSteps` are now transcribed from the official therootdatabase.com ADSET card images (see `adsetTextProvenance`).",
-        "Map / deck assets remain partial; not blocking until the wizard renders them."
+        "Map / deck assets remain partial; not blocking until the wizard renders them.",
+        "Hireling module gating verified against Leder Games product pages (2026-06): hirelings ship in standalone Hirelings Packs, NOT the same-named faction expansions, and each pack supplies its own meeples (Law of Root H.3.3 — a hireling never needs you to own the matching faction). Mapping: Marauder Expansion = patrol/dynasty/uprising/exile; Riverfolk Hirelings Pack (riverfolkHirelings) = prophets/flotilla/bandits; Underworld Hirelings Pack (underworldHirelings) = expedition/spies/protector; Marauder Hirelings Pack (marauderHirelings) = flameBearers/vaultKeepers/band; Homeland Hireling Pack (homelandHirelings) = advocates/roamers/farmers. Do NOT regate these back onto the riverfolk/underworld/homeland expansion toggles."
       ]
     }
   }
