@@ -239,6 +239,41 @@ function CompanionScreen() {
   const state = lastState?.state ?? null;
   const definition = pendingTurn?.definition ?? lastState?.definition;
 
+  // Have we received anything usable from the host yet — a game snapshot,
+  // a seating list, or a setup turn? Until we have, there's nothing to
+  // show regardless of what the raw transport status says.
+  const hasSynced =
+    Boolean(state) || Boolean(pendingSeating) || Boolean(pendingTurn);
+
+  // Display status, distinct from the raw transport status. The first
+  // sync can churn under the hood — relay presence lands ("connected")
+  // before any data arrives, and a dead-channel recovery briefly flips
+  // back to "reconnecting" — but to the user that's all still one
+  // "getting set up" phase. So until we've synced, we always present
+  // "connecting" (one steady state, no green→grey→green flicker). Once
+  // synced, we report the real status honestly, so a genuine mid-game
+  // drop still surfaces as "reconnecting".
+  const displayStatus: typeof status = hasSynced
+    ? status
+    : status === "error" || status === "disconnected"
+      ? status
+      : "connecting";
+
+  // After a while still unsynced, surface a gentle hint. We never give
+  // up (the pull + reconnect keep running in the background), but a
+  // first sync that drags past ~12s usually means the host isn't
+  // sharing, so we nudge the user rather than leave them watching a
+  // silent "Setting up…". Clears the moment we sync.
+  const [slowToSync, setSlowToSync] = useState(false);
+  useEffect(() => {
+    if (hasSynced || displayStatus !== "connecting") {
+      setSlowToSync(false);
+      return;
+    }
+    const id = window.setTimeout(() => setSlowToSync(true), 12_000);
+    return () => window.clearTimeout(id);
+  }, [hasSynced, displayStatus]);
+
   const [claimedSlot, setClaimedSlot] = useState<number | null>(null);
   // When true, the player-option swap modal is open. Lets the
   // claimant pick a new option from the definition's player-pick
@@ -626,39 +661,39 @@ function CompanionScreen() {
         <div className={styles.header}>
           <span
             className={`${styles.statusDot} ${
-              status === "connecting" || status === "reconnecting"
+              displayStatus === "connecting" || displayStatus === "reconnecting"
                 ? styles.statusDotConnecting
-                : status === "connected"
+                : displayStatus === "connected"
                   ? styles.statusDotConnected
-                  : status === "disconnected"
+                  : displayStatus === "disconnected"
                     ? styles.statusDotDisconnected
                     : styles.statusDotError
             }`}
             aria-hidden
           />
           <span>
-            {status === "connecting" && (
+            {displayStatus === "connecting" && (
               <>
                 Connecting to <span className={styles.hostCode}>{code}</span>…
               </>
             )}
-            {status === "connected" && (
+            {displayStatus === "connected" && (
               <>
                 Connected to <span className={styles.hostCode}>{code}</span>
               </>
             )}
-            {status === "reconnecting" && (
+            {displayStatus === "reconnecting" && (
               <>
                 Reconnecting to <span className={styles.hostCode}>{code}</span>…
               </>
             )}
-            {status === "disconnected" && (
+            {displayStatus === "disconnected" && (
               <>
                 Disconnected from{" "}
                 <span className={styles.hostCode}>{code}</span>
               </>
             )}
-            {status === "error" && <>{describePeerError(error)}</>}
+            {displayStatus === "error" && <>{describePeerError(error)}</>}
           </span>
           {claimedPlayer && (
             <span className={styles.claimedAs}>
@@ -770,14 +805,18 @@ function CompanionScreen() {
           />
         )}
 
-        {!state &&
-          !pendingTurn &&
-          !pendingSeating &&
-          status === "connected" && (
-            <div className={styles.empty}>
-              Waiting for the host to share state…
-            </div>
-          )}
+        {/* Pre-sync placeholder. Shown for the whole "getting set up"
+            window — through relay pairing, the STATE pull, and any
+            dead-channel recovery — so the body doesn't blank out while
+            the connection heals. displayStatus is "connecting" exactly
+            until the first snapshot arrives (see its derivation). */}
+        {displayStatus === "connecting" && (
+          <div className={styles.empty}>
+            {slowToSync
+              ? "Still connecting… check the host still has this session open. Keep this page open — it'll connect on its own — or refresh to retry."
+              : "Setting up your connection…"}
+          </div>
+        )}
 
         {state && (
           <>
