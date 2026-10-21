@@ -110,6 +110,9 @@
 
   /* How far a spent entry's mark fades in a turn list (0 to 1). */
   --opacity-spent: 0.4;
+  /* How far a value line fades once its entry was combined into another:
+     less than one simply out of play, so it can be followed into the join. */
+  --opacity-merged: 0.7;
 
   /* How much ink a seat colour takes when it is set as text: none on the
      dark default, where seat colours were chosen to read; all of it on a

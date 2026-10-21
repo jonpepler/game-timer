@@ -16,6 +16,7 @@ import {
   type ValueStepChoice,
   ValueStepPrompt,
 } from "@/components/ValueStepPrompt";
+import { combinesFromHistory } from "@/state/combineHistory";
 import type { EntryValues } from "@/state/gameDefinition";
 import {
   floorToTrack,
@@ -73,22 +74,25 @@ export const valueStepChoices = (
  * Series for the value chart: every entry that has had a value, live
  * while it is in some list. Live entries come in their lists' order (so
  * entries on one value are in turn order), then the rest in the order
- * they first got a value.
+ * they first got a value. A combined source records where it went.
  */
 export const valueSeries = (state: GameSessionState): ValueSeries[] => {
   const entries = state.turnEntries ?? [];
   const inPlay = new Set((state.turnLists ?? []).flatMap((l) => l.order));
+  const merges = combinesFromHistory(entries, state.valueHistory ?? []);
   const byEntry = new Map<string, ValueSeries>();
   for (const point of state.valueHistory ?? []) {
     let series = byEntry.get(point.entryId);
     if (!series) {
       const entry = entries.find((e) => e.id === point.entryId);
+      const mergesInto = merges.get(point.entryId);
       series = {
         id: point.entryId,
         name: entry?.label ?? point.entryId,
         color: entry?.color ?? "var(--color-player-fallback)",
         ...(entry?.nameParts ? { nameParts: entry.nameParts } : {}),
         ...(entry?.identity?.symbol ? { symbol: entry.identity.symbol } : {}),
+        ...(mergesInto ? { mergesInto } : {}),
         points: [],
         live: inPlay.has(point.entryId),
       };

@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { liftColor } from "@/utils/liftColor";
 import {
   type ValueSeries,
   ValueHistoryChart,
@@ -204,5 +205,70 @@ describe("ValueHistoryChart, compact", () => {
     expect(
       within(screen.getByRole("table", { name: "Value" })).getByText("Echo"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ValueHistoryChart, merged series", () => {
+  const MERGED: ValueSeries[] = [
+    {
+      id: "t",
+      name: "Target",
+      color: "#536e54",
+      symbol: "moon",
+      points: [
+        { turn: 6, value: 75 },
+        { turn: 8, value: 90 },
+      ],
+      live: true,
+    },
+    ...(["a", "b"] as const).map(
+      (id, i): ValueSeries => ({
+        id,
+        name: id,
+        color: "#cc7c7f",
+        symbol: "cog",
+        points: [
+          { turn: 1, value: 60 + i * 30 },
+          { turn: 3, value: 70 + i * 20 },
+        ],
+        live: false,
+        mergesInto: { entryId: "t", turn: 6 },
+      }),
+    ),
+  ];
+  const lastPoint = (d: string | null) =>
+    [...(d ?? "").matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].at(-1)?.slice(1, 3);
+
+  it.each([
+    "compact",
+    "labelled",
+  ] as const)("%s: runs each source into the target's first point and marks it once", (variant) => {
+    render(
+      <ValueHistoryChart
+        label="Value"
+        series={MERGED}
+        currentTurn={9}
+        variant={variant}
+      />,
+    );
+    const svg = screen.getByTestId("value-history-chart");
+    const [join, ...others] = screen.getAllByTestId("merge-join");
+    expect(others).toHaveLength(0);
+    expect(join).toHaveAttribute("fill", liftColor("#536e54"));
+    const at = [join.getAttribute("cx"), join.getAttribute("cy")];
+    const sources = svg.querySelectorAll(
+      `path[stroke="${liftColor("#cc7c7f")}"]`,
+    );
+    expect(sources).toHaveLength(2);
+    for (const source of sources)
+      expect(lastPoint(source.getAttribute("d"))).toEqual(at);
+  });
+
+  it("keeps the join out of the sources' rows in the accessible table", () => {
+    render(<ValueHistoryChart label="Value" series={MERGED} currentTurn={9} />);
+    const rows = within(screen.getByRole("table", { name: "Value" }))
+      .getAllByRole("row")
+      .slice(1);
+    expect(rows.map((r) => r.textContent)).toContain("aout60, 70");
   });
 });

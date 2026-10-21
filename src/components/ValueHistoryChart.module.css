@@ -44,6 +44,10 @@
   opacity: 0.4;
 }
 
+.out.merged {
+  opacity: var(--opacity-merged);
+}
+
 .outEnd {
   fill: var(--color-surface);
   stroke-width: 1.5;

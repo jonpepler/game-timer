@@ -25,6 +25,9 @@ export interface ValueSeries {
   points: Array<{ turn: number; value: number }>;
   // Still in play: its line runs on to the current turn.
   live: boolean;
+  // Combined into another series at this turn count: the line runs on
+  // into that series' value then.
+  mergesInto?: { entryId: string; turn: number };
 }
 
 interface ValueHistoryChartProps {
@@ -200,6 +203,38 @@ const linePathOf = (
   return `M${start},${openY}${d}L${Math.max(px, endX)},${py}`;
 };
 
+interface MergeJoin {
+  key: string;
+  turn: number;
+  value: number;
+  color: string;
+}
+
+/**
+ * Carry each merged series on to the point where the series it joined
+ * begins, so the sources visibly run into the line they formed, and list
+ * those points once each. A series whose target is not drawn keeps its
+ * own end.
+ */
+const withMerges = (
+  series: ValueSeries[],
+): { lines: ValueSeries[]; joins: MergeJoin[] } => {
+  const joins = new Map<string, MergeJoin>();
+  const lines = series.map((s) => {
+    const merge = s.mergesInto;
+    const target = merge && series.find((t) => t.id === merge.entryId);
+    const at = target?.points.find((p) => p.turn === merge?.turn);
+    const last = s.points[s.points.length - 1];
+    if (!merge || !target || !at || at.turn < last.turn) return s;
+    const key = `${target.id}-${at.turn}`;
+    joins.set(key, { key, ...at, color: target.color });
+    return { ...s, points: [...s.points, at] };
+  });
+  return { lines, joins: Array.from(joins.values()) };
+};
+
+const JOIN_RADIUS = 3.5;
+
 /** The chart in the variant asked for. */
 export function ValueHistoryChart({
   variant = "labelled",
@@ -228,7 +263,8 @@ function LabelledValueChart({
   const gradientPrefix = useId().replace(/:/g, "");
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(360);
-  const drawn = series.filter((s) => s.points.length > 0);
+  const charted = series.filter((s) => s.points.length > 0);
+  const { lines: drawn, joins } = withMerges(charted);
   const hasData = drawn.length > 0;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure once the chart first has data and its box exists
@@ -399,19 +435,24 @@ function LabelledValueChart({
             .map((s) => {
               const last = s.points[s.points.length - 1];
               return (
-                <g key={`out-${s.id}`} className={styles.out}>
+                <g
+                  key={`out-${s.id}`}
+                  className={`${styles.out} ${s.mergesInto ? styles.merged : ""}`}
+                >
                   <path
                     d={linePath(s)}
                     className={styles.line}
                     stroke={stroke(s)}
                   />
-                  <circle
-                    cx={x(last.turn)}
-                    cy={y(last.value)}
-                    r={2.5}
-                    className={styles.outEnd}
-                    stroke={stroke(s)}
-                  />
+                  {!s.mergesInto && (
+                    <circle
+                      cx={x(last.turn)}
+                      cy={y(last.value)}
+                      r={2.5}
+                      className={styles.outEnd}
+                      stroke={stroke(s)}
+                    />
+                  )}
                 </g>
               );
             })}
@@ -421,6 +462,17 @@ function LabelledValueChart({
               d={linePath(s)}
               className={styles.line}
               stroke={stroke(s)}
+            />
+          ))}
+          {joins.map((j) => (
+            <circle
+              key={`join-${j.key}`}
+              cx={x(j.turn)}
+              cy={y(j.value)}
+              r={JOIN_RADIUS}
+              fill={liftColor(j.color)}
+              className={styles.endDot}
+              data-testid="merge-join"
             />
           ))}
           {live.map((s, i) => {
@@ -499,7 +551,7 @@ function LabelledValueChart({
           })}
         </svg>
       </div>
-      <ValueTable label={label} series={drawn} />
+      <ValueTable label={label} series={charted} />
     </figure>
   );
 }
@@ -558,7 +610,8 @@ function CompactValueChart({
   const gradientPrefix = useId().replace(/:/g, "");
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(360);
-  const drawn = series.filter((s) => s.points.length > 0);
+  const charted = series.filter((s) => s.points.length > 0);
+  const { lines: drawn, joins } = withMerges(charted);
   const hasData = drawn.length > 0;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure once the chart first has data and its box exists
@@ -691,7 +744,7 @@ function CompactValueChart({
               <path
                 key={`out-${s.id}`}
                 d={linePath(s)}
-                className={`${styles.line} ${styles.out}`}
+                className={`${styles.line} ${styles.out} ${s.mergesInto ? styles.merged : ""}`}
                 stroke={stroke(s)}
               />
             ))}
@@ -701,6 +754,17 @@ function CompactValueChart({
               d={linePath(s)}
               className={styles.line}
               stroke={stroke(s)}
+            />
+          ))}
+          {joins.map((j) => (
+            <circle
+              key={`join-${j.key}`}
+              cx={x(j.turn)}
+              cy={y(j.value)}
+              r={JOIN_RADIUS}
+              fill={liftColor(j.color)}
+              className={styles.endDot}
+              data-testid="merge-join"
             />
           ))}
           {groups.map((g, i) => {
@@ -732,7 +796,7 @@ function CompactValueChart({
           />
         ))}
       </div>
-      <ValueTable label={label} series={drawn} />
+      <ValueTable label={label} series={charted} />
     </figure>
   );
 }
