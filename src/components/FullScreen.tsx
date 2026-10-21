@@ -6,11 +6,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import {
-  type FullScreenHandle,
-  FullScreen as InternalFullScreen,
-  useFullScreenHandle,
-} from "react-full-screen";
 import { IconButton } from "@/components/ui";
 import { cx } from "@/components/ui/contained";
 import { DebugLogPanel, logEnvOnce } from "./DebugLogOverlay";
@@ -23,6 +18,35 @@ interface FullScreenProps {
   /** Keeps the header bar on screen, on an opaque strip, as the page scrolls. */
   pinnedBar?: boolean;
 }
+
+interface FullScreenHandle {
+  active: boolean;
+  enter: () => void;
+  exit: () => void;
+}
+
+/**
+ * Fullscreen for the whole document rather than a wrapper element, so the
+ * body's ground, its texture and its frame stay on screen: a fullscreen
+ * element shows only its own subtree.
+ */
+const useDocumentFullScreen = (): FullScreenHandle => {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const sync = () => setActive(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  return {
+    active,
+    enter: () => {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    },
+    exit: () => {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    },
+  };
+};
 
 /**
  * Exposes the fullscreen handle so a control inside a modal `<dialog>`
@@ -41,30 +65,28 @@ export const FullScreen = ({
   menuExtras,
   pinnedBar = false,
 }: FullScreenProps) => {
-  const handle = useFullScreenHandle();
+  const handle = useDocumentFullScreen();
   const [debugOpen, setDebugOpen] = useState(false);
   useEffect(() => logEnvOnce(), []);
 
   return (
     <FullScreenHandleContext.Provider value={handle}>
-      <InternalFullScreen handle={handle}>
-        {children}
-        <header className={cx(styles.bar, pinnedBar && styles.pinned)}>
-          <FullScreenToggle tooltipAlign="start" />
-          {menuExtras}
-          <IconButton
-            label="Open debug log"
-            shape="square"
-            tooltipAlign="end"
-            className={styles.end}
-            aria-expanded={debugOpen}
-            onClick={() => setDebugOpen((v) => !v)}
-          >
-            <Bug aria-hidden />
-          </IconButton>
-        </header>
-        {debugOpen && <DebugLogPanel onClose={() => setDebugOpen(false)} />}
-      </InternalFullScreen>
+      {children}
+      <header className={cx(styles.bar, pinnedBar && styles.pinned)}>
+        <FullScreenToggle tooltipAlign="start" />
+        {menuExtras}
+        <IconButton
+          label="Open debug log"
+          shape="square"
+          tooltipAlign="end"
+          className={styles.end}
+          aria-expanded={debugOpen}
+          onClick={() => setDebugOpen((v) => !v)}
+        >
+          <Bug aria-hidden />
+        </IconButton>
+      </header>
+      {debugOpen && <DebugLogPanel onClose={() => setDebugOpen(false)} />}
     </FullScreenHandleContext.Provider>
   );
 };
