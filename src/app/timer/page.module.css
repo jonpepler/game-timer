@@ -68,11 +68,12 @@
 }
 
 /* Fixed height, so a subheading or a longer name never moves the ring
-   below it. */
+   below it. Tall enough for the tallest banner: a lineage line, the
+   title, a ribbon and a subheading. */
 .bannerRow {
   align-self: stretch;
   flex-shrink: 0;
-  height: clamp(64px, 11vmin, 96px);
+  height: clamp(100px, 15vmin, 120px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,11 +81,6 @@
      past either side. */
   overflow-x: visible;
   overflow-y: clip;
-}
-
-/* An entry banner can carry a lineage rule and a ribbon. */
-.bannerRowEntry {
-  padding: var(--space-4) 0;
 }
 
 .ringStage {

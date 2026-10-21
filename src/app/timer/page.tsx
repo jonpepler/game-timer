@@ -1347,9 +1347,7 @@ export default function Home() {
       <div className={styles.container}>
         {modal}
         <main className={styles.centre}>
-          <div
-            className={`${styles.bannerRow} ${activeIsEntry ? styles.bannerRowEntry : ""}`}
-          >
+          <div className={styles.bannerRow}>
             {activeIsEntry && activeEntry && turnOrderView ? (
               <div className={styles.activePlayer}>
                 <TurnEntryBanner

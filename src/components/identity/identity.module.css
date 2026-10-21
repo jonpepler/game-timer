@@ -77,9 +77,12 @@
   text-align: center;
 }
 
-/* Room for the hairline rules to read as rules, not dashes. */
+/* Room for the hairline rules to read as rules, not dashes. A lineage
+   line and a ribbon share the title's fixed row, so a merged
+   entry's title steps down to leave them room. */
 .banner:has(.rule) {
   min-width: min(440px, calc(100vw - 32px));
+  font-size: 0.78em;
 }
 
 .rule {
@@ -89,9 +92,9 @@
   justify-content: center;
   gap: var(--space-8);
   min-width: 0;
-  margin-bottom: var(--space-6);
-  /* The kit label, tracked wider so it reads as a rule across the banner. */
-  line-height: var(--line-height-body);
+  /* The kit label, tracked wider so it reads as a rule across the banner.
+     Tight to the title it names. */
+  line-height: var(--line-height-tight);
   letter-spacing: 0.14em;
   white-space: nowrap;
   color: var(--color-text-dim);
@@ -171,7 +174,10 @@
   width: 70%;
   max-width: 420px;
   height: 5px;
-  margin-top: var(--space-8);
+  /* Underlines the title, so it sits nearer the title than the
+     subheading below. */
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
   background: var(--entry-color);
   clip-path: polygon(0 0, 100% 0, 97% 50%, 100% 100%, 0 100%, 3% 50%);
 }
