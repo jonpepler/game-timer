@@ -111,14 +111,17 @@
   text-overflow: ellipsis;
 }
 
-/* Equal side columns keep the title on the banner's centre line. */
+/*
+ * Equal side columns keep the title on the banner's centre line. The
+ * title never wraps: a long name runs wider than the banner, overflowing
+ * both sides evenly, so the subheading below keeps its line.
+ */
 .head {
   display: grid;
   grid-template-columns:
-    minmax(min-content, 1fr) minmax(0, auto)
+    minmax(min-content, 1fr) max-content
     minmax(min-content, 1fr);
   align-items: center;
-  max-width: 100%;
   min-width: 0;
 }
 
@@ -148,10 +151,8 @@
 }
 
 .title {
-  min-width: 0;
   line-height: var(--line-height-flush);
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+  white-space: nowrap;
   align-self: last baseline;
 }
 

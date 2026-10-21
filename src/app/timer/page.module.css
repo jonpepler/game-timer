@@ -76,7 +76,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* Clipped top and bottom to hold its height; a long title may run
+     past either side. */
+  overflow-x: visible;
+  overflow-y: clip;
 }
 
 /* An entry banner can carry a lineage rule and a ribbon. */
@@ -370,9 +373,11 @@
   outline-offset: 6px;
 }
 
-/* After the base rule, so the wide banner's larger title wins. */
+/* After the base rule, so the wide banner's larger title wins. Held to
+   the width too, so a long name on a narrow wide screen stays clear of
+   the header bar's buttons. */
 @media (min-width: 1024px) {
   .activePlayer:not(.activeEmpty) {
-    font-size: clamp(44px, 6vh + 14px, 104px);
+    font-size: clamp(40px, min(6vh + 14px, 4.4vw), 104px);
   }
 }
