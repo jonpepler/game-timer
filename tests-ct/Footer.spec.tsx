@@ -10,7 +10,7 @@ const baseProps = {
   paused: false,
   pause: noop,
   unpause: noop,
-  averageTime: 120,
+  remainingSeconds: 42 * 120,
   undo: noop,
 };
 

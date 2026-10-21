@@ -45,7 +45,7 @@ test("review: milestone dialog at 4 VP", async ({ page }) => {
     .getByRole("button", { name: "Marquise de Cat", exact: true })
     .click();
   await confirm.click();
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
   // Kick the timer running, then pump Marquise (Player 1) to 4 to
   // fire the first milestone dialog.
   await page.locator("main").click();
@@ -100,7 +100,7 @@ test("review: timer running with player arcs around the ring", async ({
     .getByRole("button", { name: "Marquise de Cat", exact: true })
     .click();
   await confirm.click();
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
   // Click the ring to start the timer running (state.started → true).
   // Wait a moment for the countdown to tick down so the ring fill is
   // visibly partial.
@@ -132,7 +132,7 @@ test("review: track after fire-once milestone has fired", async ({ page }) => {
     .getByRole("button", { name: "Marquise de Cat", exact: true })
     .click();
   await confirm.click();
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
   await page.locator("main").click();
   await page.locator("main").click();
   // Pump Player 1 to 4 and dismiss the dialog so the H marker at 4

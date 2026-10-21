@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /*
  * Shared wizard-walking helpers for e2e tests. The wizard has several
@@ -22,6 +22,8 @@ export interface StartGameOptions {
   expectedTurns?: number;
   /** Generic only: enable per-player tracking. */
   trackPlayers?: boolean;
+  /** Generic only: pick "Variable (reorder during play)" turn order. */
+  variableTurnOrder?: boolean;
   /** Generic: number of players when tracking on. Root: seats. */
   playerCount?: number;
   /** Root: faction option *labels* per seat, in seating order
@@ -33,8 +35,21 @@ export interface StartGameOptions {
   seatNames?: string[];
 }
 
-const next = (page: Page) =>
-  page.getByRole("button", { name: /^Next/ }).click();
+/** The wizard's "2 / 5 · Modules" progress line. */
+const progress = (page: Page) =>
+  page.getByRole("dialog", { name: "Game Setup" }).getByText(/^\d+ \/ \d+ · /);
+
+/**
+ * Press Next and wait for the next screen to commit. Without the wait,
+ * a slow render lets the caller's heading check run against the old
+ * screen and press Next again, and a press that resolves the button
+ * while it still reads Next can land after it has become Start Game.
+ */
+const next = async (page: Page) => {
+  const before = await progress(page).textContent();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  await expect(progress(page)).not.toHaveText(before ?? "");
+};
 
 /**
  * Advance through Next clicks until the named screen heading is
@@ -99,6 +114,9 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
         await page
           .getByLabel(new RegExp(`^Seat ${i + 1} name$`))
           .fill(options.seatNames[i]);
+        await page
+          .getByLabel(new RegExp(`^Seat ${i + 1} name$`))
+          .press("Enter");
       }
     }
     // Faction picker (last screen).
@@ -134,6 +152,9 @@ export async function startGame(page: Page, options: StartGameOptions = {}) {
         await page
           .getByLabel(/^Number of players$/)
           .fill(String(options.playerCount));
+      }
+      if (options.variableTurnOrder) {
+        await page.getByLabel(/^Variable \(reorder during play\)/).check();
       }
     }
   }

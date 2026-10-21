@@ -1,0 +1,171 @@
+/* Opaque so the timer ring never shows through between rows. Capped
+   in width so rows stay scannable on wide screens. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-self: flex-end;
+  width: 100%;
+  max-width: 560px;
+  padding: var(--space-8);
+  background-color: var(--color-sheet);
+  background-image: var(--ornament-texture);
+  border: 1px solid var(--color-sheet-rule);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--elevation-sheet);
+  outline: var(--sheet-inner-rule) solid var(--color-sheet-rule);
+  outline-offset: calc(var(--space-4) * -1);
+  pointer-events: auto;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: 0 var(--space-4);
+}
+
+/* Scrolls when the order is longer than the space available. */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: min(45dvh, 360px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 52px;
+  padding: var(--space-4) var(--space-6) var(--space-4) var(--space-8);
+  background:
+    linear-gradient(var(--color-surface-muted), var(--color-surface-muted)),
+    var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--row-color, var(--color-border));
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-sm);
+  user-select: none;
+}
+
+.active {
+  background:
+    linear-gradient(
+      var(--color-surface-elevated),
+      var(--color-surface-elevated)
+    ),
+    var(--color-surface);
+  border-color: var(--color-border-strong);
+  border-left-color: var(--row-color, var(--color-border-strong));
+  box-shadow: 0 0 0 1px var(--row-color, var(--color-border-strong));
+}
+
+/* A spent turn: the row recedes. Its mark and colour edge fade by the
+   spent opacity; its text drops to the muted ink rather than fading, so
+   it still clears contrast on every theme. */
+.spent {
+  background: var(--color-surface);
+  border-left-color: color-mix(
+    in srgb,
+    var(--row-color, var(--color-border)) calc(var(--opacity-spent) * 100%),
+    transparent
+  );
+}
+
+.spent :is(.nameText, .value) {
+  color: var(--color-text-muted);
+}
+
+.spent > :is(span[data-symbol], .discSlot) {
+  opacity: var(--opacity-spent);
+}
+
+.shifting {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.dragging {
+  z-index: 2;
+  background:
+    linear-gradient(
+      var(--color-surface-elevated),
+      var(--color-surface-elevated)
+    ),
+    var(--color-surface);
+  box-shadow: var(--elevation-raised);
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shifting {
+    transition: none;
+  }
+}
+
+/* The handle owns the gesture: no scrolling or zooming while held. */
+.handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragging .handle {
+  cursor: grabbing;
+}
+
+/* Room for a Disc beside rows without a token, so names line up. */
+.discSlot {
+  flex: none;
+  width: var(--space-32);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The name over its owner, the owner set smaller and lighter. */
+.name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  line-height: var(--line-height-tight);
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.value {
+  flex: none;
+  min-width: 2.5em;
+  text-align: right;
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}

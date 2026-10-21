@@ -1,104 +1,71 @@
-/* ── Idle / opening / error states (chips in the top-left chrome) ─── */
-
-.button {
-  /* Override the global button reset. Min-height matches the
-     sibling chrome buttons (FullScreen, New game). */
-  width: auto;
-  height: auto;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.button:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.opening {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-}
-
-.errorMessage {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  margin-right: 8px;
-}
-
-/* ── Open: compact chip + popover panel ───────────────────────────── */
-
+/* The open session in the header bar: a square-cornered chip the
+   height of the bar's buttons, showing the code and how many joined. */
 .openWrapper {
   position: relative;
 }
 
-.openChip {
-  /* Override the global button reset. Matches the other chrome
-     buttons' height so they line up flat. */
+.chip {
   width: auto;
-  height: auto;
-  min-height: 44px;
-  padding: 0 12px;
+  height: var(--control-height-md);
+  min-width: var(--control-height-md);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-12);
   background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
   color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chrome);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
 }
 
-.openChip:hover {
+.chip:hover {
   background: var(--color-surface-elevated);
+  background-image: var(--ornament-texture);
   border-color: var(--color-border-strong);
 }
 
-.chipCode {
-  font-family: var(--font-mono);
-  color: var(--color-text);
+.chip:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
 }
 
-.chipCount {
+.chip svg {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
   color: var(--color-text-muted);
-  font-size: 12px;
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #4caf50;
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.count {
+  color: var(--color-text-muted);
 }
 
 .popoverWrap {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--space-8));
   left: 0;
-  z-index: 20;
+  z-index: var(--z-popover);
+}
+
+/* On a phone the bar has no room to the right of the chip, so the panel
+   centres on the screen under the bar instead. */
+@media (max-width: 600px) {
+  .popoverWrap {
+    position: fixed;
+    top: calc(var(--control-height-md) + 2 * var(--space-12));
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }

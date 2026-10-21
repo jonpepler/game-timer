@@ -1,0 +1,29 @@
+{
+  "next_turn": {
+    "file": "sound/next_turn.mp3",
+    "credit": {
+      "licence": "CC-BY-4.0",
+      "title": "steam train horn 02",
+      "author": "eliasheuninck",
+      "url": "https://freesound.org/s/170848/"
+    }
+  },
+  "last_30": {
+    "file": "sound/last_30.flac",
+    "credit": {
+      "licence": "CC0-1.0",
+      "title": "Big Steam Engine Perfect Loop (24bit flac)",
+      "author": "steaq",
+      "url": "https://freesound.org/s/594215/"
+    }
+  },
+  "overtime": {
+    "file": "sound/overtime.mp3",
+    "credit": {
+      "licence": "CC-BY-NC-4.0",
+      "title": "Train Whistle",
+      "author": "RetroGuy23",
+      "url": "https://freesound.org/s/652401/"
+    }
+  }
+}

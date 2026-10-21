@@ -1,74 +1,93 @@
+import { Bug, Maximize, Minimize } from "lucide-react";
 import {
-  FullScreen as InternalFullScreen,
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import {
   type FullScreenHandle,
+  FullScreen as InternalFullScreen,
   useFullScreenHandle,
 } from "react-full-screen";
-import { Maximize, Minimize } from "lucide-react";
-
+import { IconButton } from "@/components/ui";
+import { cx } from "@/components/ui/contained";
+import { DebugLogPanel, logEnvOnce } from "./DebugLogOverlay";
 import styles from "./FullScreen.module.css";
-import { createContext, useContext, type ReactNode } from "react";
-import { DebugLogOverlay } from "./DebugLogOverlay";
 
 interface FullScreenProps {
   children: ReactNode;
-  // Optional extra controls rendered alongside the fullscreen toggle in
-  // the top-left chrome.
+  /** Page controls for the header bar, between fullscreen and the debug log. */
   menuExtras?: ReactNode;
+  /** Keeps the header bar on screen, on an opaque strip, as the page scrolls. */
+  pinnedBar?: boolean;
 }
 
-// React context exposing the FullScreen handle so inner components
-// (notably the wizard, which renders inside a modal `<dialog>` that
-// blocks pointer events to the chrome) can render their own toggle
-// that's reachable from within the modal layer.
+/**
+ * Exposes the fullscreen handle so a control inside a modal `<dialog>`
+ * (the setup wizard), whose backdrop blocks the header bar, can offer
+ * its own toggle.
+ */
 const FullScreenHandleContext = createContext<FullScreenHandle | null>(null);
 
-export const FullScreen = ({ children, menuExtras }: FullScreenProps) => {
+/**
+ * The page frame: fullscreen support and the header bar. The bar is one
+ * row of square icon buttons: fullscreen first, the page's own controls,
+ * then the debug log launcher at the far end.
+ */
+export const FullScreen = ({
+  children,
+  menuExtras,
+  pinnedBar = false,
+}: FullScreenProps) => {
   const handle = useFullScreenHandle();
+  const [debugOpen, setDebugOpen] = useState(false);
+  useEffect(() => logEnvOnce(), []);
 
   return (
     <FullScreenHandleContext.Provider value={handle}>
       <InternalFullScreen handle={handle}>
         {children}
-        <div className={styles.menuContainer}>
-          <FullScreenToggle />
+        <header className={cx(styles.bar, pinnedBar && styles.pinned)}>
+          <FullScreenToggle tooltipAlign="start" />
           {menuExtras}
-        </div>
-        {/* Debug log overlay — small bug-icon launcher in the
-            top-right corner. Expands into a panel showing live
-            log entries with copy / clear / level-filter
-            affordances. Available on every page that wraps with
-            FullScreen (timer + companion). */}
-        <DebugLogOverlay />
+          <IconButton
+            label="Open debug log"
+            shape="square"
+            tooltipAlign="end"
+            className={styles.end}
+            aria-expanded={debugOpen}
+            onClick={() => setDebugOpen((v) => !v)}
+          >
+            <Bug aria-hidden />
+          </IconButton>
+        </header>
+        {debugOpen && <DebugLogPanel onClose={() => setDebugOpen(false)} />}
       </InternalFullScreen>
     </FullScreenHandleContext.Provider>
   );
 };
 
-// Standalone toggle button — reads the FullScreen handle from
-// context so it can be mounted anywhere inside the FullScreen
-// tree (including inside a modal `<dialog>`). Falls back to a
-// disabled placeholder when there's no provider above it.
-export const FullScreenToggle = ({ className }: { className?: string }) => {
+/**
+ * The fullscreen toggle as a header-bar button. Reads the handle from
+ * context, so it works anywhere inside FullScreen, including in a modal.
+ */
+export const FullScreenToggle = ({
+  tooltipAlign,
+}: {
+  tooltipAlign?: "center" | "start" | "end";
+}) => {
   const handle = useContext(FullScreenHandleContext);
   if (!handle) return null;
-  const cls = className ?? styles.toggle;
-  return handle.active ? (
-    <button
-      type="button"
-      onClick={handle.exit}
-      className={cls}
-      aria-label="Exit fullscreen"
+  return (
+    <IconButton
+      label={handle.active ? "Exit fullscreen" : "Enter fullscreen"}
+      shape="square"
+      tooltipAlign={tooltipAlign}
+      onClick={handle.active ? handle.exit : handle.enter}
     >
-      <Minimize size={16} aria-hidden />
-    </button>
-  ) : (
-    <button
-      type="button"
-      onClick={handle.enter}
-      className={cls}
-      aria-label="Enter fullscreen"
-    >
-      <Maximize size={16} aria-hidden />
-    </button>
+      {handle.active ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+    </IconButton>
   );
 };

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { useMemo } from "react";
 
 interface QrCodeProps {
   value: string;
@@ -10,53 +10,40 @@ interface QrCodeProps {
   alt?: string;
 }
 
-// Renders a QR encoding `value` as an <img> data URL. Re-encodes when
-// the value changes. Tiny payload (typical companion URL is ~80 chars
-// → a sub-1KB PNG).
+/**
+ * A QR code encoding `value`, drawn as an SVG in the current text colour
+ * on a transparent ground, so it follows the theme. One path holds every
+ * dark module, with a one-module quiet zone around them.
+ */
 export function QrCode({
   value,
   size = 160,
   className,
   alt = "QR code",
 }: QrCodeProps) {
-  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const { path, extent } = useMemo(() => {
+    const { modules } = QRCode.create(value);
+    const n = modules.size;
+    let d = "";
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (modules.get(y, x)) d += `M${x + 1} ${y + 1}h1v1h-1z`;
+      }
+    }
+    return { path: d, extent: n + 2 };
+  }, [value]);
 
-  useEffect(() => {
-    let cancelled = false;
-    QRCode.toDataURL(value, {
-      width: size,
-      margin: 1,
-      // Dark-themed: invert colours so the QR sits on the surface and
-      // stays high-contrast under the app's dark palette.
-      color: { dark: "#ffffff", light: "#00000000" },
-    })
-      .then((url) => {
-        if (!cancelled) setDataUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setDataUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [value, size]);
-
-  if (!dataUrl) {
-    return (
-      <div
-        className={className}
-        style={{ width: size, height: size }}
-        aria-busy="true"
-      />
-    );
-  }
   return (
-    <img
-      src={dataUrl}
-      alt={alt}
+    <svg
+      role="img"
+      aria-label={alt}
       width={size}
       height={size}
+      viewBox={`0 0 ${extent} ${extent}`}
+      shapeRendering="crispEdges"
       className={className}
-    />
+    >
+      <path d={path} fill="currentColor" />
+    </svg>
   );
 }

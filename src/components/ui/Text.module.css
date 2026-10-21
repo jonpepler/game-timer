@@ -1,0 +1,71 @@
+/* Headings: three sizes, all bold, in the display face. */
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: var(--text-transform-display);
+  color: var(--color-text);
+}
+
+.size1 {
+  font-size: var(--font-size-xl);
+}
+
+.size2 {
+  font-size: var(--font-size-lg);
+}
+
+/* Too small for a display face drawn for large sizes: takes the label face
+   and is set as written. */
+.size3 {
+  font-family: var(--font-label);
+  font-size: var(--font-size-md);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.center {
+  text-align: center;
+}
+
+/* The section label: a small uppercase eyebrow over a group. */
+.label {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-label);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-label);
+  line-height: var(--line-height-tight);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Disc: a colour identity, always with a hairline ring. */
+.disc {
+  flex: none;
+  display: inline-block;
+  width: var(--disc-size-md);
+  height: var(--disc-size-md);
+  border-radius: var(--radius-disc);
+  background: var(--disc-color, var(--color-player-fallback));
+  box-shadow: 0 0 0 1px var(--color-ring);
+}
+
+.discSm {
+  width: var(--disc-size-sm);
+  height: var(--disc-size-sm);
+}
+
+.discLg {
+  width: var(--disc-size-lg);
+  height: var(--disc-size-lg);
+}
+
+/* Hollow: the same colour as a ring only, for something set aside. */
+.discHollow {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--disc-color, var(--color-player-fallback));
+}

@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Standalone "what's in the share popover" content — the QR + code +
+ * Standalone "what's in the share popover" content: the QR + code +
  * URL + footer that appears when the user clicks Share in the timer
  * chrome.
  *
@@ -11,10 +11,11 @@
  *
  * The component owns its own copy-to-clipboard "Copied" toast state.
  * Status / sessionCode / connectedPeers / close all come from the
- * caller — we don't own the underlying peer session.
+ * caller: we don't own the underlying peer session.
  */
 import { Copy, Loader2, Share2, X } from "lucide-react";
 import { useState } from "react";
+import { Button, IconButton, SectionLabel } from "@/components/ui";
 import { QrCode } from "./QrCode";
 import { buildCompanionUrl } from "@/lib/sessionCode";
 import styles from "./SharePanel.module.css";
@@ -24,7 +25,7 @@ interface SharePanelProps {
   sessionCode: string | null;
   connectedPeers: string[];
   error: Error | null;
-  // Stops the share session — called when the user clicks "Stop
+  // Stops the share session: called when the user clicks "Stop
   // sharing" in the footer.
   onClose?: () => void;
   // Dismisses the panel itself without stopping the session. Used by
@@ -53,7 +54,7 @@ export function SharePanel({
       setCopied(key);
       setTimeout(() => setCopied(null), 1500);
     } catch {
-      // Clipboard unavailable — values are still selectable in the UI.
+      // Clipboard unavailable: values are still selectable in the UI.
     }
   };
 
@@ -62,19 +63,18 @@ export function SharePanel({
   return (
     <div className={styles.panel} role="dialog" aria-label="Share session">
       <div className={styles.header}>
-        <span className={styles.title}>
-          <Share2 size={12} aria-hidden />
+        <SectionLabel as="span" className={styles.title}>
+          <Share2 aria-hidden />
           {status === "open" ? "Sharing session" : "Share session"}
-        </span>
+        </SectionLabel>
         {onDismiss && (
-          <button
-            type="button"
+          <IconButton
+            label="Close share panel"
+            tooltip={false}
             onClick={onDismiss}
-            className={styles.closeButton}
-            aria-label="Close share panel"
           >
             <X aria-hidden />
-          </button>
+          </IconButton>
         )}
       </div>
 
@@ -88,17 +88,13 @@ export function SharePanel({
         <div className={styles.errorBlock}>
           <p className={styles.errorMessage}>
             {error?.message === "Lost connection to server."
-              ? "The PeerJS broker dropped our connection. This usually fixes itself in a few seconds — try again, or switch networks if it persists."
+              ? "The PeerJS broker dropped our connection. This usually fixes itself in a few seconds: try again, or switch networks if it persists."
               : `Couldn't open a share session: ${error?.message ?? "unknown error"}`}
           </p>
           {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className={styles.retryButton}
-            >
+            <Button size="sm" onClick={onRetry}>
               Try again
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -114,33 +110,33 @@ export function SharePanel({
           </div>
 
           <div className={styles.codeRow}>
-            <span className={styles.codeLabel}>Code</span>
+            <SectionLabel as="span">Code</SectionLabel>
             <div className={styles.codeValue}>
               <span>{sessionCode}</span>
-              <button
-                type="button"
-                onClick={() => copy(sessionCode, "code")}
+              <Button
+                size="sm"
+                icon={<Copy aria-hidden />}
                 className={styles.copyButton}
+                onClick={() => copy(sessionCode, "code")}
                 aria-label="Copy session code"
               >
-                <Copy aria-hidden />
                 {copied === "code" ? "Copied" : "Copy"}
-              </button>
+              </Button>
             </div>
           </div>
 
           <div className={styles.codeRow}>
-            <span className={styles.codeLabel}>Link</span>
+            <SectionLabel as="span">Link</SectionLabel>
             <div className={styles.urlValue}>{url}</div>
-            <button
-              type="button"
-              onClick={() => copy(url, "url")}
+            <Button
+              size="sm"
+              icon={<Copy aria-hidden />}
               className={styles.copyButton}
+              onClick={() => copy(url, "url")}
               aria-label="Copy companion URL"
             >
-              <Copy aria-hidden />
               {copied === "url" ? "Copied" : "Copy link"}
-            </button>
+            </Button>
           </div>
 
           <p className={styles.help}>
@@ -153,13 +149,9 @@ export function SharePanel({
                 {connectedPeers.length}{" "}
                 {connectedPeers.length === 1 ? "device" : "devices"} connected
               </span>
-              <button
-                type="button"
-                onClick={onClose}
-                className={styles.stopButton}
-              >
+              <Button size="sm" onClick={onClose}>
                 Stop sharing
-              </button>
+              </Button>
             </div>
           )}
         </>

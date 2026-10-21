@@ -1,130 +1,348 @@
-.main {
-  display: flex;
-  flex-direction: column;
-  /* Lift the timer ring slightly above pure-vertical-center so the
-     player overlay (score panel + time share) can sit closer below
-     without crowding the ring. Pulls the ring up by ~14% of free
-     space. */
-  justify-content: flex-start;
-  padding-top: 6vh;
-  align-items: center;
-  flex: 1;
-  gap: 24px;
-  margin: 15px;
-}
-
+/*
+ * Timer page layout. The ring is the hero: its diameter is a function of
+ * the viewport alone, so nothing that appears, disappears, expands or
+ * collapses around it during a game can resize or move it.
+ *
+ * Phone and tablet portrait (below the wide breakpoint): the whole page
+ * scrolls as one column. The ring has a fixed size below the title and
+ * every panel flows after it, full width, in PANEL_ORDER (page.tsx).
+ * Once the ring scrolls away, a pinned line under the header bar keeps
+ * the turn and its time in view.
+ *
+ * Wide (1024px and up): three rows. The title, between the header bar's
+ * buttons; the ring, in a centre column as wide as the ring; and a
+ * full-width bottom row of fixed height. The title row, the bottom row
+ * and so the ring are sized from the viewport only, and whatever the
+ * bottom row holds scrolls inside it. The side columns hold the panels
+ * PANEL_PLACEMENT puts there, starting at the top under the header bar's
+ * buttons, and scroll on their own when those run long.
+ */
 .container {
-  /* `position: relative` so absolutely-positioned children (overlay,
-     footer) anchor against this container rather than the viewport.
-     `100dvh` follows the visible viewport on iOS (URL bar in/out),
-     with `100vh` as a static fallback for browsers that don't support
-     dvh yet. Together these stop the overlay from sliding under the
-     URL bar on mobile. */
+  /* Space for the header bar: 44px buttons with 12px either side. */
+  --chrome-height: 68px;
+  /* The fixed footer: a 56px button plus 16px padding either side. */
+  --footer-height: 88px;
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  align-items: stretch;
+  gap: var(--space-16);
+  min-height: 100vh;
   /* biome-ignore lint/suspicious/noDuplicateProperties: 100vh is a deliberate fallback for browsers without dvh support */
-  height: 100dvh;
-  font-family:
-    "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans",
-    Arial, sans-serif;
+  min-height: 100dvh;
+  padding: var(--chrome-height) var(--space-16)
+    calc(var(--footer-height) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
-.playerOverlay {
-  position: absolute;
-  /* Sit just above the footer (~88px tall) — the previous 96px
-     gap left enough vertical room between the score panel and
-     the time share that they read as separate islands and the
-     time share clipped on shorter viewports. Tighter spacing
-     packs them as one bottom strip. */
-  bottom: 80px;
-  left: 24px;
-  right: 24px;
+.centre {
   display: flex;
   flex-direction: column;
-  /* Tight gap pulls the score panel and time-share together. */
-  gap: 4px;
-  align-items: stretch;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+/* On a phone the columns dissolve so every panel shares one flow and
+   can be ordered among the others. */
+.column {
+  display: contents;
+}
+
+.panel {
+  min-width: 0;
+}
+
+/* Reserved from the start so the time-share bar appearing after the
+   first recorded turn moves nothing. */
+.timeShareSlot {
+  /* The label line, the gap and the bar. */
+  min-height: 35px;
+}
+
+/* A compact value chart leaves its bottom strip to its fading fills, so
+   the time share after it is pulled up over that strip (and the gap). */
+.container:has([data-chart-slot] [data-overlap-bottom])
+[data-panel="timeShare"] {
+  position: relative;
+  margin-top: calc(-1 * (var(--space-24) + var(--space-16)));
+}
+
+/* Fixed height, so a subheading or a longer name never moves the ring
+   below it. */
+.bannerRow {
+  align-self: stretch;
+  flex-shrink: 0;
+  height: clamp(64px, 11vmin, 96px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* An entry banner can carry a lineage rule and a ribbon. */
+.bannerRowEntry {
+  padding: var(--space-4) 0;
+}
+
+.ringStage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.timerRingWrapper {
+  position: relative;
+  /* The full content width, held back on short or landscape screens.
+     `svh` doesn't change as mobile browser bars show and hide, so
+     scrolling never resizes it. */
+  width: min(100vw - 2 * var(--space-16), 58svh, 600px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: var(--radius-disc);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-press) var(--ease-standard);
+}
+
+/* The turn and its time on one line, pinned under the header bar while
+   the ring is scrolled out of view. */
+.readout {
+  position: fixed;
+  top: var(--chrome-height);
+  left: 0;
+  right: 0;
+  z-index: var(--z-chrome);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-12);
+  padding: var(--space-6) var(--space-16) var(--space-8);
+  background-color: var(--color-sheet);
+  background-image: var(--ornament-texture);
+  background-attachment: fixed;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--elevation-dock-top);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  white-space: nowrap;
   pointer-events: none;
-  /* Cap the overlay's height so when the score panel + time-share
-     would otherwise grow taller than the available space above the
-     footer, the column scrolls internally instead of pushing the
-     bottom segment off-screen. */
-  max-height: calc(100% - 96px);
-  overflow-y: auto;
+}
+
+.readoutName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readoutTime {
+  flex: none;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .container {
+    /* The title row, between the header bar's buttons. */
+    --title-height: clamp(104px, 12vh + 16px, 176px);
+    /* The bottom row, the time share included. */
+    --row-height: clamp(200px, 20vh + 40px, 264px);
+    --ring-gap: var(--space-8);
+    /* The footer and the two gaps beside the ring. */
+    --rest: calc(var(--footer-height) + 2 * var(--ring-gap));
+    /* The largest ring the height leaves, kept clear of the side
+       columns' panels at narrow widths. Viewport units only. */
+    --ring-size: min(
+      calc(100svh - var(--title-height) - var(--row-height) - var(--rest)),
+      calc(100vw - 760px)
+    );
+    /* Kept clear either side of the title for the header bar's buttons. */
+    --chrome-width: 340px;
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr) var(--ring-size)
+      minmax(0, 1fr);
+    grid-template-rows: var(--title-height) minmax(0, 1fr) var(--row-height);
+    grid-template-areas:
+      "left centre right"
+      "left centre right"
+      "bottom bottom bottom";
+    column-gap: var(--space-24);
+    row-gap: var(--ring-gap);
+    height: 100vh;
+    /* biome-ignore lint/suspicious/noDuplicateProperties: 100vh is a deliberate fallback for browsers without svh support */
+    height: 100svh;
+    min-height: 0;
+    padding: 0 var(--space-16) var(--footer-height);
+    overflow: hidden;
+  }
+
+  .readout {
+    display: none;
+  }
+
+  /* The title and the ring are one centre column. The title is wider
+     than the ring and overhangs the column equally on both sides. */
+  .centre {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    gap: var(--ring-gap);
+    min-height: 0;
+  }
+
+  .bannerRow {
+    align-self: center;
+    width: calc(100vw - 2 * var(--chrome-width));
+    height: var(--title-height);
+    padding: var(--space-8) 0 0;
+  }
+
+  .ringStage {
+    flex: 1 1 0;
+    align-items: center;
+    min-height: 0;
+  }
+
+  .timerRingWrapper {
+    width: var(--ring-size);
+  }
+
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* From the top, under the header bar's buttons and in line with
+     them, so the round actions sit in one place in every round. */
+  .column[data-column="left"] {
+    grid-area: left;
+    grid-row: 1 / 3;
+    align-items: flex-start;
+    padding-top: var(--chrome-height);
+  }
+
+  /* Below the title row, which overhangs into this column. */
+  .column[data-column="right"] {
+    grid-area: right;
+    grid-row: 1 / 3;
+    padding-top: var(--title-height);
+  }
+
+  /* The side columns run alongside the title, which overhangs into
+     them; only their panels take taps. */
+  .column[data-column="left"],
+  .column[data-column="right"] {
+    pointer-events: none;
+  }
+
+  .column[data-column="left"] > *,
+  .column[data-column="right"] > * {
+    pointer-events: auto;
+  }
+
+  .column[data-column="bottom"] {
+    grid-area: bottom;
+    gap: var(--space-4);
+    overflow: hidden;
+    padding: 0 0 var(--space-8);
+  }
+
+  /*
+   * Takes what the time share leaves of the fixed row; anything taller
+   * scrolls inside it. Reversed, so content shorter than the row sits on
+   * the time share and taller content opens scrolled to its end: the
+   * track's foot stays in view and only the controls above it scroll.
+   */
+  .column[data-column="bottom"] > [data-panel="scores"] {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    container: panel-row / inline-size;
+  }
+
+  .column[data-column="bottom"] > [data-panel="timeShare"] {
+    flex: none;
+  }
+
+  /* Keeps its full height, so taller content scrolls rather than
+     squashing. */
+  .column[data-column="bottom"] > [data-panel="scores"] > * {
+    flex-shrink: 0;
+  }
+
+  .container:has([data-chart-slot] [data-overlap-bottom])
+    [data-panel="timeShare"] {
+    margin-top: calc(-1 * (var(--space-24) + var(--space-4)));
+  }
+
+  /* Panels keep their DOM order inside a column. */
+  .panel {
+    order: 0 !important;
+  }
 }
 
 .activePlayer {
-  align-self: center;
+  max-width: 100%;
+  min-width: 0;
   font-size: clamp(28px, 4.2vmin, 44px);
   font-weight: 700;
   letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  pointer-events: auto;
-  /* Sits above the timer ring with breathing room. */
-  margin-bottom: clamp(12px, 2vh, 28px);
+  gap: var(--space-16);
 }
 
-/* Tinted faction meeple silhouette. The `background` (set inline)
-   carries the faction colour; `mask-image` cuts the silhouette out
-   of that colour. Scales with the banner text. */
+/* Tinted player meeple silhouette. The `background` (set inline)
+   carries the player colour; `mask-image` cuts the silhouette out of
+   that colour. Scales with the banner text. */
 .activePlayerMeeple {
   composes: maskBase from "@/components/PlayerMeeple.module.css";
-  width: clamp(48px, 7vmin, 80px);
-  height: clamp(48px, 7vmin, 80px);
+  width: max(48px, 1.6em);
+  height: max(48px, 1.6em);
   display: inline-block;
   flex-shrink: 0;
+}
+
+.activeEmpty {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: clamp(18px, 2.8vmin, 28px);
+  line-height: var(--line-height-prose);
 }
 
 .activePlayerSuffix {
   color: var(--color-text-muted);
   font-weight: 500;
-  font-size: clamp(18px, 2.8vmin, 28px);
-}
-
-/* Interrupt action for lead-relative turn order (Arcs' "Seize the
-   Initiative"). Sits between the active-player banner and the timer
-   ring, outside the tap-to-advance ring so pressing it can't double
-   as a turn advance. */
-.seizeButton {
-  align-self: center;
-  white-space: nowrap;
-  margin-bottom: clamp(10px, 1.8vh, 22px);
-  padding: 10px 20px;
-  border: 2px solid var(--color-timer-active);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-timer-active) 14%, transparent);
-  color: var(--color-text);
-  font: inherit;
-  font-weight: 700;
-  font-size: clamp(15px, 2.2vmin, 20px);
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  pointer-events: auto;
-  transition:
-    transform 0.08s ease,
-    filter 0.15s ease;
-}
-
-.seizeButton:hover,
-.seizeButton:focus-visible {
-  filter: brightness(1.12);
-  outline: 2px solid var(--color-text);
-  outline-offset: 2px;
-}
-
-.seizeButton:active {
-  transform: scale(0.97);
+  font-size: max(18px, 0.55em);
 }
 
 .activePlayerText {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  line-height: 1.1;
+  min-width: 0;
+  line-height: var(--line-height-tight);
+  /* The seat's colour as text, pulled toward the ink as far as the scheme
+     needs for the name to read. */
+  color: color-mix(
+    in srgb,
+    currentColor calc(100% - var(--seat-text-ink)),
+    var(--color-text)
+  );
+}
+
+.activePlayerName,
+.activePlayerSubheading {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .activePlayerSubheading {
@@ -132,31 +350,7 @@
   color: var(--color-text-muted);
   font-weight: 400;
   letter-spacing: 0.01em;
-  margin-top: 4px;
-}
-
-/* Timer ring wrapper — scales to fill the remaining vertical
-   space between the active-player banner above and the overlay
-   below. The container is a square (aspect-ratio: 1) sized by
-   the SMALLER of: available width OR available height
-   (100dvh minus reserved chrome). This replaces the JS-computed
-   `size` and lets the ring grow with the viewport. */
-.timerRingWrapper {
-  position: relative;
-  /* Reserved: ~60px chrome top + 60px active banner + 80px
-     footer + 160px overlay-and-padding = ~360px. Cap at a
-     reasonable max so the ring doesn't dominate huge monitors. */
-  width: min(100%, calc(100dvh - 360px), 720px);
-  aspect-ratio: 1;
-  flex-shrink: 0;
-  /* Tap-to-advance lives here now; reads as the canonical click
-     target for the page. A circular hit area would be ideal, but
-     a square bounding box works since the ring fills it visually
-     and the keyboard / ARIA contract is the same. */
-  cursor: pointer;
-  border-radius: 50%;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease;
+  margin-top: var(--space-4);
 }
 
 .timerRingWrapper:active {
@@ -168,38 +362,9 @@
   outline-offset: 6px;
 }
 
-@media (max-width: 540px) {
-  .timerRingWrapper {
-    width: min(100%, calc(100dvh - 280px));
+/* After the base rule, so the wide banner's larger title wins. */
+@media (min-width: 1024px) {
+  .activePlayer:not(.activeEmpty) {
+    font-size: clamp(44px, 6vh + 14px, 104px);
   }
-}
-
-.newGameButton {
-  /* Override the global button reset. Min-height matches the
-     FullScreen toggle + Share chip so the chrome row reads flat. */
-  width: auto;
-  height: auto;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.newGameButton:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
 }

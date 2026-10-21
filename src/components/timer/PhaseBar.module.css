@@ -1,0 +1,56 @@
+/* Fixed height so the bar never changes the space the timer ring gets. */
+.bar {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: var(--space-12);
+  height: calc(var(--control-height-md) + var(--space-4));
+  flex-shrink: 0;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.status {
+  margin: 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.phase {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+/* The button keeps its whole label; the round's name gives way first. */
+.end {
+  flex: none;
+}
+
+/* Too narrow for both on one line: the button takes its own. */
+@media (max-width: 379px) {
+  .bar {
+    flex-wrap: wrap;
+    height: auto;
+  }
+}
+
+/* Wide layouts seat the bar at the top left, in line with the header
+   bar's buttons above it. */
+@media (min-width: 1024px) {
+  .bar {
+    justify-content: flex-start;
+    margin: 0;
+    width: auto;
+  }
+}

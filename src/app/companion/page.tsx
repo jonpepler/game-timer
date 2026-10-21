@@ -2,27 +2,42 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Minus, Plus } from "lucide-react";
 import styles from "./page.module.css";
 import { useSessionCompanion } from "@/hooks/useSessionCompanion";
 import { describePeerError } from "@/lib/peerTransport";
 import { CodeEntryPanel } from "./CodeEntryPanel";
+import { selectPrediction } from "@/state/prediction";
 import {
   PEER_PROTOCOL_VERSION,
   type CompanionToHostMessage,
   type HostToCompanionMessage,
 } from "@/state/peerProtocol";
 import { ScorePanel } from "@/components/ScorePanel";
+import { TurnOrderPanel } from "@/components/TurnOrderPanel";
+import { PeerNotice } from "@/components/PeerNotice";
+import { PlayersSheet } from "@/components/PlayersSheet";
+import { SeatList } from "@/components/SeatList";
+import { CommitTextInput } from "@/components/CommitTextInput";
+import { MAX_SEAT_NAME } from "@/state/seating";
+import { PhaseBar } from "@/components/timer/PhaseBar";
+import { useTurnEntryControls } from "@/hooks/useTurnEntryControls";
+import { authorizeCommand, type SessionCommand } from "@/state/sessionCommands";
+import { Pause, Play, Undo2 } from "lucide-react";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { VictoryBanner } from "@/components/VictoryBanner";
 import { PlayerMeeple } from "@/components/PlayerMeeple";
 import { EventDialog } from "@/components/EventDialog";
 import { FullScreen } from "@/components/FullScreen";
+import { SchemeToggle } from "@/components/SchemeToggle";
+import { useColourScheme, useGameTheme } from "@/hooks/useGameTheme";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
-  selectCanSeize,
+  createInitialGameSessionState,
+  selectAvailableControls,
   selectCurrentPlayerIndex,
-  selectRemainingTurns,
+  selectTurnOrder,
+  selectTurnPhases,
+  selectUntimedTurnLabel,
 } from "@/state/gameSession";
 import {
   playerColor,
@@ -30,6 +45,8 @@ import {
   playerIcon,
   playerSubheading,
 } from "@/lib/playerVisual";
+import { TurnActions } from "@/components/TurnActions";
+import { TurnEntryBanner } from "@/components/identity/EntryBanner";
 import { createLogger } from "@/lib/logger";
 import type {
   GameDefinition,
@@ -38,8 +55,26 @@ import type {
   SetupStep,
 } from "@/state/gameDefinition";
 import type { Player } from "@/state/gameSession";
+import {
+  Button,
+  Disc,
+  Field,
+  IconButton,
+  ListRow,
+  SectionLabel,
+  Sheet,
+  Stepper,
+  VisuallyHidden,
+} from "@/components/ui";
 
 const stateLog = createLogger("companion-state");
+
+// Stands in for the host's state before the first STATE arrives, so the
+// turn-entry hook can run unconditionally.
+const NO_STATE = createInitialGameSessionState({
+  initialAverageSeconds: 0,
+  expectedTurns: 0,
+});
 const playersLog = createLogger("companion-players");
 
 // Locate the player-pick SetupStep in the active definition. Companion
@@ -95,7 +130,7 @@ function CompanionScreen() {
   > | null>(null);
   // A pick we've sent and are waiting on the host to acknowledge (by
   // advancing the turn). Drives a "submitting…" state instead of
-  // optimistically blanking the picker — and lets us resend if the
+  // optimistically blanking the picker, and lets us resend if the
   // host's heartbeat shows it's still waiting on this same seat (i.e.
   // our SETUP_PICK was dropped). Held as both state (for render) and a
   // ref (so the message effect reads the latest without re-subscribing).
@@ -111,10 +146,55 @@ function CompanionScreen() {
   // re-render on every message.
   const lastMsgArrivedAtRef = useRef<number>(0);
   // Hash so we only log the roster snapshot when player identity
-  // changes (name/metadata) — turn ticks shouldn't spam.
+  // changes (name/metadata): turn ticks shouldn't spam.
   const lastPlayersSigRef = useRef<string>("");
+  // The host and this page disagree on the protocol: nothing sent or
+  // received can be trusted until both are reloaded.
+  const [versionMismatch, setVersionMismatch] = useState(false);
+  // Why the host refused this page's last command, shown until dismissed.
+  const [refusal, setRefusal] = useState<string | null>(null);
+  // Commands awaiting the host's COMMAND_RESULT, by id.
+  const sentCommandsRef = useRef(new Map<string, SessionCommand>());
+  // A refusal is news, not a state: it clears itself so it never sits
+  // over the turn controls.
+  useEffect(() => {
+    if (refusal === null) return;
+    const id = window.setTimeout(() => setRefusal(null), 6000);
+    return () => window.clearTimeout(id);
+  }, [refusal]);
+  // Read by the message effect without making it re-run on connect.
+  const peerIdRef = useRef(peerId);
+  peerIdRef.current = peerId;
+  // Optimistic lock: when the user taps End my turn, we disable
+  // the button immediately and don't re-enable until the host's
+  // STATE confirms we're no longer the active player (or refuses).
+  const [endingTurn, setEndingTurn] = useState(false);
+  // The state revision the last Undo tap cited, while it is in flight.
+  const [undoSentAt, setUndoSentAt] = useState<number | null>(null);
   useEffect(() => {
     if (!lastMessage) return;
+    if (lastMessage.protocolVersion !== PEER_PROTOCOL_VERSION) {
+      stateLog.warn("host speaks another protocol version", {
+        version: lastMessage.protocolVersion,
+      });
+      setVersionMismatch(true);
+      return;
+    }
+    if (lastMessage.type === "PROTOCOL_MISMATCH") {
+      if (lastMessage.peerId === peerIdRef.current) setVersionMismatch(true);
+      return;
+    }
+    if (lastMessage.type === "COMMAND_RESULT") {
+      const command = sentCommandsRef.current.get(lastMessage.commandId);
+      if (!command) return;
+      sentCommandsRef.current.delete(lastMessage.commandId);
+      if (!lastMessage.ok) {
+        setRefusal(lastMessage.reason ?? "The host did not apply that");
+        if (command.type === "END_TURN") setEndingTurn(false);
+        if (command.type === "UNDO") setUndoSentAt(null);
+      }
+      return;
+    }
     if (lastMessage.type === "STATE") {
       setLastState(lastMessage);
       const now = Date.now();
@@ -130,7 +210,7 @@ function CompanionScreen() {
         transitMs,
         turns: lastMessage.state.turns.length,
       });
-      // Roster snapshot — fires when the players[] identity changes
+      // Roster snapshot: fires when the players[] identity changes
       // (so we can confirm whether the inbound STATE carries the
       // expected color + iconSrc + headIconSrc on each player). Same
       // shape as the host-players logger so the two are easy to
@@ -156,7 +236,7 @@ function CompanionScreen() {
           lastMessage.stepId === submitted.stepId &&
           lastMessage.seatIndex === submitted.seatIndex
         ) {
-          // Host is still on the seat we picked for — our SETUP_PICK
+          // Host is still on the seat we picked for: our SETUP_PICK
           // was dropped. The host re-broadcasts on a heartbeat, so we
           // use each re-arrival as a retry tick and resend the pick.
           send({
@@ -167,7 +247,7 @@ function CompanionScreen() {
             optionId: submitted.optionId,
           } satisfies CompanionToHostMessage);
         } else {
-          // Host advanced to a different seat/step — our pick landed.
+          // Host advanced to a different seat/step: our pick landed.
           submittedPickRef.current = null;
           setSubmitting(false);
         }
@@ -178,11 +258,15 @@ function CompanionScreen() {
       setSubmitting(false);
     } else if (lastMessage.type === "SETUP_SEATING")
       setPendingSeating(lastMessage);
+    else if (lastMessage.type === "SETUP_SEATING_CLOSED") {
+      setPendingSeating(null);
+      seatConfirmedRef.current = false;
+    }
   }, [lastMessage, send]);
 
   // First-sync safety net. The host pushes STATE the moment we connect,
   // but that push is best-effort: the WebRTC data channel carrying it
-  // may not be open yet at that instant, so the snapshot is dropped —
+  // may not be open yet at that instant, so the snapshot is dropped,
   // and once the game has started the host has no STATE heartbeat to
   // recover it, leaving us stuck on "connecting" with no claim UI. So
   // once connected we pull the snapshot ourselves, retrying on a short
@@ -191,7 +275,7 @@ function CompanionScreen() {
   //
   // Escalation: relay presence can be live (we received the host's role
   // announce → status "connected") while the data channel is actually
-  // dead in the host→companion direction — our REQUEST_STATEs reach the
+  // dead in the host→companion direction: our REQUEST_STATEs reach the
   // host and it re-broadcasts, but nothing comes back. Pulling forever
   // can't fix a dead channel, so after a few unanswered attempts we
   // force a transport reconnect, which tears the peer connection down
@@ -201,7 +285,7 @@ function CompanionScreen() {
   useEffect(() => {
     if (lastState) stateSeenRef.current = true;
   }, [lastState]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: lastState is a deliberate re-run trigger — when STATE finally arrives the effect re-evaluates, sees stateSeenRef set, and clears the pull interval at once rather than on its next tick.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lastState is a deliberate re-run trigger, when STATE finally arrives the effect re-evaluates, sees stateSeenRef set, and clears the pull interval at once rather than on its next tick.
   useEffect(() => {
     if (status !== "connected") {
       // A fresh (re)connection must re-establish state from scratch.
@@ -220,10 +304,10 @@ function CompanionScreen() {
       }
       attempts += 1;
       if (attempts % ATTEMPTS_BEFORE_RECONNECT === 0) {
-        // Pulls are going unanswered — the channel is likely dead.
+        // Pulls are going unanswered: the channel is likely dead.
         // Rebuild it; the fresh connection's onConnect re-pushes STATE
         // and our pulls resume against a live channel.
-        stateLog.warn("no STATE after repeated requests — forcing reconnect", {
+        stateLog.warn("no STATE after repeated requests: forcing reconnect", {
           attempts,
         });
         reconnect();
@@ -239,16 +323,16 @@ function CompanionScreen() {
   const state = lastState?.state ?? null;
   const definition = pendingTurn?.definition ?? lastState?.definition;
 
-  // Have we received anything usable from the host yet — a game snapshot,
+  // Have we received anything usable from the host yet: a game snapshot,
   // a seating list, or a setup turn? Until we have, there's nothing to
   // show regardless of what the raw transport status says.
   const hasSynced =
     Boolean(state) || Boolean(pendingSeating) || Boolean(pendingTurn);
 
   // Display status, distinct from the raw transport status. The first
-  // sync can churn under the hood — relay presence lands ("connected")
+  // sync can churn under the hood: relay presence lands ("connected")
   // before any data arrives, and a dead-channel recovery briefly flips
-  // back to "reconnecting" — but to the user that's all still one
+  // back to "reconnecting", but to the user that's all still one
   // "getting set up" phase. So until we've synced, we always present
   // "connecting" (one steady state, no green→grey→green flicker). Once
   // synced, we report the real status honestly, so a genuine mid-game
@@ -279,18 +363,20 @@ function CompanionScreen() {
   // claimant pick a new option from the definition's player-pick
   // step without re-running setup.
   const [changingPlayerOption, setChangingPlayerOption] = useState(false);
-  // Two-step preview inside the swap modal — same pattern as the
+  // The players sheet: rename anyone at the table mid-game, as the host can.
+  const [renamingPlayers, setRenamingPlayers] = useState(false);
+  // Two-step preview inside the swap modal, same pattern as the
   // wizard's PlayerPickScreen. Tap card → confirm screen → Confirm.
   const [changePreviewId, setChangePreviewId] = useState<string | null>(null);
 
   // Companion-chosen display name, persisted per (code, slot) in
-  // localStorage so it survives refreshes — and, crucially, across the
+  // localStorage so it survives refreshes, and, crucially, across the
   // host starting a *new* game (which resets seat names to "Player N").
   // It's the companion's local source of truth and is propagated to the
   // host (see the sync effect below) so the shared main screen shows
   // the same name rather than a stale "Player 1".
   const [customName, setCustomName] = useState<string>("");
-  // Distinguishes an active edit (user typing in "Your name") from a
+  // Distinguishes an active edit (a submitted "Your name") from a
   // passive load (restored from storage / reclaim). Active edits push
   // unconditionally; passive loads only fill in a default host name.
   const customNameEditedRef = useRef(false);
@@ -317,20 +403,20 @@ function CompanionScreen() {
       if (next) window.localStorage.setItem(customNameKey, next);
       else window.localStorage.removeItem(customNameKey);
     } catch {
-      // localStorage unavailable — name simply won't persist.
+      // localStorage unavailable: name simply won't persist.
     }
   };
 
   // Propagate the companion's name to the host so the main screen shows
-  // it too — not just this device. Two triggers:
-  //   • active edit ("Your name") → push immediately, overriding
+  // it too, not just this device. Two triggers:
+  //   • active edit ("Your name", once submitted) → push, overriding
   //     whatever the host currently has for our seat;
   //   • (re)claiming a seat whose host-side name is still a default
   //     "Player N" → fill in our remembered name. This is the new-game
   //     case: the host resets seat names, but we still remember "Jon".
   // A non-default host name we didn't just edit is left alone, so a
-  // name the host deliberately set isn't clobbered. Routed as a seating
-  // rename during setup, or RENAME_PLAYER once the game is running.
+  // name the host deliberately set isn't clobbered. Sent as a rename
+  // command against the setup seat list while it is open, else the game.
   useEffect(() => {
     const name = customName.trim();
     const activeEdit = customNameEditedRef.current;
@@ -338,29 +424,23 @@ function CompanionScreen() {
     if (!name || claimedSlot === null) return;
     const isDefaultName = (n: string | undefined) =>
       n === undefined || /^Player \d+$/.test(n);
-    if (state?.players) {
-      const hostName = state.players[claimedSlot]?.name;
-      if (hostName === undefined || hostName === name) return;
-      if (activeEdit || isDefaultName(hostName)) {
-        send({
-          type: "RENAME_PLAYER",
-          protocolVersion: PEER_PROTOCOL_VERSION,
-          name,
-        } satisfies CompanionToHostMessage);
-      }
-    } else if (pendingSeating) {
-      const seatName = pendingSeating.seats[claimedSlot]?.name;
-      if (seatName === undefined || seatName === name) return;
-      if (activeEdit || isDefaultName(seatName)) {
-        send({
-          type: "SEATING_REQUEST",
-          protocolVersion: PEER_PROTOCOL_VERSION,
-          stepId: pendingSeating.stepId,
-          action: { kind: "rename", seatIndex: claimedSlot, name },
-        } satisfies CompanionToHostMessage);
-      }
-    }
-  }, [customName, claimedSlot, state, pendingSeating, send]);
+    const seat = pendingSeating
+      ? pendingSeating.seats[claimedSlot]
+      : state?.players?.[claimedSlot];
+    if (!seat || seat.name === name) return;
+    if (!activeEdit && !isDefaultName(seat.name)) return;
+    // During setup, wait until the host has given us the seat.
+    if (pendingSeating && pendingSeating.claimedBy[claimedSlot] !== peerId)
+      return;
+    sendCommandRef.current({
+      type: "RENAME_PLAYER",
+      playerIndex: claimedSlot,
+      ...(pendingSeating
+        ? { seatId: pendingSeating.seats[claimedSlot].id }
+        : {}),
+      name,
+    });
+  }, [customName, claimedSlot, state, pendingSeating, peerId]);
 
   // Restore a previously-claimed slot for this host when we arrive,
   // and re-announce it once we're connected.
@@ -373,113 +453,122 @@ function CompanionScreen() {
         if (!Number.isNaN(parsed)) setClaimedSlot(parsed);
       }
     } catch {
-      // localStorage unavailable — claim simply won't persist.
+      // localStorage unavailable: claim simply won't persist.
     }
   }, [code]);
 
-  useEffect(() => {
-    if (status === "connected" && claimedSlot !== null) {
-      const msg: CompanionToHostMessage = {
-        type: "CLAIM",
-        protocolVersion: PEER_PROTOCOL_VERSION,
-        playerIndex: claimedSlot,
-      };
-      send(msg);
+  const rememberClaim = (slot: number | null) => {
+    setClaimedSlot(slot);
+    if (!code) return;
+    try {
+      if (slot === null) window.localStorage.removeItem(claimStorageKey(code));
+      else window.localStorage.setItem(claimStorageKey(code), String(slot));
+    } catch {
+      // Persistence is best-effort.
     }
-  }, [status, claimedSlot, send]);
-
-  // Follow our claim across host-driven seat reorders. Whenever a
-  // fresh SETUP_SEATING arrives, scan claimedBy[] for our own peer
-  // id; if we find ourselves at a different index than `claimedSlot`,
-  // sync local state to that index. This makes the companion's UI
-  // follow its seat when the host moves it up/down in the seating
-  // step.
-  useEffect(() => {
-    if (!pendingSeating || !peerId) return;
-    const mineAt = pendingSeating.claimedBy.indexOf(peerId);
-    if (mineAt !== -1 && mineAt !== claimedSlot) setClaimedSlot(mineAt);
-  }, [pendingSeating, peerId, claimedSlot]);
-
-  // Auto-reclaim during setup: when SETUP_SEATING arrives and the
-  // companion has a stored claim but the host hasn't yet recorded it
-  // (e.g. on first connect after a page refresh), ask the host to
-  // honour the claim again. Skipped if our peer id is already
-  // somewhere in claimedBy[] — the index-follow effect above
-  // handles syncing claimedSlot in that case, and re-issuing here
-  // would race against host-driven seat reorders.
-  useEffect(() => {
-    if (!pendingSeating || claimedSlot === null) return;
-    if (peerId && pendingSeating.claimedBy.includes(peerId)) return;
-    if (claimedSlot < 0 || claimedSlot >= pendingSeating.seats.length) return;
-    const currentClaim = pendingSeating.claimedBy[claimedSlot];
-    if (currentClaim !== null) return;
-    send({
-      type: "SEATING_REQUEST",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-      stepId: pendingSeating.stepId,
-      action: { kind: "claim", seatIndex: claimedSlot },
-    } satisfies CompanionToHostMessage);
-  }, [pendingSeating, claimedSlot, peerId, send]);
-
-  const claim = (playerIndex: number) => {
-    setClaimedSlot(playerIndex);
-    if (code) {
-      try {
-        window.localStorage.setItem(claimStorageKey(code), String(playerIndex));
-      } catch {
-        // Persistence is best-effort.
-      }
-    }
+  };
+  const sendClaim = (playerIndex: number) =>
     send({
       type: "CLAIM",
       protocolVersion: PEER_PROTOCOL_VERSION,
       playerIndex,
     } satisfies CompanionToHostMessage);
+
+  // Re-announce a remembered seat on every (re)connection. Only here
+  // and on a tap: re-sending on every local change would race the
+  // host's own claim bookkeeping when seats move.
+  const claimedSlotRef = useRef(claimedSlot);
+  claimedSlotRef.current = claimedSlot;
+  // Whether the host's seat list has shown this phone on a seat since
+  // it connected. Losing the seat after that means it was removed or
+  // released; before it, the remembered seat is still being asked for.
+  const seatConfirmedRef = useRef(false);
+  useEffect(() => {
+    if (status !== "connected") return;
+    seatConfirmedRef.current = false;
+    const slot = claimedSlotRef.current;
+    if (slot !== null)
+      send({
+        type: "CLAIM",
+        protocolVersion: PEER_PROTOCOL_VERSION,
+        playerIndex: slot,
+      } satisfies CompanionToHostMessage);
+  }, [status, send]);
+
+  /**
+   * During setup the host's seat list is the truth about which seat is
+   * ours: the claim follows its seat through reorders on any screen,
+   * and a removed seat takes the claim with it. A remembered seat the
+   * host has not confirmed yet is asked for again while it is free.
+   */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rememberClaim and sendClaim only close over stable values
+  useEffect(() => {
+    if (!pendingSeating || !peerId) return;
+    const mineAt = pendingSeating.claimedBy.indexOf(peerId);
+    if (mineAt !== -1) {
+      seatConfirmedRef.current = true;
+      if (mineAt !== claimedSlot) rememberClaim(mineAt);
+      return;
+    }
+    if (claimedSlot === null) return;
+    if (seatConfirmedRef.current) {
+      seatConfirmedRef.current = false;
+      rememberClaim(null);
+      return;
+    }
+    if (
+      claimedSlot < pendingSeating.seats.length &&
+      pendingSeating.claimedBy[claimedSlot] === null
+    )
+      sendClaim(claimedSlot);
+    else rememberClaim(null);
+  }, [pendingSeating, peerId, claimedSlot]);
+
+  // While setup is seating players the host confirms the claim through
+  // its seat list; mid-game the claim shows at once.
+  const claim = (playerIndex: number) => {
+    if (!pendingSeating) rememberClaim(playerIndex);
+    sendClaim(playerIndex);
   };
 
   const release = () => {
-    setClaimedSlot(null);
-    if (code) {
-      try {
-        window.localStorage.removeItem(claimStorageKey(code));
-      } catch {
-        // best-effort
-      }
-    }
+    rememberClaim(null);
+    seatConfirmedRef.current = false;
     send({
       type: "RELEASE",
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
   };
 
-  // Optimistic lock: when the user taps End my turn, we disable
-  // the button immediately and don't re-enable until the host's
-  // STATE confirms we're no longer the active player. Without
-  // this the button stays highlighted for the round-trip and
-  // can be clicked multiple times in rapid succession.
-  const [endingTurn, setEndingTurn] = useState(false);
-  const endTurn = () => {
-    setEndingTurn(true);
+  /**
+   * Send a game action to the host, which checks it against this page's
+   * claimed seat and answers with COMMAND_RESULT. The same commands the
+   * host's own UI runs.
+   */
+  const commandSeqRef = useRef(0);
+  const sendCommand = (command: SessionCommand) => {
+    if (versionMismatch) return;
+    commandSeqRef.current += 1;
+    const commandId = `${peerId ?? "companion"}:${commandSeqRef.current}`;
+    sentCommandsRef.current.set(commandId, command);
+    if (command.type === "END_TURN") setEndingTurn(true);
     send({
-      type: "END_TURN",
+      type: "COMMAND",
       protocolVersion: PEER_PROTOCOL_VERSION,
+      commandId,
+      command,
     } satisfies CompanionToHostMessage);
   };
-  // Clear the lock once the host has rotated us off the active
-  // seat (STATE has arrived with a new currentPlayerIndex).
+  const sendCommandRef = useRef(sendCommand);
+  sendCommandRef.current = sendCommand;
 
-  const bumpScore = (delta: number) =>
-    send({
-      type: "INCREMENT_SCORE",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-      delta,
-    } satisfies CompanionToHostMessage);
+  const bumpScore = (delta: number) => {
+    if (claimedSlot === null) return;
+    sendCommand({ type: "INCREMENT_SCORE", playerIndex: claimedSlot, delta });
+  };
 
-  const seizeInitiative = () =>
-    send({
-      type: "SEIZE",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-    } satisfies CompanionToHostMessage);
+  const triggerControl = (controlId: string) =>
+    sendCommand({ type: "TRIGGER_CONTROL", controlId });
 
   // Wizard-time pick response. Sent in answer to a SETUP_TURN from
   // the host; the host applies it to the wizard's setupContext.
@@ -498,7 +587,7 @@ function CompanionScreen() {
     } satisfies CompanionToHostMessage);
     // Show a "submitting…" state rather than blanking the picker.
     // Cleared (or resent) when the host's next SETUP_TURN/SETUP_DONE
-    // arrives — see the message effect above. This is what makes a
+    // arrives: see the message effect above. This is what makes a
     // dropped pick recover gracefully instead of leaving the player
     // staring at an empty screen.
     submittedPickRef.current = {
@@ -507,26 +596,6 @@ function CompanionScreen() {
       optionId,
     };
     setSubmitting(true);
-  };
-
-  // Seating-step edits — the companion can claim, rename, add, and
-  // remove seats from the host's wizard during early setup. The host
-  // validates each request against the step's min/max bounds before
-  // re-broadcasting fresh SETUP_SEATING to every connected peer.
-  const sendSeating = (
-    action:
-      | { kind: "add"; name: string }
-      | { kind: "rename"; seatIndex: number; name: string }
-      | { kind: "remove"; seatIndex: number }
-      | { kind: "claim"; seatIndex: number },
-  ) => {
-    if (!pendingSeating) return;
-    send({
-      type: "SEATING_REQUEST",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-      stepId: pendingSeating.stepId,
-      action,
-    } satisfies CompanionToHostMessage);
   };
 
   const tapTimer = () =>
@@ -541,7 +610,7 @@ function CompanionScreen() {
       protocolVersion: PEER_PROTOCOL_VERSION,
     } satisfies CompanionToHostMessage);
 
-  // Escape-hatch player-option swap — lets a player whose seat is
+  // Escape-hatch player-option swap: lets a player whose seat is
   // wired to the wrong (or no) option fix it mid-game without
   // re-setting up. Same wire format as a mid-game change-of-mind:
   // SET_PLAYER_OPTION is routed by the host's claim-map, so the
@@ -554,18 +623,6 @@ function CompanionScreen() {
       optionId,
     } satisfies CompanionToHostMessage);
 
-  // Mid-game rename — needed because (a) the old SET_PLAYER_OPTION
-  // bug wrote the option label over the player's display name, so
-  // sessions in the wild need a repair path, and (b) renaming on the
-  // fly is just nice to have. Host routes by the claiming peer's
-  // seat so a companion can only rename its own player.
-  const sendRenamePlayer = (name: string) =>
-    send({
-      type: "RENAME_PLAYER",
-      protocolVersion: PEER_PROTOCOL_VERSION,
-      name,
-    } satisfies CompanionToHostMessage);
-
   const stats = useMemo(
     () =>
       state
@@ -575,6 +632,7 @@ function CompanionScreen() {
               .map((t) => ({
                 playerIndex: t.playerIndex as number,
                 elapsedSeconds: t.elapsedSeconds,
+                untimed: t.untimed,
               })),
           )
         : [],
@@ -582,26 +640,50 @@ function CompanionScreen() {
   );
 
   const visualKey = definition?.playerVisualFrom;
+  const colorKey = definition?.playerColorFrom ?? visualKey;
+  // The phone takes the look of the host's game.
+  useGameTheme(definition?.id);
+  const scheme = useColourScheme();
   const subheadingKey = definition?.playerSubheadingFrom;
   const activePlayerIndex = state ? selectCurrentPlayerIndex(state) : null;
+  // Variable turn order travels inside STATE; a seated companion edits
+  // it (reorders included) through the same commands as the host.
+  const turnOrderView = state ? selectTurnOrder(state) : null;
   const playerViews =
     state?.players?.map((p, i) => ({
       name: p.name,
-      color: playerColor(p, i, visualKey),
+      color: playerColor(p, i, colorKey, scheme),
       headIconSrc: playerHeadIcon(p, visualKey),
       iconSrc: playerIcon(p, visualKey),
     })) ?? [];
-  const activeSubheading =
-    state?.players && activePlayerIndex !== null
-      ? playerSubheading(state.players[activePlayerIndex], subheadingKey)
-      : undefined;
-  const activePlayer =
+  // A labelled turn entry heads the banner with its own name and colour,
+  // its owner as the subheading, as on the host.
+  const activeEntry = turnOrderView?.entries.find(
+    (e) => e.id === turnOrderView.activeId,
+  );
+  const ownerView =
     activePlayerIndex !== null ? playerViews[activePlayerIndex] : undefined;
+  const activeSubheading =
+    activeEntry?.label !== undefined
+      ? ownerView?.name
+      : state?.players && activePlayerIndex !== null
+        ? playerSubheading(state.players[activePlayerIndex], subheadingKey)
+        : undefined;
+  const activePlayer =
+    activeEntry?.label !== undefined
+      ? {
+          name: activeEntry.label,
+          color: activeEntry.color ?? ownerView?.color ?? "var(--color-text)",
+          iconSrc: undefined,
+          headIconSrc: undefined,
+        }
+      : ownerView;
   const victorPlayer =
     state?.victor !== undefined && state?.victor !== null
       ? playerViews[state.victor]
       : undefined;
-  const remaining = state ? selectRemainingTurns(state) : 0;
+  const prediction = state ? selectPrediction(state) : null;
+  const remaining = Math.max(0, prediction?.turns ?? 0);
   const scoresVisible = !!(
     state?.scoreConfig &&
     state.players &&
@@ -618,25 +700,83 @@ function CompanionScreen() {
       : undefined;
   const isMyTurn =
     claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
-  // Seize is offered to the active seat under lead-relative turn order,
-  // while it's still available this round. The host re-validates.
-  const seizeLabel =
-    state?.turnOrder?.mode === "lead-relative"
-      ? (state.turnOrder.interrupt?.label ?? null)
-      : null;
-  const canSeize =
-    isMyTurn && seizeLabel !== null && !!state && selectCanSeize(state);
+  // The host's own rule decides, so a shared turn no seat owns can be
+  // ended from any seated phone.
+  const canEndTurn =
+    !!state &&
+    claimedSlot !== null &&
+    !victorPlayer &&
+    authorizeCommand(
+      state,
+      { type: "END_TURN" },
+      { kind: "seat", seatIndex: claimedSlot },
+    ).ok;
+  // A running game with no players has no seats to claim, so this
+  // screen speaks for the table without one, as the host allows.
+  const seatless =
+    !!state?.started && playerViews.length === 0 && !pendingSeating;
+  const actsForTable =
+    (claimedSlot !== null || seatless) && !victorPlayer && !versionMismatch;
+  const revision = state?.revision ?? 0;
+  // A sent undo locks the button until the host's state moves on (or it
+  // refuses), so a double tap cannot read as a second undo.
+  const canUndo =
+    actsForTable && lastState?.canUndo === true && undoSentAt !== revision;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: revision is a deliberate re-run trigger, any change of the host's state ends the lock
+  useEffect(() => {
+    setUndoSentAt(null);
+  }, [revision]);
+  const undo = () => {
+    setUndoSentAt(revision);
+    sendCommand({ type: "UNDO", atRevision: revision });
+  };
+  // Absent from a host that does not share its clock.
+  const hostPaused = lastState?.paused;
+  const untimedTurn = state ? selectUntimedTurnLabel(state) !== null : false;
+  const canPause = actsForTable && !!state?.started && !untimedTurn;
+  const setPaused = (paused: boolean) =>
+    sendCommand({ type: "SET_PAUSED", paused });
+  const setTurnsLeft = (left: number) => {
+    if (!state) return;
+    sendCommand({
+      type: "SET_EXPECTED_TURNS",
+      expectedTurns: state.turns.length + left,
+    });
+  };
+  // Controls available to this companion's seat right now. The host
+  // re-validates every trigger.
+  const availableControlIds =
+    state && claimedSlot !== null && !victorPlayer
+      ? selectAvailableControls(state, claimedSlot).map((c) => c.id)
+      : [];
   // Lift the End-my-turn optimistic lock once the host has
   // rotated us off the active seat.
+  // An owner of several entries can be up twice in a row, so a new
+  // acting entry or a new recorded turn also lifts the lock.
+  const turnsRecorded = state?.turns.length ?? 0;
+  const actingEntryId = turnOrderView?.activeId ?? null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isMyTurn, turnsRecorded and actingEntryId are deliberate re-run triggers
   useEffect(() => {
-    if (!isMyTurn) setEndingTurn(false);
-  }, [isMyTurn]);
-  // The host treats the very first tap of the timer container as
-  // "start the timer." If a companion fires END_TURN before then,
-  // it accidentally doubles as the start, which is confusing UX.
-  // We gate the End-Turn affordance until the host has recorded at
-  // least one turn — meaning the timer is genuinely running.
-  const gameStarted = (state?.turns.length ?? 0) > 0;
+    setEndingTurn(false);
+  }, [isMyTurn, turnsRecorded, actingEntryId]);
+
+  // The host's turn-entry UI: the turn order with its actions, the value
+  // question, the end-of-phase prompts and the combine sheet. A screen
+  // without a seat only watches.
+  const canAct = claimedSlot !== null && !victorPlayer && !versionMismatch;
+  const entryControls = useTurnEntryControls({
+    state: state ?? NO_STATE,
+    players: playerViews,
+    run: sendCommand,
+    disabled: !canAct,
+  });
+  const turnPhases = state ? selectTurnPhases(state) : null;
+  const currentPhaseLabel =
+    turnPhases?.phases.find((p) => p.id === turnPhases.activeId)?.label ?? "";
+  // The host's first tap starts the clock rather than ending a turn, so
+  // a phone offers End turn only once the clock has started; an END_TURN
+  // sent before then would double as the start.
+  const gameStarted = !!state?.started;
   const myScore =
     claimedSlot !== null && state
       ? (state.scores[claimedSlot] ?? state.scoreConfig?.min ?? 0)
@@ -647,6 +787,35 @@ function CompanionScreen() {
   const atMin = myScore <= scoreMin;
   const atMax = scoreMax !== undefined ? myScore >= scoreMax : false;
 
+  // Undo and the clock, as on the host's footer, beside the turn button.
+  const clockControls = (
+    <>
+      <IconButton
+        label="Undo"
+        tooltip="Undo the last action"
+        tooltipPlacement="top"
+        tooltipAlign="start"
+        size="lg"
+        onClick={undo}
+        disabled={!canUndo}
+      >
+        <Undo2 aria-hidden />
+      </IconButton>
+      {hostPaused !== undefined && (
+        <IconButton
+          label={hostPaused ? "Resume timer" : "Pause timer"}
+          tooltip={untimedTurn ? "This turn is untimed" : undefined}
+          tooltipPlacement="top"
+          size="lg"
+          onClick={() => setPaused(!hostPaused)}
+          disabled={!canPause}
+        >
+          {hostPaused ? <Play aria-hidden /> : <Pause aria-hidden />}
+        </IconButton>
+      )}
+    </>
+  );
+
   if (!code) {
     return (
       <div className={styles.container}>
@@ -656,7 +825,7 @@ function CompanionScreen() {
   }
 
   return (
-    <FullScreen>
+    <FullScreen menuExtras={<SchemeToggle />}>
       <div className={styles.container}>
         <div className={styles.header}>
           <span
@@ -698,8 +867,8 @@ function CompanionScreen() {
           {claimedPlayer && (
             <span className={styles.claimedAs}>
               {/* Silhouette (body meeple) rather than the head crest:
-                  for the Vagabond the head is a single generic crest
-                  shared by every character, so the distinguishing art
+                  an option with dealt characters may share one generic
+                  crest across all of them, so the distinguishing art
                   is the per-character body meeple. Matches the host
                   timer's active-player banner. */}
               <PlayerMeeple
@@ -707,43 +876,42 @@ function CompanionScreen() {
                 color={claimedPlayer.color}
                 headClassName={styles.claimHead}
                 silhouetteClassName={styles.claimMeeple}
-                fallback={
-                  <span
-                    className={styles.claimSwatch}
-                    style={{ background: claimedPlayer.color }}
-                    aria-hidden
-                  />
-                }
+                fallback={<Disc color={claimedPlayer.color} />}
               />
               {claimedPlayer.name}
-              <button
-                type="button"
-                onClick={release}
-                className={styles.changeButton}
-              >
-                change seat
-              </button>
+              <Button variant="ghost" size="sm" onClick={release}>
+                Change seat
+              </Button>
+              {canAct && !pendingSeating && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRenamingPlayers(true)}
+                >
+                  Rename players
+                </Button>
+              )}
               {/* Only show the swap link when the active definition
                   actually has a player-pick step (Generic doesn't,
                   so the swap would be a no-op). The button label
                   pulls from the step's own label so the wording
-                  matches the game's vocabulary — no game-specific
+                  matches the game's vocabulary, no game-specific
                   noun in app code. */}
               {definition &&
                 (() => {
                   const pickInfo = findPlayerPickStep(definition);
                   if (!pickInfo) return null;
                   return (
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         setChangePreviewId(null);
                         setChangingPlayerOption(true);
                       }}
-                      className={styles.changeButton}
                     >
-                      change {pickInfo.step.label.toLowerCase()}
-                    </button>
+                      Change {pickInfo.step.label.toLowerCase()}
+                    </Button>
                   );
                 })()}
             </span>
@@ -751,18 +919,20 @@ function CompanionScreen() {
         </div>
 
         {claimedPlayer && (
-          <label className={styles.nameField}>
-            <span className={styles.nameFieldLabel}>Your name</span>
-            <input
-              type="text"
+          <label className={styles.nameField} htmlFor="your-name">
+            <SectionLabel as="span">Your name</SectionLabel>
+            <CommitTextInput
+              id="your-name"
               value={customName}
-              onChange={(e) => saveCustomName(e.target.value)}
+              onCommit={saveCustomName}
+              maxLength={MAX_SEAT_NAME}
+              autoComplete="off"
               placeholder={
                 claimedSlot !== null
                   ? (playerViews[claimedSlot]?.name ?? "Your name")
                   : "Your name"
               }
-              className={styles.nameInput}
+              framed
             />
           </label>
         )}
@@ -776,44 +946,24 @@ function CompanionScreen() {
           />
         )}
 
-        {!pendingTurn && pendingSeating && !state?.players && (
+        {!pendingTurn && pendingSeating && (
           <SetupSeatingPanel
             seating={pendingSeating}
-            claimedSlot={claimedSlot}
-            onClaim={(seatIndex) => {
-              // Optimistically update local state so the UI reflects
-              // the claim immediately; host will broadcast fresh
-              // SETUP_SEATING to confirm (or reject if taken).
-              setClaimedSlot(seatIndex);
-              if (code) {
-                try {
-                  window.localStorage.setItem(
-                    claimStorageKey(code),
-                    String(seatIndex),
-                  );
-                } catch {
-                  // best-effort
-                }
-              }
-              sendSeating({ kind: "claim", seatIndex });
-            }}
-            onRename={(seatIndex, name) =>
-              sendSeating({ kind: "rename", seatIndex, name })
-            }
-            onAdd={(name) => sendSeating({ kind: "add", name })}
-            onRemove={(seatIndex) => sendSeating({ kind: "remove", seatIndex })}
+            mySeat={peerId ? pendingSeating.claimedBy.indexOf(peerId) : -1}
+            onClaim={claim}
+            run={sendCommand}
           />
         )}
 
         {/* Pre-sync placeholder. Shown for the whole "getting set up"
-            window — through relay pairing, the STATE pull, and any
-            dead-channel recovery — so the body doesn't blank out while
+            window: through relay pairing, the STATE pull, and any
+            dead-channel recovery, so the body doesn't blank out while
             the connection heals. displayStatus is "connecting" exactly
             until the first snapshot arrives (see its derivation). */}
         {displayStatus === "connecting" && (
           <div className={styles.empty}>
             {slowToSync
-              ? "Still connecting… check the host still has this session open. Keep this page open — it'll connect on its own — or refresh to retry."
+              ? "Still connecting… check the host still has this session open. Keep this page open (it'll connect on its own) or refresh to retry."
               : "Setting up your connection…"}
           </div>
         )}
@@ -822,6 +972,15 @@ function CompanionScreen() {
           <>
             {victorPlayer ? (
               <VictoryBanner victor={victorPlayer} />
+            ) : activeEntry?.label !== undefined && turnOrderView ? (
+              <div className={styles.activePlayer}>
+                <TurnEntryBanner
+                  entry={activeEntry}
+                  prominentKinds={turnOrderView.prominentKinds}
+                  fallbackColor={ownerView?.color ?? "var(--color-text)"}
+                  subheading={activeSubheading}
+                />
+              </div>
             ) : (
               activePlayer && (
                 <div
@@ -833,13 +992,7 @@ function CompanionScreen() {
                     color={activePlayer.color}
                     headClassName={styles.activePlayerHead}
                     silhouetteClassName={styles.activePlayerMeeple}
-                    fallback={
-                      <span
-                        className={styles.activePlayerSwatch}
-                        style={{ background: activePlayer.color }}
-                        aria-hidden
-                      />
-                    }
+                    fallback={<Disc color={activePlayer.color} size="lg" />}
                   />
                   <span className={styles.activePlayerText}>
                     <span>
@@ -859,8 +1012,29 @@ function CompanionScreen() {
             )}
 
             <div className={styles.bigStat}>
-              <span className={styles.bigStatValue}>{remaining}</span>
-              <span className={styles.bigStatLabel}>turns remaining</span>
+              {actsForTable && !prediction?.modelled ? (
+                <Stepper
+                  value={
+                    <span className={styles.bigStatValue}>{remaining}</span>
+                  }
+                  valueLabel="Turns remaining"
+                  onDecrement={() => setTurnsLeft(remaining - 1)}
+                  onIncrement={() => setTurnsLeft(remaining + 1)}
+                  canDecrement={remaining > 0}
+                  decrementLabel="One turn fewer"
+                  incrementLabel="One turn more"
+                />
+              ) : (
+                <span className={styles.bigStatValue}>
+                  {prediction?.remaining?.count ?? remaining}
+                </span>
+              )}
+              <SectionLabel as="span">
+                {prediction?.remaining?.label ??
+                  (prediction?.modelled
+                    ? "Turns remaining, roughly"
+                    : "Turns remaining")}
+              </SectionLabel>
             </div>
 
             {playerViews.length === 0 &&
@@ -874,82 +1048,86 @@ function CompanionScreen() {
                     to advance the timer.
                   </div>
                   <div className={styles.endTurnSlot}>
-                    <button
-                      type="button"
-                      onClick={tapTimer}
-                      className={styles.endTurnButton}
-                    >
-                      Next turn
-                    </button>
+                    <div className={styles.turnRow}>
+                      {clockControls}
+                      <Button variant="primary" fullWidth onClick={tapTimer}>
+                        Next turn
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
 
-            {playerViews.length > 0 && claimedSlot === null && (
-              <div className={styles.claimPanel}>
-                <span className={styles.claimTitle}>Claim a player</span>
-                <ul className={styles.claimList}>
-                  {playerViews.map((p, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => claim(i)}
-                        className={styles.claimRow}
-                      >
-                        <span
-                          className={styles.claimSwatch}
-                          style={{ background: p.color }}
-                          aria-hidden
+            {playerViews.length > 0 &&
+              claimedSlot === null &&
+              !pendingSeating && (
+                <div className={styles.claimPanel}>
+                  <SectionLabel as="span">Claim a player</SectionLabel>
+                  <ul className={styles.claimList}>
+                    {playerViews.map((p, i) => (
+                      <li key={i}>
+                        <ListRow
+                          color={p.color}
+                          lead={<Disc color={p.color} />}
+                          label={p.name}
+                          onClick={() => claim(i)}
                         />
-                        {p.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            {/* Mid-game faction picker removed — faction selection
-              happens during the host's wizard via the SETUP_TURN /
+            {/* No mid-game option picker: picks happen during the host's wizard via the SETUP_TURN /
               SetupTurnPanel flow, not after the game has started. */}
 
             {claimedPlayer && state.scoreConfig && (
-              <div className={styles.scoreControls}>
-                <button
-                  type="button"
-                  onClick={() => bumpScore(-scoreStep)}
-                  disabled={atMin}
-                  className={styles.scoreButton}
-                  aria-label="Decrease my score"
-                >
-                  <Minus aria-hidden />
-                </button>
-                <div>
-                  <div className={styles.scoreLabel}>My score</div>
-                  <div className={styles.scoreValue}>{myScore}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => bumpScore(scoreStep)}
-                  disabled={atMax}
-                  className={styles.scoreButton}
-                  aria-label="Increase my score"
-                >
-                  <Plus aria-hidden />
-                </button>
-              </div>
+              <Stepper
+                size="wide"
+                className={styles.scoreControls}
+                value={
+                  <span className={styles.scoreBlock}>
+                    <SectionLabel as="span">My score</SectionLabel>
+                    <span>{myScore}</span>
+                  </span>
+                }
+                onDecrement={() => bumpScore(-scoreStep)}
+                onIncrement={() => bumpScore(scoreStep)}
+                canDecrement={!atMin}
+                canIncrement={!atMax}
+                decrementLabel="Decrease my score"
+                incrementLabel="Increase my score"
+              />
             )}
 
             <div className={styles.bottomStack}>
-              {scoresVisible && playerViews.length > 0 && state.scoreConfig && (
-                <ScorePanel
-                  players={playerViews}
-                  scores={state.scores}
-                  scoreConfig={state.scoreConfig}
-                  readOnly
-                  firedMilestones={state.firedMilestones}
+              {turnPhases && turnPhases.phases.length > 1 && (
+                <PhaseBar
+                  phaseLabel={currentPhaseLabel}
+                  onEnd={canAct ? entryControls.endPhase : undefined}
                 />
               )}
+              {entryControls.turnOrderPanel && playerViews.length > 0 && (
+                <TurnOrderPanel
+                  players={playerViews}
+                  turnOrder={entryControls.turnOrderPanel}
+                  scores={state.scores}
+                  scoreConfig={scoresVisible ? state.scoreConfig : undefined}
+                  readOnly={!canAct}
+                />
+              )}
+              {(scoresVisible || entryControls.turnOrderPanel?.chart) &&
+                playerViews.length > 0 && (
+                  <ScorePanel
+                    players={playerViews}
+                    scores={state.scores}
+                    scoreConfig={state.scoreConfig}
+                    readOnly={!canAct}
+                    firedMilestones={state.firedMilestones}
+                    chart={entryControls.turnOrderPanel?.chart}
+                    catchUp={!entryControls.turnOrderPanel}
+                  />
+                )}
               {stats.length > 0 && (
                 <PlayerTimeShare stats={stats} players={playerViews} />
               )}
@@ -961,34 +1139,65 @@ function CompanionScreen() {
               IS spare room. */}
             {claimedPlayer && !victorPlayer && (
               <div className={styles.endTurnSlot}>
-                {gameStarted && canSeize && seizeLabel && (
-                  <button
-                    type="button"
-                    onClick={seizeInitiative}
-                    className={styles.seizeButton}
-                  >
-                    {seizeLabel}
-                  </button>
-                )}
-                {gameStarted ? (
-                  <button
-                    type="button"
-                    onClick={endTurn}
-                    disabled={!isMyTurn || endingTurn}
-                    className={styles.endTurnButton}
-                  >
-                    {isMyTurn ? "End my turn" : "Waiting for your turn…"}
-                  </button>
-                ) : (
-                  <div className={styles.endTurnPending}>
-                    Waiting for the host to start the timer…
-                  </div>
-                )}
+                <TurnActions
+                  controls={state.controls ?? []}
+                  availableIds={availableControlIds}
+                  onTrigger={triggerControl}
+                />
+                <div className={styles.turnRow}>
+                  {clockControls}
+                  {gameStarted ? (
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={entryControls.advance}
+                      disabled={!canEndTurn || endingTurn}
+                    >
+                      {!canEndTurn
+                        ? "Waiting for your turn…"
+                        : activeEntry?.label !== undefined
+                          ? `End ${activeEntry.label}’s turn`
+                          : isMyTurn
+                            ? "End my turn"
+                            : "End turn"}
+                    </Button>
+                  ) : (
+                    <div className={styles.endTurnPending}>
+                      Waiting for the host to start the timer…
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
         )}
       </div>
+      {state && entryControls.overlays}
+      {versionMismatch ? (
+        <PeerNotice
+          tone="alert"
+          message="This phone and the host are running different versions of Game Timer. Reload both pages to keep playing."
+          onDismiss={() => setVersionMismatch(false)}
+        />
+      ) : (
+        refusal && (
+          <PeerNotice
+            tone="status"
+            message={`Not applied: ${refusal}`}
+            onDismiss={() => setRefusal(null)}
+          />
+        )
+      )}
+      {renamingPlayers && canAct && !pendingSeating && state?.players && (
+        <PlayersSheet
+          players={state.players}
+          onRename={(playerIndex, name) =>
+            sendCommand({ type: "RENAME_PLAYER", playerIndex, name })
+          }
+          canEdit={(playerIndex) => playerIndex === claimedSlot}
+          onClose={() => setRenamingPlayers(false)}
+        />
+      )}
       {changingPlayerOption && definition && claimedSlot !== null && (
         <ChangePlayerOptionModal
           definition={definition}
@@ -1001,7 +1210,14 @@ function CompanionScreen() {
             setChangingPlayerOption(false);
             setChangePreviewId(null);
           }}
-          onRename={sendRenamePlayer}
+          onRename={(name) => {
+            if (name && claimedSlot !== null)
+              sendCommand({
+                type: "RENAME_PLAYER",
+                playerIndex: claimedSlot,
+                name,
+              });
+          }}
           onClose={() => {
             setChangingPlayerOption(false);
             setChangePreviewId(null);
@@ -1056,7 +1272,7 @@ function SetupTurnPanel({
     .filter((x): x is NonNullable<typeof x> => !!x);
   const excluded = new Set(pendingTurn.excludedOptionIds);
 
-  // Two-step pick — mirrors the host's PlayerPickScreen. Tap a card
+  // Two-step pick: mirrors the host's PlayerPickScreen. Tap a card
   // to open a full-screen confirm view; tap Confirm to send
   // SETUP_PICK; Back returns to the card list.
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
@@ -1087,7 +1303,7 @@ function SetupTurnPanel({
 
   // We've sent a pick and are waiting for the host to confirm by
   // advancing the turn. Show a quiet pending state rather than the
-  // picker — if the pick was dropped the host's heartbeat re-arrives
+  // picker, if the pick was dropped the host's heartbeat re-arrives
   // and we resend (see the message effect), so this resolves itself.
   if (submitting) {
     return (
@@ -1102,9 +1318,7 @@ function SetupTurnPanel({
       visible.find((o) => o.id === previewCardId) ??
       allOptions.find((o) => o.id === previewCardId) ??
       null;
-    const previewAdset = previewOption
-      ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
-      : undefined;
+    const previewSteps = previewOption?.setupInstructions ?? [];
     const previewMeeple = previewOption
       ? (
           previewOption as unknown as {
@@ -1121,9 +1335,7 @@ function SetupTurnPanel({
         aria-label={`Confirm ${previewLabel}`}
       >
         <div className={styles.heroPreviewInstruction}>
-          <span className={styles.heroPreviewSubtle}>
-            Your turn — confirm your pick
-          </span>
+          <SectionLabel as="span">Your turn — confirm your pick</SectionLabel>
           <span className={styles.heroPreviewTitle}>{previewLabel}</span>
         </div>
         <div
@@ -1148,11 +1360,11 @@ function SetupTurnPanel({
               }}
             />
           )}
-          {previewAdset && previewAdset.length > 0 && (
+          {previewSteps.length > 0 && (
             <ol className={styles.heroPreviewSteps}>
-              {previewAdset.map((s, i) => (
+              {previewSteps.map((s, i) => (
                 <li key={i}>
-                  <span className={styles.heroCardAdsetIndex}>{i + 1}.</span>
+                  <span className={styles.heroCardStepsIndex}>{i + 1}.</span>
                   <span>{s}</span>
                 </li>
               ))}
@@ -1160,23 +1372,19 @@ function SetupTurnPanel({
           )}
         </div>
         <div className={styles.heroPreviewActions}>
-          <button
-            type="button"
-            onClick={() => setPreviewCardId(null)}
-            className={styles.heroPreviewSecondary}
-          >
+          <Button fullWidth onClick={() => setPreviewCardId(null)}>
             Back
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
             onClick={() => {
               onPick(previewCardId);
               setPreviewCardId(null);
             }}
-            className={styles.heroPreviewPrimary}
           >
             Confirm setup
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -1189,63 +1397,43 @@ function SetupTurnPanel({
       aria-label={`Your turn to pick a ${pickLabel}`}
     >
       <div className={styles.heroPickerHeader}>
-        Your turn — choose a {pickLabel}
+        Your turn: choose a {pickLabel}
       </div>
       <div className={styles.heroCardColumn}>
         {visible.map((option) => {
           const isBlocked = excluded.has(option.id);
-          const adsetSteps = (option as unknown as { adsetSteps?: string[] })
-            .adsetSteps;
+          const setupSteps = option.setupInstructions ?? [];
           const meepleSrc = (
             option as unknown as {
               assets?: { meepleSvg?: { appPath?: string } };
             }
           ).assets?.meepleSvg?.appPath;
           return (
-            <button
+            <ListRow
               key={option.id}
-              type="button"
               disabled={isBlocked}
               onClick={() => setPreviewCardId(option.id)}
-              className={styles.heroCard}
-              // Accessible name is just the option label, not the
-              // computed text of all child nodes (which would
-              // include every ADSET step).
+              // The name is the option label, not every setup step.
               aria-label={option.label}
-              style={
-                {
-                  ["--faction-color" as string]:
-                    option.color ?? "var(--color-border)",
-                } as React.CSSProperties
+              color={option.color}
+              lead={
+                meepleSrc && (
+                  <img
+                    src={meepleSrc}
+                    alt=""
+                    aria-hidden
+                    className={styles.optionMeeple}
+                    style={{
+                      background: option.color ?? "var(--color-text)",
+                      WebkitMaskImage: `url(${meepleSrc})`,
+                      maskImage: `url(${meepleSrc})`,
+                    }}
+                  />
+                )
               }
-            >
-              <span className={styles.heroCardLabel}>{option.label}</span>
-              {adsetSteps && adsetSteps.length > 0 && (
-                <ol className={styles.heroCardAdset}>
-                  {adsetSteps.map((s, i) => (
-                    <li key={i}>
-                      <span className={styles.heroCardAdsetIndex}>
-                        {i + 1}.
-                      </span>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {meepleSrc && (
-                <img
-                  src={meepleSrc}
-                  alt=""
-                  aria-hidden
-                  className={styles.heroCardMeeple}
-                  style={{
-                    background: option.color ?? "var(--color-text)",
-                    WebkitMaskImage: `url(${meepleSrc})`,
-                    maskImage: `url(${meepleSrc})`,
-                  }}
-                />
-              )}
-            </button>
+              label={option.label}
+              hint={setupSteps.length > 0 && <OptionSteps steps={setupSteps} />}
+            />
           );
         })}
       </div>
@@ -1257,11 +1445,11 @@ function SetupTurnPanel({
 // ?code= in the URL (e.g. typed the address by hand, or shared the
 // page URL not the QR link). Lets them paste / type a session code
 // and navigate to ?code=… so the normal connect path takes over.
-// Escape-hatch player-option swap modal — fullscreen, mirrors the
+// Escape-hatch player-option swap modal: fullscreen, mirrors the
 // wizard's PlayerPickScreen UX (tap card → preview → Confirm).
 // Excludes options already claimed by other seats so the
 // SET_PLAYER_OPTION peer message doesn't get rejected on the host.
-// The host's mutex constraints still apply server-side — we only
+// The host's mutex constraints still apply server-side: we only
 // filter the obvious taken-by-someone-else case in the picker.
 function ChangePlayerOptionModal({
   definition,
@@ -1284,7 +1472,7 @@ function ChangePlayerOptionModal({
 }) {
   // Seed the rename input with the current host-side name so the
   // user can edit it as text. Tracks edits locally; "Save" fires
-  // the peer message. NOT debounced — explicit Save matches the
+  // the peer message. NOT debounced: explicit Save matches the
   // explicit-action vibe of the rest of the modal.
   const currentName = players[claimedSlot]?.name ?? "";
   const [nameDraft, setNameDraft] = useState(currentName);
@@ -1292,7 +1480,7 @@ function ChangePlayerOptionModal({
     setNameDraft(currentName);
   }, [currentName]);
 
-  // Keyboard dismissal — Escape closes the modal.
+  // Keyboard dismissal: Escape closes the modal.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -1307,8 +1495,8 @@ function ChangePlayerOptionModal({
   const renameDirty = nameDraft.trim().length > 0 && nameDraft !== currentName;
   const pick = findPlayerPickStep(definition);
   if (!pick) return null;
-  // The step's own `label` is the game-vocab noun ("Faction" for
-  // Root, "Class" for a hypothetical class-based game). All
+  // The step's own `label` is the game-vocab noun (e.g. "Class" for a
+  // class-based game). All
   // user-visible swap strings derive from it so this component
   // stays game-agnostic.
   const stepLabel = pick.step.label;
@@ -1330,292 +1518,202 @@ function ChangePlayerOptionModal({
       onPreviewChange(null);
       return null;
     }
-    const adset = (option as unknown as { adsetSteps?: string[] }).adsetSteps;
+    const setupSteps = option.setupInstructions ?? [];
     const meeple = (
       option as unknown as { assets?: { meepleSvg?: { appPath?: string } } }
     ).assets?.meepleSvg?.appPath;
     const color = option.color ?? "var(--color-border)";
     return (
-      <div
-        className={styles.swapOverlay}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Confirm ${stepLabel.toLowerCase()} swap`}
-      >
-        <div
-          className={styles.heroPreview}
-          style={{ padding: 20, maxWidth: 480, width: "100%" }}
-        >
-          <div className={styles.heroPreviewInstruction}>
-            <span className={styles.heroPreviewSubtle}>
-              Confirm {stepLabel.toLowerCase()} swap
-            </span>
-            <span className={styles.heroPreviewTitle}>{option.label}</span>
-          </div>
-          <div
-            className={styles.heroPreviewCard}
-            style={
-              {
-                background: `color-mix(in srgb, ${color} 18%, var(--color-surface))`,
-                borderColor: color,
-              } as React.CSSProperties
-            }
-          >
-            {meeple && (
-              <img
-                src={meeple}
-                alt=""
-                aria-hidden
-                className={styles.heroPreviewMeeple}
-                style={{
-                  background: color,
-                  WebkitMaskImage: `url(${meeple})`,
-                  maskImage: `url(${meeple})`,
-                }}
-              />
-            )}
-            {adset && adset.length > 0 && (
-              <ol className={styles.heroPreviewSteps}>
-                {adset.map((s, i) => (
-                  <li key={i}>
-                    <span className={styles.heroCardAdsetIndex}>{i + 1}.</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-          <div className={styles.heroPreviewActions}>
-            <button
-              type="button"
-              onClick={() => onPreviewChange(null)}
-              className={styles.heroPreviewSecondary}
-            >
-              Back
-            </button>
-            <button
-              type="button"
+      <Sheet
+        title={option.label}
+        subtitle={`Confirm ${stepLabel.toLowerCase()} swap`}
+        onDismiss={() => onPreviewChange(null)}
+        actions={
+          <>
+            <Button onClick={() => onPreviewChange(null)}>Back</Button>
+            <Button
+              variant="primary"
               onClick={() => onConfirm(pick.step.id, option.id)}
-              className={styles.heroPreviewPrimary}
             >
               Confirm swap
-            </button>
-          </div>
+            </Button>
+          </>
+        }
+      >
+        <div
+          className={styles.heroPreviewCard}
+          style={
+            {
+              background: `color-mix(in srgb, ${color} 18%, var(--color-surface))`,
+              borderColor: color,
+            } as React.CSSProperties
+          }
+        >
+          {meeple && (
+            <img
+              src={meeple}
+              alt=""
+              aria-hidden
+              className={styles.heroPreviewMeeple}
+              style={{
+                background: color,
+                WebkitMaskImage: `url(${meeple})`,
+                maskImage: `url(${meeple})`,
+              }}
+            />
+          )}
+          {setupSteps.length > 0 && (
+            <ol className={styles.heroPreviewSteps}>
+              {setupSteps.map((s, i) => (
+                <li key={i}>
+                  <span className={styles.heroCardStepsIndex}>{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
-      </div>
+      </Sheet>
     );
   }
 
   return (
-    <div
-      className={styles.swapOverlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Change ${stepLabel.toLowerCase()}`}
+    <Sheet
+      title={`Change ${stepLabel.toLowerCase()}`}
+      onDismiss={onClose}
+      width="wide"
+      actions={<Button onClick={onClose}>Close</Button>}
     >
-      <div className={styles.swapPanel}>
-        <header className={styles.swapHeader}>
-          <span className={styles.swapTitle}>
-            Change {stepLabel.toLowerCase()}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className={styles.swapClose}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </header>
-        {/* Rename row — repairs sessions where the old buggy
+      {/* Rename row: repairs sessions where the old buggy
             SET_PLAYER_OPTION wrote the option label over the
             human's display name. Independent of the option pick:
             Save fires only the rename. */}
-        <div className={styles.renameRow}>
-          <label className={styles.renameLabel} htmlFor="swap-rename">
-            Player name
-          </label>
-          <input
-            id="swap-rename"
-            type="text"
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            className={styles.renameInput}
-            placeholder="Player name"
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            disabled={!renameDirty}
-            onClick={() => {
-              onRename(nameDraft.trim());
-            }}
-            className={styles.renameSave}
-          >
-            Save
-          </button>
-        </div>
-        <div className={styles.heroCardColumn}>
-          {pick.options.map((option) => {
-            const blocked = takenIds.has(option.id);
-            const adset = (option as unknown as { adsetSteps?: string[] })
-              .adsetSteps;
-            const meeple = (
-              option as unknown as {
-                assets?: { meepleSvg?: { appPath?: string } };
-              }
-            ).assets?.meepleSvg?.appPath;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                disabled={blocked}
-                onClick={() => onPreviewChange(option.id)}
-                className={styles.heroCard}
-                aria-label={option.label}
-                style={
-                  {
-                    ["--faction-color" as string]:
-                      option.color ?? "var(--color-border)",
-                  } as React.CSSProperties
-                }
-              >
-                <span className={styles.heroCardLabel}>{option.label}</span>
-                {adset && adset.length > 0 && (
-                  <ol className={styles.heroCardAdset}>
-                    {adset.map((s, i) => (
-                      <li key={i}>
-                        <span className={styles.heroCardAdsetIndex}>
-                          {i + 1}.
-                        </span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                {meeple && (
+      <div className={styles.renameRow}>
+        <VisuallyHidden as="label" htmlFor="swap-rename">
+          Player name
+        </VisuallyHidden>
+        <Field
+          id="swap-rename"
+          type="text"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          placeholder="Player name"
+          autoComplete="off"
+        />
+        <Button
+          variant="primary"
+          disabled={!renameDirty}
+          onClick={() => onRename(nameDraft.trim())}
+        >
+          Save
+        </Button>
+      </div>
+      <div className={styles.heroCardColumn}>
+        {pick.options.map((option) => {
+          const blocked = takenIds.has(option.id);
+          const setupSteps = option.setupInstructions ?? [];
+          const meeple = (
+            option as unknown as {
+              assets?: { meepleSvg?: { appPath?: string } };
+            }
+          ).assets?.meepleSvg?.appPath;
+          return (
+            <ListRow
+              key={option.id}
+              disabled={blocked}
+              onClick={() => onPreviewChange(option.id)}
+              aria-label={option.label}
+              color={option.color}
+              lead={
+                meeple && (
                   <img
                     src={meeple}
                     alt=""
                     aria-hidden
-                    className={styles.heroCardMeeple}
+                    className={styles.optionMeeple}
                     style={{
                       background: option.color ?? "var(--color-text)",
                       WebkitMaskImage: `url(${meeple})`,
                       maskImage: `url(${meeple})`,
                     }}
                   />
-                )}
-              </button>
-            );
-          })}
-        </div>
+                )
+              }
+              label={option.label}
+              hint={setupSteps.length > 0 && <OptionSteps steps={setupSteps} />}
+            />
+          );
+        })}
       </div>
-    </div>
+    </Sheet>
   );
 }
 
-// Pre-game collaborative seating: the host's wizard publishes its
-// seating list whenever it changes; this panel lets the companion
-// claim a seat (binding their peer identity to it), rename their
-// seat so everyone sees the same name, and add/remove seats.
+/**
+ * The setup seat list, as the host's wizard shows it. A phone that has
+ * taken a seat arranges the list like the host does (order, adding and
+ * removing) but names and colours only its own seat; one without a seat
+ * can only take one.
+ */
 function SetupSeatingPanel({
   seating,
-  claimedSlot,
+  mySeat,
   onClaim,
-  onRename,
-  onAdd,
-  onRemove,
+  run,
 }: {
   seating: Extract<HostToCompanionMessage, { type: "SETUP_SEATING" }>;
-  claimedSlot: number | null;
+  // Index of this phone's seat, or -1.
+  mySeat: number;
   onClaim: (seatIndex: number) => void;
-  onRename: (seatIndex: number, name: string) => void;
-  onAdd: (name: string) => void;
-  onRemove: (seatIndex: number) => void;
+  run: (command: SessionCommand) => void;
 }) {
-  const { seats, claimedBy, minPlayers, maxPlayers } = seating;
-  const canAdd = seats.length < maxPlayers;
-  const canRemove = seats.length > minPlayers;
+  const { seats, claimedBy, minPlayers, maxPlayers, colorOptions } = seating;
+  const seated = mySeat !== -1;
+  const heldByOther = (i: number) => claimedBy[i] !== null && i !== mySeat;
+  const ref = (i: number) => ({ playerIndex: i, seatId: seats[i].id });
+  const edits = seated
+    ? {
+        onRename: (i: number, name: string) =>
+          run({ type: "RENAME_PLAYER", ...ref(i), name }),
+        onMove: (from: number, to: number) =>
+          run({ type: "REORDER_SEATS", ...ref(from), toIndex: to }),
+        onRemove: (i: number) => run({ type: "REMOVE_SEAT", ...ref(i) }),
+        canRemove: (i: number) => !heldByOther(i),
+        onAdd: () => run({ type: "ADD_SEAT" }),
+        onColor: (i: number, colorId: string) =>
+          run({ type: "SET_SEAT_COLOR", ...ref(i), colorId }),
+        canEdit: (i: number) => i === mySeat,
+      }
+    : {};
 
   return (
-    <div className={styles.claimPanel}>
-      <span className={styles.claimTitle}>Take a seat</span>
-      <ul className={styles.claimList}>
-        {seats.map((seat, i) => {
-          const claimedByPeer = claimedBy[i];
-          const isMine = claimedSlot === i;
-          const isTakenByOther = !isMine && claimedByPeer !== null;
-          if (isMine) {
-            return (
-              <li key={i} className={styles.claimRow}>
-                <label className={styles.nameField} style={{ flex: 1 }}>
-                  <span className={styles.nameFieldLabel}>
-                    Seat {i + 1} (you)
-                  </span>
-                  <input
-                    type="text"
-                    value={seat.name}
-                    onChange={(e) => onRename(i, e.target.value)}
-                    className={styles.nameInput}
-                    aria-label={`Rename seat ${i + 1}`}
-                  />
-                </label>
-              </li>
-            );
-          }
-          return (
-            <li
-              key={i}
-              className={styles.claimRow}
-              style={{ display: "flex", gap: 8, alignItems: "center" }}
+    <section className={styles.claimPanel} aria-label="Seats">
+      <SectionLabel as="span">{seated ? "Seats" : "Take a seat"}</SectionLabel>
+      <SeatList
+        seats={seats}
+        label="Seats"
+        colorOptions={colorOptions}
+        minPlayers={minPlayers}
+        maxPlayers={maxPlayers}
+        {...edits}
+        seatNote={(i) =>
+          i === mySeat ? (
+            <span className={styles.seatNote}>You</span>
+          ) : heldByOther(i) ? (
+            <span className={styles.seatNote}>Taken</span>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onClaim(i)}
+              aria-label={`Claim seat ${i + 1}`}
             >
-              <button
-                type="button"
-                onClick={() => onClaim(i)}
-                disabled={isTakenByOther}
-                style={{ all: "unset", cursor: "pointer", flex: 1 }}
-                aria-label={
-                  isTakenByOther ? `Seat ${i + 1} taken` : `Claim seat ${i + 1}`
-                }
-              >
-                Seat {i + 1} — {seat.name}
-                {isTakenByOther && (
-                  <em
-                    style={{
-                      marginLeft: 8,
-                      opacity: 0.7,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    (taken)
-                  </em>
-                )}
-              </button>
-              {canRemove && !isTakenByOther && (
-                <button
-                  type="button"
-                  onClick={() => onRemove(i)}
-                  className={styles.changeButton}
-                  aria-label={`Remove seat ${i + 1}`}
-                >
-                  remove
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {canAdd && (
-        <button
-          type="button"
-          onClick={() => onAdd(`Player ${seats.length + 1}`)}
-          className={styles.changeButton}
-        >
-          + Add seat
-        </button>
-      )}
-    </div>
+              Claim
+            </Button>
+          )
+        }
+      />
+    </section>
   );
 }
 
@@ -1624,5 +1722,19 @@ export default function CompanionPage() {
     <Suspense fallback={null}>
       <CompanionScreen />
     </Suspense>
+  );
+}
+
+/** An option's setup steps, numbered, under its name in a row. */
+function OptionSteps({ steps }: { steps: string[] }) {
+  return (
+    <ol className={styles.optionSteps}>
+      {steps.map((s, i) => (
+        <li key={i}>
+          <span className={styles.heroCardStepsIndex}>{i + 1}.</span>
+          <span>{s}</span>
+        </li>
+      ))}
+    </ol>
   );
 }

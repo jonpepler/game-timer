@@ -1,7 +1,15 @@
 import styles from "./page.module.css";
 
-import Link from "next/link";
 import { Play } from "lucide-react";
+import { ButtonLink, SectionLabel } from "@/components/ui";
+import { builtInDefinitions } from "@/state/definitions";
+import { creditLine, type SoundSlot, soundCredits } from "@/state/gameSounds";
+
+const SLOT_LABELS: Record<SoundSlot, string> = {
+  next_turn: "Next turn",
+  last_30: "Final 30 seconds",
+  overtime: "Overtime",
+};
 
 export default function Home() {
   return (
@@ -14,15 +22,36 @@ export default function Home() {
             limit on anyone’s thinking.
           </p>
         </div>
-        <Link href="/timer" className={styles.cta}>
-          <Play size={18} aria-hidden />
-          New Game
-        </Link>
+        <ButtonLink href="/timer" variant="primary" icon={<Play aria-hidden />}>
+          New game
+        </ButtonLink>
       </main>
       <footer className={styles.footer}>
-        <span className={styles.footerLabel}>Sound credits</span>
-        <span>Chime 0011.wav — radian</span>
-        <span>Chime-Improper.flac — drooler</span>
+        <SectionLabel as="span" className={styles.footerLabel}>
+          Sound credits
+        </SectionLabel>
+        <span>Chime 0011.wav: radian</span>
+        <span>Chime-Improper.flac: drooler</span>
+        {builtInDefinitions.map((definition) => {
+          const credits = soundCredits(definition);
+          if (credits.length === 0) return null;
+          return (
+            <section
+              key={definition.id}
+              aria-label={`${definition.name} sound credits`}
+              className={styles.footerGroup}
+            >
+              <span className={styles.footerGame}>{definition.name}</span>
+              <ul className={styles.footerList}>
+                {credits.map((credit) => (
+                  <li key={credit.slot}>
+                    {SLOT_LABELS[credit.slot]}: {creditLine(credit)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
       </footer>
     </div>
   );

@@ -1,20 +1,14 @@
 import type { GameDefinition } from "./gameDefinition";
-import { arcsDefinition } from "./definitions/arcs";
+import { builtInDefinitions } from "./definitions";
 import { genericDefinition } from "./definitions/generic";
-import { rootDefinition } from "./definitions/root";
 import { listCustomDefinitions } from "./customDefinitions";
 
-// Built-in definitions bundled with the app.
-const BUILT_INS: readonly GameDefinition[] = Object.freeze([
-  genericDefinition,
-  rootDefinition,
-  arcsDefinition,
-]);
+const BUILT_INS: readonly GameDefinition[] = builtInDefinitions;
 
-export const DEFAULT_DEFINITION_ID = genericDefinition.id;
+export const DEFAULT_DEFINITION_ID = BUILT_INS[0].id;
 
 // Built-ins first (Generic by convention is the default), then custom
-// in storage order. Custom definitions can't override built-ins —
+// in storage order. Custom definitions can't override built-ins:
 // duplicate ids are skipped.
 export const listDefinitions = (): GameDefinition[] => {
   const builtInIds = new Set(BUILT_INS.map((d) => d.id));

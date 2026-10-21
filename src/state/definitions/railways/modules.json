@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "definitionId": "railways",
+  "categories": {
+    "expansion": {
+      "base": {
+        "label": "Base game"
+      },
+      "landmarkTiles": {
+        "label": "Landmarks: Landmark tiles"
+      },
+      "metropolitan": {
+        "label": "Landmarks: Metropolitan Transit Department"
+      },
+      "events": {
+        "label": "Landmarks: Events"
+      }
+    },
+    "gameLength": {
+      "short": {
+        "label": "Short Game",
+        "description": "4 cycles, 8 Minor Companies in 2 columns"
+      },
+      "long": {
+        "label": "Long Game",
+        "description": "6 cycles, 12 Minor Companies in 3 columns"
+      }
+    }
+  }
+}

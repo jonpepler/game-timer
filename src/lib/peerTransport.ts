@@ -6,7 +6,7 @@
  *
  * Trystero (serverless WebRTC over public Nostr relays) is the standard.
  * PeerJS is kept as a fallback: build/run with NEXT_PUBLIC_USE_PEERJS=true
- * to use it instead — handy for debugging, or for plain-http LAN testing
+ * to use it instead: handy for debugging, or for plain-http LAN testing
  * where Trystero's crypto.subtle (secure-context only) is unavailable.
  *
  * Note: the choice is build-time/global on purpose. Host and companion

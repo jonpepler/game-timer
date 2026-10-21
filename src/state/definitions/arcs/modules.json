@@ -10,6 +10,13 @@
         "label": "Leaders & Lore Pack"
       }
     },
+    "colour": {
+      "red": { "label": "Red", "color": "#E25A44" },
+      "blue": { "label": "Blue", "color": "#4A8BE0" },
+      "yellow": { "label": "Yellow", "color": "#E8B428" },
+      "white": { "label": "White", "color": "#ECE8DD" },
+      "pink": { "label": "Pink", "color": "#DF559E" }
+    },
     "leader": {
       "elder": {
         "label": "Elder",
@@ -245,6 +252,10 @@
         "imageUrlPattern": "https://cardcdn.buriedgiant.com/cards/arcs/en-US/{CARD}.webp",
         "cors": "Access-Control-Allow-Origin: *",
         "licence": "No explicit redistribution licence; mirrored for a personal fan tool. Confirm with Buried Giant before any wide publication."
+      },
+      "buriedgiant-pnp-kit-4": {
+        "note": "Pink seat colour #DF559E is the mean of the pink pixels in '5p City.png' and '5p Starport.png' from Arcs Kit #4 (5th Player), the official Beyond the Reach print-and-play. The Mandate card backs name the colour 'Pink'.",
+        "url": "https://arcs-beyond-the-reach.backerkit.com/hosted_preorders/project_updates?page=2"
       }
     },
     "gaps": [

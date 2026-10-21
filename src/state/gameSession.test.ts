@@ -25,6 +25,23 @@ describe("gameSessionReducer", () => {
     expect(state.currentTurnStartedAt).toBe(1000);
   });
 
+  it("counts every change in the revision, including an undo", () => {
+    const started = gameSessionReducer(init(), { type: "START", at: 1000 });
+    expect(started.revision).toBe(1);
+    const ended = gameSessionReducer(started, {
+      type: "NEXT_TURN",
+      elapsedSeconds: 10,
+      at: 2000,
+    });
+    expect(ended.revision).toBe(2);
+    // Undo restores the turns but never the revision.
+    expect(gameSessionReducer(ended, { type: "UNDO" }).revision).toBe(3);
+    // An action that changes nothing leaves it alone.
+    expect(gameSessionReducer(started, { type: "START", at: 5 }).revision).toBe(
+      1,
+    );
+  });
+
   it("START is idempotent once the session has begun", () => {
     const first = gameSessionReducer(init(), { type: "START", at: 1000 });
     const second = gameSessionReducer(first, { type: "START", at: 2000 });
@@ -85,7 +102,7 @@ describe("gameSessionReducer", () => {
 
     expect(undone.turns).toHaveLength(0);
     expect(undone.currentTurnStartedAt).toBe(1000);
-    // Back to zero turns means the original average is restored — see the
+    // Back to zero turns means the original average is restored: see the
     // dedicated test below for why we don't freeze the rolling average.
     expect(undone.averageSeconds).toBe(300);
   });
@@ -155,6 +172,43 @@ describe("gameSessionReducer", () => {
     expect(reset.started).toBe(false);
     expect(reset.expectedTurns).toBe(50);
     expect(reset.averageSeconds).toBe(300);
+  });
+
+  describe("SET_STARTING_AVERAGE", () => {
+    it("sets the first countdown before any turn is recorded", () => {
+      const s = gameSessionReducer(init(), {
+        type: "SET_STARTING_AVERAGE",
+        seconds: 90,
+      });
+      expect(s.averageSeconds).toBe(90);
+      expect(s.initialAverageSeconds).toBe(90);
+    });
+
+    it("is what undo back to zero turns and RESET return to", () => {
+      let s = gameSessionReducer(init(), {
+        type: "SET_STARTING_AVERAGE",
+        seconds: 90,
+      });
+      s = gameSessionReducer(s, { type: "START", at: 0 });
+      s = gameSessionReducer(s, {
+        type: "NEXT_TURN",
+        elapsedSeconds: 20,
+        at: 20000,
+      });
+      expect(s.averageSeconds).toBe(20);
+      expect(gameSessionReducer(s, { type: "UNDO" }).averageSeconds).toBe(90);
+      expect(gameSessionReducer(s, { type: "RESET" }).averageSeconds).toBe(90);
+    });
+
+    it("leaves a countdown that is already running alone", () => {
+      const started = gameSessionReducer(init(), { type: "START", at: 0 });
+      const s = gameSessionReducer(started, {
+        type: "SET_STARTING_AVERAGE",
+        seconds: 90,
+      });
+      expect(s.averageSeconds).toBe(300);
+      expect(s.initialAverageSeconds).toBe(90);
+    });
   });
 });
 
@@ -397,9 +451,9 @@ describe("score milestones", () => {
     increment: 1,
     victory: { type: "firstToMax" as const },
     milestones: [
-      { atScore: 4, label: "Trigger hireling A" },
-      { atScore: 8, label: "Trigger hireling B" },
-      { atScore: 12, label: "Trigger hireling C" },
+      { atScore: 4, label: "Trigger event A" },
+      { atScore: 8, label: "Trigger event B" },
+      { atScore: 12, label: "Trigger event C" },
     ],
   };
 
@@ -424,7 +478,7 @@ describe("score milestones", () => {
       value: 4,
     });
     expect(next.pendingMilestones).toEqual([
-      { playerIndex: 0, atScore: 4, label: "Trigger hireling A" },
+      { playerIndex: 0, atScore: 4, label: "Trigger event A" },
     ]);
     expect(next.firedMilestones[0]).toEqual([4]);
   });
@@ -436,7 +490,7 @@ describe("score milestones", () => {
       value: 4,
     });
     state = gameSessionReducer(state, { type: "DISMISS_MILESTONE" });
-    // Score down then back to 4 — no re-fire.
+    // Score down then back to 4, no re-fire.
     state = gameSessionReducer(state, {
       type: "SET_SCORE",
       playerIndex: 0,
@@ -472,8 +526,8 @@ describe("score milestones", () => {
       value: 4,
     });
     expect(state.pendingMilestones).toEqual([
-      { playerIndex: 0, atScore: 4, label: "Trigger hireling A" },
-      { playerIndex: 1, atScore: 4, label: "Trigger hireling A" },
+      { playerIndex: 0, atScore: 4, label: "Trigger event A" },
+      { playerIndex: 1, atScore: 4, label: "Trigger event A" },
     ]);
   });
 
@@ -545,7 +599,7 @@ describe("score milestones", () => {
       }),
       { type: "START", at: 0 },
     );
-    // Player 0 crosses first — they get the dialog.
+    // Player 0 crosses first: they get the dialog.
     const afterA = gameSessionReducer(state, {
       type: "SET_SCORE",
       playerIndex: 0,
@@ -554,7 +608,7 @@ describe("score milestones", () => {
     expect(afterA.pendingMilestones).toEqual([
       { playerIndex: 0, atScore: 4, label: "Trigger" },
     ]);
-    // Player 1 crosses next — dialog stays silent.
+    // Player 1 crosses next: dialog stays silent.
     const afterB = gameSessionReducer(afterA, {
       type: "SET_SCORE",
       playerIndex: 1,

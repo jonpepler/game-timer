@@ -1,0 +1,8 @@
+/*
+ * Trimmed to cap height and baseline, the box is the letters themselves,
+ * so a flex row centring it on an icon centres the visible line rather
+ * than the face's line box, whose ascent and descent vary by font.
+ */
+.text {
+  text-box: trim-both cap alphabetic;
+}

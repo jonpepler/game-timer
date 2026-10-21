@@ -1,0 +1,167 @@
+/*
+ * One frame for everything that floats over a screen: a centred card on a
+ * wide screen, a bottom sheet on a phone. The title and the actions stay
+ * put while the body between them scrolls.
+ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-24);
+  background: var(--elevation-backdrop);
+  backdrop-filter: blur(var(--elevation-backdrop-blur));
+  animation: fade var(--duration-base) var(--ease-standard);
+}
+
+.prompt {
+  z-index: var(--z-prompt);
+}
+
+.hero {
+  z-index: var(--z-hero);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 2 * var(--space-24));
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-sheet);
+  background-image: var(--ornament-texture);
+  color: var(--color-text);
+  border: 2px solid var(--sheet-accent, var(--color-sheet-rule));
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--elevation-overlay);
+  outline: var(--sheet-inner-rule) solid var(--color-sheet-rule);
+  outline-offset: calc(var(--space-4) * -1);
+  overflow: hidden;
+  animation: rise var(--duration-slow) var(--ease-emphasis);
+}
+
+.wide {
+  max-width: 560px;
+}
+
+.grid {
+  max-width: 760px;
+}
+
+.header {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-24) var(--space-24) var(--space-12);
+  text-align: center;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-4) var(--space-24) var(--space-24);
+}
+
+.actions {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  padding: var(--space-16) var(--space-24) var(--space-24);
+  border-top: 1px solid var(--color-border);
+}
+
+.actions > * {
+  flex: 1 1 auto;
+}
+
+/* Centred content, for an announcement rather than a form. */
+.centred {
+  align-items: center;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .card {
+    max-width: none;
+    max-height: calc(100dvh - var(--space-32));
+    border-bottom: none;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    animation-name: slideUp;
+  }
+
+  .actions {
+    padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .body:last-child {
+    padding-bottom: calc(var(--space-24) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: scale(0.92) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .card {
+    animation: none;
+  }
+}

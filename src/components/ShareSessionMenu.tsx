@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2, Share2 } from "lucide-react";
+import { Loader2, RotateCw, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Disc, IconButton, VisuallyHidden } from "@/components/ui";
 import styles from "./ShareSessionMenu.module.css";
 import { SharePanel } from "./SharePanel";
 
@@ -54,63 +55,50 @@ export function ShareSessionMenu({
 
   if (status === "idle") {
     return (
-      <button
-        type="button"
-        onClick={(e) => {
-          stop(e);
-          open();
-        }}
-        className={styles.button}
-        aria-label="Share this session"
-      >
-        <Share2 size={16} aria-hidden />
-        Share
-      </button>
+      <IconButton label="Share this session" shape="square" onClick={open}>
+        <Share2 aria-hidden />
+      </IconButton>
     );
   }
 
   if (status === "opening") {
     return (
-      <span className={styles.opening} role="status">
-        <Loader2 size={14} aria-hidden />
-        Opening…
+      <span className={styles.chip} role="status">
+        <Loader2 aria-hidden />
+        <VisuallyHidden>Opening…</VisuallyHidden>
       </span>
     );
   }
 
   if (status === "error") {
     return (
-      <button
-        type="button"
-        onClick={(e) => {
-          stop(e);
-          open();
-        }}
-        className={styles.button}
-        aria-label="Retry opening the share session"
+      <IconButton
+        label="Retry opening the share session"
+        tooltip={`${error?.message ?? "Failed"}: retry`}
+        shape="square"
+        onClick={open}
       >
-        <Share2 size={16} aria-hidden />
-        <span className={styles.errorMessage}>
-          {error?.message ?? "Failed"}
-        </span>
-        Retry
-      </button>
+        <RotateCw aria-hidden />
+      </IconButton>
     );
   }
 
-  // status === "open"
+  // status === "open": the code stays readable in the bar, since the
+  // table reads it aloud to anyone joining.
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: propagation guard only, not an interactive element
+    // biome-ignore lint/a11y/useKeyWithClickEvents: propagation guard only, not an interactive element
     <div className={styles.openWrapper} ref={wrapperRef} onClick={stop}>
       <button
         type="button"
         onClick={() => setPopoverOpen((v) => !v)}
-        className={styles.openChip}
+        className={styles.chip}
         aria-expanded={popoverOpen}
         aria-label={`Sharing session ${sessionCode ?? ""}, ${connectedPeers.length} connected`}
       >
-        <span className={styles.dot} aria-hidden />
-        <span className={styles.chipCode}>{sessionCode}</span>
-        <span className={styles.chipCount}>· {connectedPeers.length}</span>
+        <Disc color="var(--color-success)" size="sm" />
+        <span className={styles.code}>{sessionCode}</span>
+        <span className={styles.count}>· {connectedPeers.length}</span>
       </button>
 
       {popoverOpen && sessionCode && (

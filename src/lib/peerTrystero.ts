@@ -1,5 +1,5 @@
 /*
- * Trystero-backed transport — a spike alternative to ./peer (PeerJS).
+ * Trystero-backed transport: a spike alternative to ./peer (PeerJS).
  *
  * Implements the exact HostSession / CompanionSession contract from
  * ./peer so the hooks and pages need no changes. Which transport is
@@ -8,7 +8,7 @@
  *
  * Why bother: PeerJS leans on a central broker that hands out peer
  * ids. After a phone suspends/closes the tab the data channel dies,
- * and reconnecting means redialling a *specific* peer id — which
+ * and reconnecting means redialling a *specific* peer id, which
  * frequently lands on "peer-unavailable". Trystero is room-based: a
  * peer rejoins a room by name and the relay layer re-pairs everyone
  * automatically (it also auto-reconnects its relay sockets). That is
@@ -19,7 +19,7 @@
  * is direct P2P. We host nothing. TURN/relay slots exist in ROOM_CONFIG
  * but are intentionally left empty per the no-infra constraint.
  *
- * Mesh caveat: a Trystero room is a full mesh — host + every companion
+ * Mesh caveat: a Trystero room is a full mesh: host + every companion
  * are mutual peers. To keep the host/companion model, the host
  * announces its role to each newcomer (ACTION_ROLE); companions then
  * target their messages at the host id rather than broadcasting to the
@@ -27,7 +27,7 @@
  *
  * API note: written against trystero@0.25.x, whose room API uses
  * settable handler properties (room.onPeerJoin = fn) and action objects
- * ({ send, onMessage }) — not the older tuple/callback style.
+ * ({ send, onMessage }), not the older tuple/callback style.
  */
 import type {
   DataPayload,
@@ -46,7 +46,7 @@ import type {
 
 const log = createLogger("peer-trystero");
 
-// Namespacing — mirrors PEER_BROKER_KEY in ./peer. Rooms under
+// Namespacing: mirrors PEER_BROKER_KEY in ./peer. Rooms under
 // different appIds never discover each other even with the same id.
 const APP_ID = "game-timer";
 
@@ -55,15 +55,15 @@ const ACTION_MSG = "msg";
 const ACTION_ROLE = "role";
 
 // Discovery relays. Trystero otherwise derives a *fixed* 5-relay subset
-// of its defaults by hashing appId — so every session we ever open uses
+// of its defaults by hashing appId, so every session we ever open uses
 // the identical set, and any flaky member (we repeatedly saw
 // `koru.bitcointxoko.org` return 502 on the WebSocket handshake) degrades
 // signalling for *every* session the same way. Worse signalling means
 // incomplete ICE/SDP exchange, which is what produces the half-open data
 // channel that strands a joining companion (relay presence is live, but
 // the host's messages never arrive). So we pin our own curated set of
-// high-uptime relays — all drawn from Trystero's vetted default list, so
-// they're known to relay the ephemeral signalling events it uses — and
+// high-uptime relays: all drawn from Trystero's vetted default list, so
+// they're known to relay the ephemeral signalling events it uses, and
 // drop the flaky ones. Host and companion must share the set to find
 // each other. `turnConfig` / `rtcConfig` (TURN) stay empty: no infra.
 const RELAY_URLS = [
@@ -89,28 +89,28 @@ const loadTrystero = () => import("trystero/nostr");
 
 // Our protocol messages are JSON objects (a subset of DataPayload), but
 // the transport contract types `send` as (data: unknown). This narrows
-// at the single outbound boundary — not ingested JSON, so no schema.
+// at the single outbound boundary, not ingested JSON, so no schema.
 const asPayload = (data: unknown): DataPayload => data as DataPayload;
 
 // Trystero's Nostr strategy uses Web Crypto (crypto.subtle) to derive
-// room keys. Browsers only expose crypto.subtle in a *secure context* —
+// room keys. Browsers only expose crypto.subtle in a *secure context*:
 // HTTPS or localhost. Over a plain-http LAN URL (e.g. testing on a phone
 // at http://192.168.x.x) it's undefined and joinRoom throws deep inside
 // ("reading 'importKey'"). Fail early with a message the error UI shows
 // (describePeerError passes Error.message through) instead of crashing.
-// PeerJS doesn't hit this — only WebRTC, which works on insecure origins.
+// PeerJS doesn't hit this, only WebRTC, which works on insecure origins.
 const assertSecureContext = () => {
   if (typeof window === "undefined") return;
   if (!window.isSecureContext || !window.crypto?.subtle) {
     throw new Error(
-      "Sharing needs a secure connection (HTTPS or localhost). A plain http:// address over the local network won't work on a phone — use an HTTPS dev URL (e.g. a tunnel) or the deployed site.",
+      "Sharing needs a secure connection (HTTPS or localhost). A plain http:// address over the local network won't work on a phone: use an HTTPS dev URL (e.g. a tunnel) or the deployed site.",
     );
   }
 };
 
 /*
  * Ref-counted room manager. Trystero allows only ONE live instance of a
- * given room per tab — a second joinRoom() for the same id shares relay
+ * given room per tab: a second joinRoom() for the same id shares relay
  * state, so leaving one orphans the other. React StrictMode (dev) mounts
  * effects twice, which would otherwise do exactly that. We therefore
  * join each room once and hand out shared handles; the room is only left
@@ -186,7 +186,7 @@ export async function createHost(
   // The room id *is* the session code. No broker hands these out, so
   // the "unavailable-id" collision dance in useSessionHost simply never
   // fires (createHost never rejects with that). Two hosts picking the
-  // same 4-char code would share a room — see the spike notes.
+  // same 4-char code would share a room: see the spike notes.
   const roomId = options.desiredId ?? "gtmr-host";
   const { joinRoom } = await loadTrystero();
   const entry = acquireRoom(roomId, joinRoom);
@@ -318,14 +318,14 @@ export async function connectToHost(
         (info as { host?: unknown }).host
       ) {
         hostId = ctx.peerId;
-        log.info("host identified — connected", { hostId });
+        log.info("host identified: connected", { hostId });
         emitState("connected");
       }
     };
 
     entry.room.onPeerLeave = (peerId) => {
       if (peerId === hostId) {
-        log.warn("host left — awaiting re-pair");
+        log.warn("host left: awaiting re-pair");
         hostId = null;
         emitState(destroyed ? "closed" : "reconnecting");
       }
@@ -338,7 +338,7 @@ export async function connectToHost(
   // currently isolated (no host id). Trystero usually re-pairs on its own
   // once its relay socket reconnects; this just nudges rediscovery if we
   // came back to the foreground still alone. Synchronous because we're
-  // not holding the room (refs already 0 in the isolated case is rare —
+  // not holding the room (refs already 0 in the isolated case is rare:
   // it's a best-effort nudge).
   const rejoin = () => {
     if (destroyed || hostId) return;
@@ -352,7 +352,7 @@ export async function connectToHost(
   // to settle, then rejoin with a fresh peer connection. Used when relay
   // presence is live but the data channel is dead (the host's role
   // announce reached us, yet its STATE replies never do). The leave must
-  // complete before we rejoin the same id — Trystero allows only one live
+  // complete before we rejoin the same id: Trystero allows only one live
   // instance of a room per tab, so a rejoin that races the async leave
   // gets orphaned and never re-pairs. selfId is stable across this, so
   // the host re-pairs us to the same identity and our seat claim holds.
@@ -360,7 +360,7 @@ export async function connectToHost(
   const hardReconnect = async () => {
     if (destroyed || reconnecting) return;
     reconnecting = true;
-    log.info("companion hard reconnect — leaving room", { roomId });
+    log.info("companion hard reconnect: leaving room", { roomId });
     hostId = null;
     emitState("reconnecting");
     const entry = liveRooms.get(roomId);
@@ -385,7 +385,7 @@ export async function connectToHost(
       reconnecting = false;
       return;
     }
-    log.info("companion hard reconnect — rejoining room", { roomId });
+    log.info("companion hard reconnect: rejoining room", { roomId });
     bindRoom(acquireRoom(roomId, joinRoom));
     reconnecting = false;
   };

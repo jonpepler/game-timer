@@ -1,0 +1,115 @@
+/* A short stadium label: a static status mark until it takes onPress. */
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-chip);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+/* An actionable chip is a 44px value picker that fills inverse when chosen. */
+.actionable {
+  flex: initial;
+  width: auto;
+  height: auto;
+  min-width: var(--control-height-md);
+  min-height: var(--control-height-md);
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-16);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.actionable:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.actionable[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent);
+}
+
+.actionable:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.actionable:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.solid {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.muted {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.success {
+  background: var(--color-success-tint);
+  border-color: transparent;
+  color: var(--color-on-success-tint);
+}
+
+.warning {
+  background: var(--color-warning-tint);
+  border-color: transparent;
+  color: var(--color-on-warning-tint);
+}
+
+.danger {
+  background: var(--color-danger-tint);
+  border-color: transparent;
+  color: var(--color-on-danger-tint);
+}
+
+/* A row of chips that wraps. */
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* Segmented: one choice from a few views, the chips joined in a track. */
+.segmented {
+  display: inline-flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+}
+
+.segment {
+  composes: chip actionable;
+  padding: var(--space-4) var(--space-12);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: transparent;
+}

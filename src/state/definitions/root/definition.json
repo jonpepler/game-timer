@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "id": "root",
   "name": "Root",
+  "gameSpecificTerms": [
+    "root",
+    "faction",
+    "hireling",
+    "vagabond",
+    "landmark",
+    "woodland",
+    "marquise",
+    "eyrie",
+    "riverfolk",
+    "underworld",
+    "marauder",
+    "lizard",
+    "duchy",
+    "corvid",
+    "lilypad",
+    "knave",
+    "captain",
+    "adset",
+    "mousehold",
+    "foxburrow",
+    "rabbittown"
+  ],
   "description": "Asymmetric woodland strategy by Leder Games. First faction to 30 wins.",
   "contentSource": "./modules.json",
   "defaultExpectedTurns": 32,
@@ -184,10 +207,11 @@
     {
       "id": "hireling-setup",
       "label": "Set up hirelings",
-      "description": "Each player resolves one hireling in turn (alphabetical order).",
+      "description": "Starting with the last player in turn order and going counterclockwise, each player sets up one dealt hireling as its card describes.",
       "kind": {
         "type": "dealt-resolve",
-        "sourceStepId": "hirelings"
+        "sourceStepId": "hirelings",
+        "order": "reverse-seat"
       }
     },
     {
@@ -205,6 +229,8 @@
         "type": "player-pick",
         "mode": "turn-based",
         "optionCategory": "faction",
+        "pickOrder": "reverse-seat",
+        "draft": { "dealExtra": 1 },
         "allowRandom": true,
         "optionIds": [
           "marquise",
@@ -231,7 +257,7 @@
     },
     {
       "id": "starting-hands",
-      "label": "Choose Starting Hands",
+      "label": "Choose starting hands",
       "description": "Each player chooses three cards in their hand to keep and puts the other two cards face down on the shared deck. When finished, shuffle the shared deck.",
       "kind": {
         "type": "info"

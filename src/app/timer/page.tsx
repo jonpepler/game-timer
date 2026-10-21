@@ -1,31 +1,64 @@
 "use client";
 
 import styles from "./page.module.css";
-import { CircularProgressbar } from "react-circular-progressbar";
 
-import "react-circular-progressbar/dist/styles.css";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import { Footer } from "@/components/timer/Footer";
 import { FullScreen } from "@/components/FullScreen";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTimer } from "@/hooks/useTimer";
-import { PlayerArcs } from "@/components/timer/PlayerArcs";
+import { useTurnEntryControls } from "@/hooks/useTurnEntryControls";
+import { TimerRing } from "@/components/timer/TimerRing";
 import { useGameSetup } from "@/hooks/useGameSetupModal";
 import type {
   GameConfig,
   GameSetupWizardHandle,
+  SeatingInfo,
 } from "@/components/GameSetupWizard";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import { PlayerTimeShare } from "@/components/PlayerTimeShare";
 import { ScorePanel } from "@/components/ScorePanel";
+import { TurnOrderPanel } from "@/components/TurnOrderPanel";
+import {
+  type GameSessionState,
+  selectNeedsValueStep,
+} from "@/state/gameSession";
+import {
+  applySeatCommand,
+  type CommandActor,
+  checkCommand,
+  DEFAULT_COMMAND_POLICY,
+  isSeatCommand,
+  projectCommand,
+  resolveSeatCommand,
+  type SessionCommand,
+  SessionCommandSchema,
+  type TableContext,
+  canUndo as canUndoState,
+  type Verdict,
+} from "@/state/sessionCommands";
+import { TurnActions } from "@/components/TurnActions";
+import { PhaseBar } from "@/components/timer/PhaseBar";
 import { VictoryBanner } from "@/components/VictoryBanner";
 import { PlayerMeeple } from "@/components/PlayerMeeple";
+import { TurnEntryBanner } from "@/components/identity/EntryBanner";
 import { EventDialog } from "@/components/EventDialog";
 import { LeadPrompt } from "@/components/LeadPrompt";
 import { findDefinition } from "@/state/definitionRegistry";
-import { effectiveScoreMax } from "@/state/gameDefinition";
-import { Plus } from "lucide-react";
+import { effectiveScoreMax, turnOrderForSetup } from "@/state/gameDefinition";
+import { Plus, Users } from "lucide-react";
+import { IconButton } from "@/components/ui";
+import { SchemeToggle } from "@/components/SchemeToggle";
 import { ShareSessionMenu } from "@/components/ShareSessionMenu";
+import { PeerNotice } from "@/components/PeerNotice";
+import { PlayersSheet } from "@/components/PlayersSheet";
 import { SharePanel } from "@/components/SharePanel";
 import {
   playerColor,
@@ -33,6 +66,7 @@ import {
   playerIcon,
   playerSubheading,
 } from "@/lib/playerVisual";
+import { useColourScheme, useGameTheme } from "@/hooks/useGameTheme";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
@@ -40,13 +74,52 @@ import {
   type HostToCompanionMessage,
 } from "@/state/peerProtocol";
 import { createLogger } from "@/lib/logger";
+import { followSeats, makeSeatId, type Seat } from "@/state/seating";
 
 const peerLog = createLogger("host-protocol");
 const playersLog = createLogger("host-players");
 const stateLog = createLogger("host-state");
 
+/**
+ * Starting values before any game is set up. Setting one up replaces
+ * them with the game definition's own defaults.
+ */
 const initialTime = 5 * 60;
 const defaultExpectedTurns = 90;
+
+type PanelId = "turnActions" | "phase" | "turnOrder" | "scores" | "timeShare";
+
+type PanelRegion = "left" | "right" | "bottom";
+
+/**
+ * The panels around the ring, in reading order. On a phone they flow
+ * below the ring in this order; on a wide screen each sits in the
+ * region named by PANEL_PLACEMENT, keeping this order within it.
+ */
+const PANEL_ORDER: readonly PanelId[] = [
+  "turnActions",
+  "phase",
+  "turnOrder",
+  "scores",
+  "timeShare",
+];
+
+/**
+ * Where each panel sits on a wide screen. The bottom row spans the full
+ * width under the three columns and holds the scores (or the value
+ * chart that stands in for them) above the time share. The right column
+ * holds the turn order; it takes its share of the width whether or not
+ * there is one, so the ring stays centred.
+ */
+const PANEL_PLACEMENT: Record<PanelId, PanelRegion> = {
+  turnActions: "left",
+  phase: "left",
+  turnOrder: "right",
+  scores: "bottom",
+  timeShare: "bottom",
+};
+
+const PANEL_REGIONS: readonly PanelRegion[] = ["left", "right", "bottom"];
 
 export default function Home() {
   const { height, width } = useWindowSize();
@@ -58,16 +131,22 @@ export default function Home() {
     unpause,
     resetTimer,
     undo,
+    inUndoGroup,
     canUndo,
     paused,
     timerTotalSeconds,
     stopwatchTotalSeconds,
     averageTime,
     timerFinished,
+    untimedLabel,
     state,
     remainingTurns,
+    remainingCount,
+    remainingSeconds,
+    turnsModelled,
     currentPlayerIndex,
     setExpectedTurns,
+    setStartingAverage,
     setPlayers,
     setPlayer,
     setScoreConfig,
@@ -82,11 +161,21 @@ export default function Home() {
     pendingMilestones,
     setTurnOrder,
     setLead,
-    seizeLead,
+    setControls,
+    triggerControl,
     turnOrder,
-    leadIndex,
     pendingLeadPrompt,
-    canSeize,
+    availableControls,
+    turnOrderView,
+    turnPhases,
+    reorderTurnEntry,
+    activateTurnEntry,
+    deactivateTurnEntry,
+    setPhase,
+    dismissPhasePrompt,
+    setEntryValue,
+    combineEntries,
+    setTurnEntryPlayer,
   } = useTimer({
     initialTime,
     initialExpectedTurns: defaultExpectedTurns,
@@ -95,8 +184,32 @@ export default function Home() {
   });
 
   const players = state.players;
-  // peerId → claimed playerIndex. Released when the companion disconnects.
-  const [claimMap, setClaimMap] = useState<Record<string, number>>({});
+  /**
+   * peerId to claimed seat index, released when the companion
+   * disconnects. The ref is the truth and changes synchronously, so a
+   * second seat change or message landing before React re-renders sees
+   * the first one's claims; the state copy only drives re-broadcasts.
+   */
+  const claimsRef = useRef<Record<string, number>>({});
+  const [claimMap, setClaimMapState] = useState(claimsRef.current);
+  /**
+   * The setup wizard's seating list while it is seating players, else
+   * null. Seat commands act on it rather than the running game, and
+   * claims are indices into it. Kept in step synchronously by seat
+   * commands and by the wizard's own edits (onSeatingChange).
+   */
+  const seatingSnapshotRef = useRef<SeatingInfo | null>(null);
+  const setClaimMap = useCallback(
+    (
+      change: (prev: Record<string, number>) => Record<string, number>,
+    ): void => {
+      const next = change(claimsRef.current);
+      if (next === claimsRef.current) return;
+      claimsRef.current = next;
+      setClaimMapState(next);
+    },
+    [],
+  );
 
   // Forward-declared wizard handle so peer SETUP_PICK messages can
   // call applyPick before useGameSetup() runs further down. The
@@ -119,6 +232,165 @@ export default function Home() {
   // peer explicitly asks via REQUEST_STATE (its first-sync safety net).
   const resyncPeersRef = useRef<() => void>(() => {});
 
+  // Set when a companion speaks another protocol version, so the host
+  // says so instead of ignoring its taps without a word.
+  const [mismatchedPeerVersion, setMismatchedPeerVersion] = useState<
+    number | null
+  >(null);
+
+  /**
+   * The state the next command is checked against. Reset to the real
+   * state on every commit and advanced by projection after each command,
+   * so two commands landing before React re-renders (two screens
+   * answering one prompt) are checked in order rather than both against
+   * the same snapshot.
+   */
+  const commandStateRef = useRef(state);
+  useEffect(() => {
+    commandStateRef.current = state;
+  }, [state]);
+
+  /**
+   * The one path every game action takes, from this screen's UI or from
+   * a companion: check it against the policy and the current state, then
+   * carry it out through the timer's own actions.
+   */
+  const runCommand = (
+    command: SessionCommand,
+    actor: CommandActor,
+    // Prefixed to the command's undo group, so one screen's flow can
+    // never join another's.
+    groupScope = "host",
+  ): Verdict => {
+    const seating = seatingSnapshotRef.current;
+    const table: TableContext = {
+      seating,
+      claimedSeats: new Set(Object.values(claimsRef.current)),
+    };
+    const resolved = resolveSeatCommand(command, table);
+    const against = commandStateRef.current;
+    const verdict = resolved.ok
+      ? checkCommand(
+          against,
+          resolved.command,
+          actor,
+          DEFAULT_COMMAND_POLICY,
+          table,
+        )
+      : resolved;
+    if (!resolved.ok || !verdict.ok) {
+      peerLog.info("command refused", {
+        type: command.type,
+        actor: actor.kind,
+        reason: verdict.ok ? "" : verdict.reason,
+      });
+      return verdict;
+    }
+    const checked = resolved.command;
+    if (seating && isSeatCommand(checked)) {
+      const newSeatId = makeSeatId();
+      const change = (seats: Seat[]) =>
+        applySeatCommand(seats, checked, seating.colorOptions, newSeatId);
+      wizardHandleRef.current?.updateSeats(seating.stepId, change);
+      updateSeatingRef.current({ ...seating, seats: change(seating.seats) });
+      return verdict;
+    }
+    commandStateRef.current = projectCommand(
+      against,
+      checked,
+      Date.now(),
+      table,
+    );
+    if (checked.undoGroup !== undefined)
+      inUndoGroup(`${groupScope}:${checked.undoGroup}`, () =>
+        executeCommand(checked, against),
+      );
+    else executeCommand(checked, against);
+    return verdict;
+  };
+  const executeCommand = (
+    command: SessionCommand,
+    against: GameSessionState,
+  ) => {
+    switch (command.type) {
+      case "END_TURN":
+        // The step only applies when the running phase asks for one.
+        resetTimer(
+          command.valueStepId !== undefined && selectNeedsValueStep(against)
+            ? { valueStepId: command.valueStepId }
+            : {},
+        );
+        break;
+      case "ACTIVATE_ENTRY":
+        activateTurnEntry({
+          id: command.entryId,
+          ...(command.playerIndex !== undefined
+            ? { playerIndex: command.playerIndex }
+            : {}),
+          ...(command.value !== undefined ? { value: command.value } : {}),
+        });
+        break;
+      case "DEACTIVATE_ENTRY":
+        deactivateTurnEntry(command.entryId);
+        break;
+      case "REORDER_ENTRY":
+        reorderTurnEntry(command.entryId, command.toIndex);
+        break;
+      case "SET_ENTRY_OWNER":
+        setTurnEntryPlayer(command.entryId, command.playerIndex);
+        break;
+      case "SET_ENTRY_VALUE":
+        setEntryValue(command.entryId, command.value);
+        break;
+      case "COMBINE_ENTRIES": {
+        const { type: _, undoGroup: __, ...combine } = command;
+        combineEntries(combine);
+        break;
+      }
+      case "SET_PHASE":
+        setPhase(command.phaseId, {
+          ...(command.firstEntryId !== undefined
+            ? { firstEntryId: command.firstEntryId }
+            : {}),
+          ...(command.exitFirstEntryId !== undefined
+            ? { exitFirstEntryId: command.exitFirstEntryId }
+            : {}),
+        });
+        break;
+      case "DISMISS_PHASE_PROMPT":
+        dismissPhasePrompt();
+        break;
+      case "INCREMENT_SCORE":
+        incrementScore(command.playerIndex, command.delta);
+        break;
+      case "TRIGGER_CONTROL":
+        triggerControl(command.controlId);
+        break;
+      case "UNDO":
+        undo();
+        break;
+      case "SET_PAUSED":
+        if (command.paused && !paused) pause();
+        else if (!command.paused && paused) unpause();
+        break;
+      case "SET_EXPECTED_TURNS":
+        setExpectedTurns(command.expectedTurns);
+        break;
+      case "RENAME_PLAYER": {
+        const player = against.players?.[command.playerIndex];
+        if (player)
+          setPlayer(command.playerIndex, { ...player, name: command.name });
+        break;
+      }
+      // Seat changes only run during setup, through the wizard.
+      default:
+        break;
+    }
+  };
+  const runHostCommand = (command: SessionCommand) => {
+    runCommand(command, { kind: "host" });
+  };
+
   const handleCompanionMessage = (peerId: string, data: unknown) => {
     const msg = data as CompanionToHostMessage;
     if (!msg || typeof msg !== "object" || !("type" in msg)) {
@@ -130,23 +402,43 @@ export default function Home() {
         peerId,
         version: msg.protocolVersion,
       });
+      const peerVersion =
+        typeof msg.protocolVersion === "number" ? msg.protocolVersion : null;
+      setMismatchedPeerVersion(peerVersion ?? -1);
+      sessionHostSendRefForState.current({
+        type: "PROTOCOL_MISMATCH",
+        protocolVersion: PEER_PROTOCOL_VERSION,
+        peerId,
+        peerVersion,
+      } satisfies HostToCompanionMessage);
       return;
     }
     switch (msg.type) {
       case "CLAIM": {
-        const playerCount = state.players?.length ?? 0;
-        if (msg.playerIndex < 0 || msg.playerIndex >= playerCount) {
-          peerLog.warn("rejecting CLAIM for out-of-range slot", {
-            peerId,
-            playerIndex: msg.playerIndex,
-          });
+        const seating = seatingSnapshotRef.current;
+        const seatCount = seating
+          ? seating.seats.length
+          : (commandStateRef.current.players?.length ?? 0);
+        const index = msg.playerIndex;
+        const holder = Object.entries(claimsRef.current).find(
+          ([otherPeer, i]) => i === index && otherPeer !== peerId,
+        );
+        // During setup a seat belongs to the first phone to claim it.
+        // Mid-game a phone reconnecting under a new peer id may still
+        // be listed against its old one, so a held seat stays open.
+        if (
+          !Number.isInteger(index) ||
+          index < 0 ||
+          index >= seatCount ||
+          (seating && holder)
+        ) {
+          peerLog.warn("claim rejected", { peerId, playerIndex: index });
+          // The seat list tells the phone which seats are free.
+          broadcastSeatingRef.current();
           return;
         }
-        setClaimMap((prev) => ({ ...prev, [peerId]: msg.playerIndex }));
-        peerLog.info("claim accepted", {
-          peerId,
-          playerIndex: msg.playerIndex,
-        });
+        setClaimMap((prev) => ({ ...prev, [peerId]: index }));
+        peerLog.info("claim accepted", { peerId, playerIndex: index });
         return;
       }
       case "RELEASE": {
@@ -164,58 +456,31 @@ export default function Home() {
         resyncPeersRef.current();
         return;
       }
-      case "END_TURN": {
-        const claimed = claimMap[peerId];
-        if (claimed === undefined) {
-          peerLog.warn("END_TURN rejected — peer hasn't claimed a slot", {
-            peerId,
-          });
+      case "COMMAND": {
+        const reply = (verdict: Verdict) =>
+          sessionHostSendRefForState.current({
+            type: "COMMAND_RESULT",
+            protocolVersion: PEER_PROTOCOL_VERSION,
+            commandId: String(msg.commandId),
+            ok: verdict.ok,
+            ...(verdict.ok ? {} : { reason: verdict.reason }),
+          } satisfies HostToCompanionMessage);
+        const parsed = SessionCommandSchema.safeParse(msg.command);
+        if (!parsed.success) {
+          peerLog.warn("dropping malformed command", { peerId });
+          reply({ ok: false, reason: "The host did not understand that" });
           return;
         }
-        if (claimed !== currentPlayerIndex) {
-          peerLog.warn("END_TURN rejected — not this peer's turn", {
-            peerId,
-            claimed,
-            currentPlayerIndex,
-          });
-          return;
-        }
-        resetTimer();
-        return;
-      }
-      case "INCREMENT_SCORE": {
-        const claimed = claimMap[peerId];
-        if (claimed === undefined) {
-          peerLog.warn("INCREMENT_SCORE rejected — no claim", { peerId });
-          return;
-        }
-        incrementScore(claimed, msg.delta);
-        return;
-      }
-      case "SEIZE": {
-        // Only the active seat may seize — same identity gate as
-        // END_TURN. The reducer also re-checks canSeize (once-per-round
-        // / lead-relative), so a stale request is harmless.
-        const claimed = claimMap[peerId];
-        if (claimed === undefined) {
-          peerLog.warn("SEIZE rejected — peer hasn't claimed a slot", {
-            peerId,
-          });
-          return;
-        }
-        if (claimed !== currentPlayerIndex) {
-          peerLog.warn("SEIZE rejected — not this peer's turn", {
-            peerId,
-            claimed,
-            currentPlayerIndex,
-          });
-          return;
-        }
-        seizeLead();
+        const claimed = claimsRef.current[peerId];
+        const actor: CommandActor =
+          claimed === undefined
+            ? { kind: "guest" }
+            : { kind: "seat", seatIndex: claimed };
+        reply(runCommand(parsed.data, actor, peerId));
         return;
       }
       case "SET_PLAYER_OPTION": {
-        const claimed = claimMap[peerId];
+        const claimed = claimsRef.current[peerId];
         if (claimed === undefined) {
           peerLog.warn("SET_PLAYER_OPTION rejected — no claim", { peerId });
           return;
@@ -352,7 +617,7 @@ export default function Home() {
           peerLog.warn("SETUP_PICK dropped — wizard not mounted", { peerId });
           return;
         }
-        let claimed = claimMap[peerId];
+        let claimed = claimsRef.current[peerId];
         if (claimed === undefined) {
           // The peer's earlier CLAIM / SEATING_REQUEST may have been
           // dropped (e.g. on a flaky link during the brief seating
@@ -371,7 +636,7 @@ export default function Home() {
             });
             return;
           }
-          const seatTaken = Object.entries(claimMap).some(
+          const seatTaken = Object.entries(claimsRef.current).some(
             ([otherPeer, idx]) => idx === msg.seatIndex && otherPeer !== peerId,
           );
           if (seatTaken) {
@@ -406,62 +671,11 @@ export default function Home() {
         }
         return;
       }
-      case "SEATING_REQUEST": {
-        const handle = wizardHandleRef.current;
-        if (!handle) {
-          peerLog.warn("SEATING_REQUEST dropped — wizard not mounted", {
-            peerId,
-          });
-          return;
-        }
-        // For claims, the peer is binding their identity to a seat —
-        // first-come-first-served. Reject if the seat is already
-        // claimed by someone else.
-        if (msg.action.kind === "claim") {
-          const seatIndex = msg.action.seatIndex;
-          const existing = Object.entries(claimMap).find(
-            ([otherPeer, idx]) => idx === seatIndex && otherPeer !== peerId,
-          );
-          if (existing) {
-            peerLog.warn("claim rejected — seat already taken", {
-              peerId,
-              seatIndex,
-              by: existing[0],
-            });
-            return;
-          }
-        }
-        const ok = handle.applySeatingChange(msg.stepId, msg.action);
-        if (!ok) {
-          peerLog.warn("SEATING_REQUEST rejected by wizard", { peerId });
-          return;
-        }
-        if (msg.action.kind === "claim") {
-          setClaimMap((prev) => ({
-            ...prev,
-            [peerId]: (msg.action as { seatIndex: number }).seatIndex,
-          }));
-        } else if (msg.action.kind === "remove") {
-          // The removed seat takes any claim against it with it, and
-          // claims above it shift down by one so they still point at
-          // the same identity.
-          const removed = msg.action.seatIndex;
-          setClaimMap((prev) => {
-            const next: Record<string, number> = {};
-            for (const [pid, idx] of Object.entries(prev)) {
-              if (idx === removed) continue;
-              next[pid] = idx > removed ? idx - 1 : idx;
-            }
-            return next;
-          });
-        }
-        return;
-      }
       case "TAP_TIMER": {
         // The companion-side equivalent of tapping the timer
         // container. Always allowed — Generic + no-tracking is the
         // primary case but it's harmless in any mode.
-        resetTimer();
+        entryControls.advance();
         return;
       }
       case "DISMISS_MILESTONE": {
@@ -470,30 +684,6 @@ export default function Home() {
         // Acknowledge first wins. The next STATE broadcast clears
         // the dialog on every other screen automatically.
         dismissMilestone();
-        return;
-      }
-      case "RENAME_PLAYER": {
-        const claimed = claimMap[peerId];
-        if (claimed === undefined) {
-          peerLog.warn("RENAME_PLAYER rejected — no claim", { peerId });
-          return;
-        }
-        const existing = state.players?.[claimed];
-        if (!existing) {
-          peerLog.warn("RENAME_PLAYER rejected — no such player", {
-            peerId,
-            claimed,
-          });
-          return;
-        }
-        // Empty / whitespace-only names rejected — every other place
-        // assumes player.name is something humans can show.
-        const trimmed = msg.name.trim();
-        if (trimmed.length === 0) {
-          peerLog.warn("RENAME_PLAYER rejected — empty name", { peerId });
-          return;
-        }
-        setPlayer(claimed, { ...existing, name: trimmed });
         return;
       }
     }
@@ -524,6 +714,9 @@ export default function Home() {
   useEffect(() => {
     latestDefinitionIdRef.current = definitionId;
   }, [definitionId]);
+  // The clock is not game state, so its paused flag travels beside it.
+  const latestPausedRef = useRef(paused);
+  latestPausedRef.current = paused;
 
   // The host's send function is held in a ref so the onConnect
   // callback below can reach the latest sender without re-creating
@@ -542,7 +735,11 @@ export default function Home() {
     const message: HostToCompanionMessage = {
       type: "STATE",
       protocolVersion: PEER_PROTOCOL_VERSION,
-      state: latestStateRef.current,
+      // Undo snapshots stay on the host; companions only need to know
+      // whether there is anything to undo.
+      state: { ...latestStateRef.current, undoStack: undefined },
+      canUndo: canUndoState(latestStateRef.current),
+      paused: latestPausedRef.current,
       definition: def,
       sentAt: now,
     };
@@ -613,7 +810,14 @@ export default function Home() {
   useEffect(() => {
     if (sessionHost.status !== "open") return;
     broadcastState(peerCount);
-  }, [state, peerCount, sessionHost.status, definitionId, broadcastState]);
+  }, [
+    state,
+    paused,
+    peerCount,
+    sessionHost.status,
+    definitionId,
+    broadcastState,
+  ]);
 
   // Player-metadata diagnostic — emit a snapshot whenever the roster
   // identity changes (names + metadata), gated on a content hash so
@@ -645,11 +849,12 @@ export default function Home() {
     setPlayers(incoming.players);
     setDefinitionId(incoming.definitionId);
     const definition = findDefinition(incoming.definitionId);
+    setStartingAverage(definition?.defaultAverageSeconds ?? initialTime);
     // Score is only meaningful when player tracking is on — clear the
     // subsystem otherwise so victories can't fire against an empty roster.
-    // Resolve any per-seat-count victory threshold (e.g. Arcs 33/30/27)
-    // into a concrete `max` up front so the existing score/victory logic
-    // and the score-track rendering work unchanged.
+    // Resolve any per-seat-count victory threshold into a concrete `max`
+    // up front so the score/victory logic and the score track work
+    // unchanged.
     const baseScore = incoming.players ? definition?.score : undefined;
     const seatCount = incoming.players?.length ?? 0;
     setScoreConfig(
@@ -660,23 +865,46 @@ export default function Home() {
     // Install the turn-order model and seed the opening lead from the
     // select-lead setup step (if the game declared one). Round-robin
     // games pass undefined and keep the default rotation.
-    setTurnOrder(incoming.players ? definition?.turnOrder : undefined);
+    // A definition marked `selectable` lets the wizard override the mode
+    // (Generic's "Fixed rotation" vs "Variable" setting).
+    // Entries and phases gated on modules the table left out are dropped.
+    const declaredOrder =
+      definition?.turnOrder && incoming.setupContext
+        ? turnOrderForSetup(definition.turnOrder, incoming.setupContext)
+        : definition?.turnOrder;
+    const turnOrder =
+      declaredOrder?.selectable && incoming.turnOrderMode
+        ? { ...declaredOrder, mode: incoming.turnOrderMode }
+        : declaredOrder;
+    setTurnOrder(incoming.players ? turnOrder : undefined);
+    // Controls act for seats, so they need player tracking too.
+    setControls(incoming.players ? definition?.controls : undefined);
     const leadChoice = incoming.setupContext
       ? Object.values(incoming.setupContext).find(
           (c) => c.kind === "select-lead",
         )
       : undefined;
-    if (leadChoice?.kind === "select-lead") setLead(leadChoice.seatIndex);
+    if (leadChoice?.kind === "select-lead" && incoming.players?.length)
+      setLead(Math.min(leadChoice.seatIndex, incoming.players.length - 1));
     // When the wizard sets autoStart (last seat just confirmed
-    // their faction pick), kick the timer running immediately so
-    // the table doesn't have to tap the screen to begin.
-    // resetTimer() on the un-started state == start the timer.
-    if (incoming.autoStart) {
-      // Defer one frame so the reset above has flushed before we
-      // call resetTimer, which itself reads state.
-      queueMicrotask(() => resetTimer());
-    }
+    // their pick), start the clock so the table doesn't have to tap
+    // the screen to begin.
+    if (incoming.autoStart) setStartPending(true);
   };
+
+  /**
+   * Starts the clock once the new game's state has committed. Calling
+   * resetTimer straight from applyConfig would read the previous game's
+   * state, so it would start the wrong countdown (or record a turn when
+   * that game was running).
+   */
+  const [startPending, setStartPending] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resetTimer is recreated every render; this runs once per pending start, after the new game's state has committed
+  useEffect(() => {
+    if (!startPending) return;
+    setStartPending(false);
+    resetTimer();
+  }, [startPending]);
 
   // Peer hooks: forward the wizard's turn-based picker events to the
   // peer broker so seated companions can pick on their own screens.
@@ -686,26 +914,20 @@ export default function Home() {
   useEffect(() => {
     sessionHostSendRef.current = sessionHost.send;
   }, [sessionHost.send]);
-  // Latest seating snapshot from the wizard — kept here so we can
-  // re-broadcast SETUP_SEATING when the claim map changes (peers
-  // joining/leaving a claimed seat) without waiting for the wizard
-  // to re-emit. `seats` carries stable per-seat ids so we can
-  // detect reorders and rewrite `claimMap` accordingly.
-  const seatingSnapshotRef = useRef<{
-    stepId: string;
-    seats: Array<{ id: string; name: string }>;
-    minPlayers: number;
-    maxPlayers: number;
-  } | null>(null);
-  const claimMapRef = useRef(claimMap);
 
   const broadcastSeating = useCallback(() => {
     const snapshot = seatingSnapshotRef.current;
-    if (!snapshot) return;
-    // Project the peerId→seatIndex claim map onto a per-seat list of
-    // claiming peer ids, with `null` for unclaimed seats.
+    if (!snapshot) {
+      sessionHostSendRef.current({
+        type: "SETUP_SEATING_CLOSED",
+        protocolVersion: PEER_PROTOCOL_VERSION,
+      } satisfies HostToCompanionMessage);
+      return;
+    }
+    // Project the peerId to seat index claim map onto a per-seat list
+    // of claiming peer ids, with `null` for unclaimed seats.
     const claimedBy: Array<string | null> = snapshot.seats.map(() => null);
-    for (const [peerId, seatIndex] of Object.entries(claimMapRef.current)) {
+    for (const [peerId, seatIndex] of Object.entries(claimsRef.current)) {
       if (seatIndex >= 0 && seatIndex < claimedBy.length) {
         claimedBy[seatIndex] = peerId;
       }
@@ -718,14 +940,45 @@ export default function Home() {
       claimedBy,
       minPlayers: snapshot.minPlayers,
       maxPlayers: snapshot.maxPlayers,
-    });
+      ...(snapshot.colorOptions ? { colorOptions: snapshot.colorOptions } : {}),
+    } satisfies HostToCompanionMessage);
   }, []);
 
-  // Mirror claimMap into the ref so broadcastSeating reads the latest
-  // value, and re-broadcast whenever the claim map changes (so other
-  // companions see fresh `claimedBy`).
+  /**
+   * Replace the seating snapshot (null once setup stops seating), carry
+   * claims across the change and tell every companion. Claims follow
+   * their seat by id, so a reorder or removal on any screen keeps each
+   * phone on the seat it took. A list sharing no seat with the last one
+   * (the wizard reopened, or another game picked) is a fresh list, and
+   * claims keep their index on it.
+   */
+  const updateSeating = useCallback(
+    (info: SeatingInfo | null) => {
+      const before = seatingSnapshotRef.current;
+      if (!info && !before) return;
+      if (info) {
+        const ids = new Set(info.seats.map((seat) => seat.id));
+        const continues = before?.seats.some((seat) => ids.has(seat.id));
+        setClaimMap((claims) =>
+          followSeats(
+            claims,
+            continues ? (before?.seats ?? null) : null,
+            info.seats,
+          ),
+        );
+      }
+      seatingSnapshotRef.current = info;
+      broadcastSeating();
+    },
+    [broadcastSeating, setClaimMap],
+  );
+  const updateSeatingRef = useRef(updateSeating);
+  updateSeatingRef.current = updateSeating;
+
+  // Re-broadcast whenever the claim map changes, so every companion
+  // sees fresh `claimedBy`.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: claimMap is the change trigger; broadcastSeating reads claimsRef
   useEffect(() => {
-    claimMapRef.current = claimMap;
     broadcastSeating();
   }, [claimMap, broadcastSeating]);
 
@@ -798,55 +1051,9 @@ export default function Home() {
           stepId: info.stepId,
         });
       },
-      onSeatingChange: (info: {
-        stepId: string;
-        seats: Array<{ id: string; name: string }>;
-        minPlayers: number;
-        maxPlayers: number;
-      }) => {
-        // Detect seat-index permutation by comparing each new seat's
-        // id to its old index. When a peer's claim points at an
-        // index that no longer holds the same seat, rewrite the
-        // claim to follow the seat to its new position. Skipped
-        // when the previous snapshot is missing ids (first mount).
-        const prevSeats = seatingSnapshotRef.current?.seats;
-        if (prevSeats && prevSeats.length > 0 && info.seats.length > 0) {
-          const oldIndexById = new Map<string, number>();
-          prevSeats.forEach((s, i) => {
-            oldIndexById.set(s.id, i);
-          });
-          const newIndexById = new Map<string, number>();
-          info.seats.forEach((s, i) => {
-            newIndexById.set(s.id, i);
-          });
-          let needsRewrite = false;
-          for (const [, oldIdx] of Object.entries(claimMapRef.current)) {
-            const stillThere = prevSeats[oldIdx]
-              ? newIndexById.get(prevSeats[oldIdx].id)
-              : undefined;
-            if (stillThere !== oldIdx) {
-              needsRewrite = true;
-              break;
-            }
-          }
-          if (needsRewrite) {
-            setClaimMap((prev) => {
-              const next: Record<string, number> = {};
-              for (const [peerId, oldIdx] of Object.entries(prev)) {
-                const seatAtOldIdx = prevSeats[oldIdx];
-                if (!seatAtOldIdx) continue; // seat was removed
-                const newIdx = newIndexById.get(seatAtOldIdx.id);
-                if (newIdx !== undefined) next[peerId] = newIdx;
-              }
-              return next;
-            });
-          }
-        }
-        seatingSnapshotRef.current = info;
-        broadcastSeating();
-      },
+      onSeatingChange: updateSeating,
     }),
-    [broadcastSeating],
+    [updateSeating],
   );
   // Track the wizard's current screen so the Share-session side
   // panel can be visible only on screen 0 (the Game-picker), and
@@ -907,9 +1114,14 @@ export default function Home() {
       if (needsSetup) open();
     }
   }, [open, firstOpen, needsSetup]);
-  useEffect(() => {
-    setPreventClickCapture(isOpen);
-  }, [isOpen]);
+  /**
+   * Whether a tap on the ring is held back: while the setup modal is
+   * open, or while a field elsewhere asks for it. The modal is read
+   * directly rather than copied into the flag by an effect, because the
+   * copy lags a commit behind and on a slow render it swallowed the
+   * first tap after the wizard closed.
+   */
+  const ringGuarded = preventClickCapture || isOpen;
 
   const playerStats = useMemo(
     () =>
@@ -919,13 +1131,17 @@ export default function Home() {
           .map((t) => ({
             playerIndex: t.playerIndex as number,
             elapsedSeconds: t.elapsedSeconds,
+            untimed: t.untimed,
           })),
       ),
     [state.turns],
   );
 
   const activeDef = definitionId ? findDefinition(definitionId) : undefined;
+  useGameTheme(definitionId);
+  const scheme = useColourScheme();
   const visualKey = activeDef?.playerVisualFrom;
+  const colorKey = activeDef?.playerColorFrom ?? visualKey;
   const subheadingKey = activeDef?.playerSubheadingFrom;
 
   // Subheading text for the active player ("Marquise de Cat" under
@@ -945,17 +1161,45 @@ export default function Home() {
     () =>
       players?.map((p, i) => ({
         name: p.name,
-        color: playerColor(p, i, visualKey),
+        color: playerColor(p, i, colorKey, scheme),
         iconSrc: playerIcon(p, visualKey),
         headIconSrc: playerHeadIcon(p, visualKey),
       })),
-    [players, visualKey],
+    [players, visualKey, colorKey, scheme],
   );
 
-  const activePlayer =
+  // A labelled turn entry (not a seat) heads the banner with its own
+  // name and colour; its linked player, if any, becomes the subheading.
+  const activeEntry = turnOrderView?.entries.find(
+    (e) => e.id === turnOrderView.activeId,
+  );
+  const activeSeatView =
     playerViews && currentPlayerIndex !== null
       ? playerViews[currentPlayerIndex]
       : undefined;
+  const activePlayer = activeSeatView;
+  const activeIsEntry = activeEntry?.label !== undefined;
+  /**
+   * Whether the ring is mostly scrolled out from under the header bar,
+   * which only a phone's scrolling page can do. It brings in the
+   * one-line readout of the turn and its time.
+   */
+  const ringRef = useRef<HTMLDivElement | null>(null);
+  const [ringOutOfView, setRingOutOfView] = useState(false);
+  useEffect(() => {
+    const el = ringRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRingOutOfView(entry.intersectionRatio < 0.4),
+      // The header bar and the readout's own line cover the top.
+      { rootMargin: "-96px 0px 0px 0px", threshold: [0, 0.4] },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const activeBannerSubheading =
+    activeEntry?.label !== undefined ? activeSeatView?.name : activeSubheading;
 
   const victorPlayer =
     victor !== null && playerViews ? playerViews[victor] : undefined;
@@ -977,24 +1221,106 @@ export default function Home() {
 
   const showVictoryHero = victorPlayer != null && !victorDismissed;
 
-  const scoresVisible = scoreConfig !== undefined && (players?.length ?? 0) > 0;
+  const hasPlayers = (players?.length ?? 0) > 0;
+  const [renamingPlayers, setRenamingPlayers] = useState(false);
+  const scoresVisible = scoreConfig !== undefined && hasPlayers;
+
+  const entryControls = useTurnEntryControls({
+    state,
+    players: playerViews ?? [],
+    run: runHostCommand,
+    disabled: victor !== null,
+    domainTurns: state.turns.length + Math.max(0, remainingTurns),
+  });
+
+  const turnOrderPanel = entryControls.turnOrderPanel;
+
+  // Phase controls for games with several phases, placed by PANEL_PLACEMENT.
+  // The end-of-phase prompts live in useTurnEntryControls.
+  const showPhaseBar = (turnPhases?.phases.length ?? 0) > 1;
+  const currentPhaseLabel =
+    turnPhases?.phases.find((p) => p.id === turnPhases.activeId)?.label ?? "";
+
+  const declaredControls = state.controls ?? [];
+  const panelNodes: Record<PanelId, ReactNode> = {
+    turnActions:
+      declaredControls.length > 0 ? (
+        <TurnActions
+          controls={declaredControls}
+          availableIds={availableControls.map((c) => c.id)}
+          onTrigger={(controlId) =>
+            runHostCommand({ type: "TRIGGER_CONTROL", controlId })
+          }
+        />
+      ) : null,
+    phase:
+      showPhaseBar && turnPhases ? (
+        <PhaseBar
+          phaseLabel={currentPhaseLabel}
+          onEnd={entryControls.endPhase}
+        />
+      ) : null,
+    turnOrder:
+      turnOrderPanel && playerViews ? (
+        <TurnOrderPanel
+          players={playerViews}
+          turnOrder={turnOrderPanel}
+          scores={scores}
+          scoreConfig={scoresVisible ? scoreConfig : undefined}
+          onIncrement={(playerIndex, delta) =>
+            runHostCommand({ type: "INCREMENT_SCORE", playerIndex, delta })
+          }
+        />
+      ) : null,
+    scores:
+      (scoresVisible || turnOrderPanel?.chart) && playerViews ? (
+        <ScorePanel
+          players={playerViews}
+          scores={scores}
+          scoreConfig={scoreConfig}
+          onIncrement={(playerIndex, delta) =>
+            runHostCommand({ type: "INCREMENT_SCORE", playerIndex, delta })
+          }
+          activePlayerIndex={currentPlayerIndex}
+          firedMilestones={state.firedMilestones}
+          chart={turnOrderPanel?.chart}
+          catchUp={!turnOrderPanel}
+        />
+      ) : null,
+    // The slot is reserved from the start so the bar appearing after
+    // the first turn moves nothing.
+    timeShare: hasPlayers ? (
+      <div className={styles.timeShareSlot}>
+        {playerStats.length > 0 && (
+          <PlayerTimeShare stats={playerStats} players={playerViews || []} />
+        )}
+      </div>
+    ) : null,
+  };
 
   return (
     <FullScreen
+      pinnedBar
       menuExtras={
         <>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              open();
-            }}
-            className={styles.newGameButton}
-            aria-label="Start a new game"
-          >
-            <Plus size={16} aria-hidden />
-            New game
-          </button>
+          <IconButton label="Start a new game" shape="square" onClick={open}>
+            <Plus aria-hidden />
+          </IconButton>
+          {/* Mid-game only: while setup is open its seat list is the
+              place to rename. */}
+          {hasPlayers && !isOpen && (
+            <IconButton
+              label="Players"
+              shape="square"
+              onClick={() => setRenamingPlayers(true)}
+            >
+              <Users aria-hidden />
+            </IconButton>
+          )}
+          {/* Not during setup: the wizard previews the theme it is
+              setting up, and a switch there would change a look the table
+              has not chosen yet. */}
+          {!isOpen && <SchemeToggle />}
           <ShareSessionMenu
             status={sessionHost.status}
             sessionCode={sessionHost.sessionCode}
@@ -1007,127 +1333,138 @@ export default function Home() {
       }
     >
       {/*
-        Tap-to-advance lives on the timer ring wrapper only — not the
-        whole container — so off-ring chrome (score panel, footer,
-        editable fields, banner) can't accidentally advance turns.
-        preventClickCapture is now dead defence: the score buttons and
-        the wizard modal aren't children of the ring, so they don't
-        bubble into the handler. Kept the state in place for now in
-        case a future surface ends up inside the ring and needs to
-        opt out.
+        Tap-to-advance lives on the timer ring wrapper only, so the
+        panels around it (controls, phase bar, scores, footer) can never
+        advance a turn. preventClickCapture still guards the ring while
+        the setup modal or an editable field is open.
+
+        Layout: the ring and its banner own the centre column. The
+        panels are placed in the side columns and the full-width bottom
+        row by PANEL_PLACEMENT and page.module.css; on a phone the
+        regions dissolve and every panel flows below the ring in a
+        scrolling page.
       */}
       <div className={styles.container}>
         {modal}
-        <main className={styles.main}>
-          {activePlayer && (
-            <div
-              className={styles.activePlayer}
-              style={{ color: activePlayer.color }}
-            >
-              {/* Faction meeple, tinted to the faction colour via
+        <main className={styles.centre}>
+          <div
+            className={`${styles.bannerRow} ${activeIsEntry ? styles.bannerRowEntry : ""}`}
+          >
+            {activeIsEntry && activeEntry && turnOrderView ? (
+              <div className={styles.activePlayer}>
+                <TurnEntryBanner
+                  entry={activeEntry}
+                  prominentKinds={turnOrderView.prominentKinds}
+                  fallbackColor={activeSeatView?.color ?? "var(--color-text)"}
+                  subheading={activeBannerSubheading}
+                />
+              </div>
+            ) : activePlayer ? (
+              <div
+                className={styles.activePlayer}
+                style={{ color: activePlayer.color }}
+              >
+                {/* Player meeple, tinted to the player colour via
                   mask-image. When there's no icon (Generic / no
                   setup), the player's name itself carries the
-                  colour — no swatch needed. */}
-              <PlayerMeeple
-                iconSrc={activePlayer.iconSrc}
-                color={activePlayer.color}
-                silhouetteClassName={styles.activePlayerMeeple}
-              />
-              <span className={styles.activePlayerText}>
-                <span>
-                  {activePlayer.name}
-                  <span className={styles.activePlayerSuffix}>{"’s turn"}</span>
-                </span>
-                {activeSubheading && (
-                  <span className={styles.activePlayerSubheading}>
-                    {activeSubheading}
+                  colour. */}
+                <PlayerMeeple
+                  iconSrc={activePlayer.iconSrc}
+                  color={activePlayer.color}
+                  silhouetteClassName={styles.activePlayerMeeple}
+                />
+
+                <span className={styles.activePlayerText}>
+                  <span className={styles.activePlayerName}>
+                    {activePlayer.name}
+                    <span className={styles.activePlayerSuffix}>
+                      {"’s turn"}
+                    </span>
                   </span>
-                )}
-              </span>
-            </div>
-          )}
-          {turnOrder?.mode === "lead-relative" &&
-            turnOrder.interrupt &&
-            state.started &&
-            !victor &&
-            canSeize &&
-            currentPlayerIndex !== null && (
-              <button
-                type="button"
-                className={styles.seizeButton}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  seizeLead();
-                }}
-              >
-                {turnOrder.interrupt.label}
-              </button>
+                  {activeBannerSubheading && (
+                    <span className={styles.activePlayerSubheading}>
+                      {activeBannerSubheading}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ) : (
+              turnOrderView && (
+                <div className={`${styles.activePlayer} ${styles.activeEmpty}`}>
+                  {`Nothing in ${turnOrderView.listLabel} yet`}
+                </div>
+              )
             )}
-          <div
-            className={styles.timerRingWrapper}
-            role="button"
-            tabIndex={0}
-            aria-label="Advance turn"
-            onClick={() => {
-              if (!preventClickCapture) resetTimer();
-            }}
-            onKeyDown={(e) => {
-              if (
-                (e.key === "Enter" || e.key === " ") &&
-                !preventClickCapture
-              ) {
-                e.preventDefault();
-                resetTimer();
-              }
-            }}
-          >
-            {playerViews && currentPlayerIndex !== null && (
-              <PlayerArcs
-                players={playerViews}
-                activeIndex={currentPlayerIndex}
-              />
-            )}
-            <CircularProgressbar
-              value={(timerTotalSeconds / averageTime) * 100}
-              background
-              styles={{
-                // Cleaner stroke: solid (no dashes), thicker
-                // path so the ring reads with weight against
-                // the dark surface. Matches the rest of the
-                // app's chrome.
-                path: {
-                  stroke: paused
-                    ? "var(--color-timer-paused)"
-                    : "var(--color-timer-active)",
-                  strokeLinecap: "round",
-                  strokeWidth: "3",
-                },
-                trail: {
-                  stroke: "var(--color-border)",
-                  strokeWidth: "1",
-                },
-                text: {
-                  fontFamily: "inherit",
-                  fontWeight: 600,
-                  fill: paused
-                    ? "var(--color-timer-paused)"
-                    : "var(--color-text)",
-                },
-                background: {
-                  fill: "var(--color-timer-overtime)",
-                  fillOpacity: timerFinished
-                    ? stopwatchTotalSeconds / averageTime
-                    : 0,
-                  transitionProperty: "fill-opacity",
-                  transitionDuration: "2s",
-                },
+          </div>
+          <div className={styles.ringStage}>
+            <div
+              ref={ringRef}
+              className={styles.timerRingWrapper}
+              role="button"
+              tabIndex={0}
+              aria-label="Advance turn"
+              onClick={() => {
+                if (!ringGuarded) entryControls.advance();
               }}
-              text={
-                timerFinished ? `+${getStopwatchString()}` : getTimerString()
-              }
-            />
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && !ringGuarded) {
+                  e.preventDefault();
+                  entryControls.advance();
+                }
+              }}
+            >
+              <TimerRing
+                players={
+                  playerViews && currentPlayerIndex !== null
+                    ? playerViews
+                    : undefined
+                }
+                activeIndex={currentPlayerIndex ?? undefined}
+                value={(timerTotalSeconds / averageTime) * 100}
+                text={
+                  timerFinished ? `+${getStopwatchString()}` : getTimerString()
+                }
+                paused={paused}
+                overtimeOpacity={
+                  timerFinished ? stopwatchTotalSeconds / averageTime : 0
+                }
+                untimedLabel={untimedLabel}
+              />
+            </div>
           </div>
         </main>
+        {ringOutOfView && (activeEntry || activePlayer) && (
+          <div className={styles.readout} role="timer" aria-label="Turn time">
+            <span className={styles.readoutName}>
+              {`${activeIsEntry && activeEntry ? activeEntry.label : activePlayer?.name}’s turn`}
+            </span>
+            <span className={styles.readoutTime}>
+              {untimedLabel ??
+                (timerFinished ? `+${getStopwatchString()}` : getTimerString())}
+            </span>
+          </div>
+        )}
+        {PANEL_REGIONS.map((region) => {
+          const panels = PANEL_ORDER.filter(
+            (panel) => PANEL_PLACEMENT[panel] === region && panelNodes[panel],
+          );
+          return (
+            <div key={region} className={styles.column} data-column={region}>
+              {panels.map((panel) => (
+                <div
+                  key={panel}
+                  className={styles.panel}
+                  data-panel={panel}
+                  // Only takes effect on a phone, where the columns
+                  // dissolve and every panel shares one flow.
+                  style={{ order: PANEL_ORDER.indexOf(panel) + 1 }}
+                >
+                  {panelNodes[panel]}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
       {showVictoryHero && (
         // Full-screen overlay variant — sits above the timer
@@ -1180,35 +1517,46 @@ export default function Home() {
             onPick={(seatIndex) => setLead(seatIndex)}
           />
         )}
-      {(scoresVisible || playerStats.length > 0) && (
-        <div className={styles.playerOverlay}>
-          {scoresVisible && playerViews && scoreConfig && (
-            <ScorePanel
-              players={playerViews}
-              scores={scores}
-              scoreConfig={scoreConfig}
-              onIncrement={incrementScore}
-              activePlayerIndex={currentPlayerIndex}
-              firedMilestones={state.firedMilestones}
-            />
-          )}
-          {playerStats.length > 0 && (
-            <PlayerTimeShare stats={playerStats} players={playerViews || []} />
-          )}
-        </div>
+      {entryControls.overlays}
+      {renamingPlayers && !isOpen && players && (
+        <PlayersSheet
+          players={players}
+          onRename={(playerIndex, name) =>
+            runHostCommand({ type: "RENAME_PLAYER", playerIndex, name })
+          }
+          onClose={() => setRenamingPlayers(false)}
+        />
+      )}
+      {mismatchedPeerVersion !== null && (
+        <PeerNotice
+          tone="alert"
+          message="A connected phone is running a different version of Game Timer, so its taps are ignored. Reload it."
+          onDismiss={() => setMismatchedPeerVersion(null)}
+        />
       )}
       {!victorPlayer && (
         <Footer
           {...{
             remainingTurns,
-            setExpectedTurns,
+            // The footer edits turns left; the game keeps the total.
+            setExpectedTurns: (left: number) => {
+              if (Number.isInteger(left) && left >= 0)
+                runHostCommand({
+                  type: "SET_EXPECTED_TURNS",
+                  expectedTurns: state.turns.length + left,
+                });
+            },
             setPreventClickCapture,
             paused,
-            pause,
-            unpause,
-            averageTime,
-            undo,
+            untimed: untimedLabel !== null,
+            pause: () => runHostCommand({ type: "SET_PAUSED", paused: true }),
+            unpause: () =>
+              runHostCommand({ type: "SET_PAUSED", paused: false }),
+            remainingSeconds,
+            undo: () => runHostCommand({ type: "UNDO" }),
             canUndo,
+            turnsEditable: !turnsModelled,
+            remainingCount,
           }}
         />
       )}

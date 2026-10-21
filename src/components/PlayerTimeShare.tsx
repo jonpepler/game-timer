@@ -1,3 +1,4 @@
+import { SectionLabel } from "@/components/ui";
 import styles from "./PlayerTimeShare.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ export function PlayerTimeShare({ stats, players }: PlayerTimeShareProps) {
 
   return (
     <div className={styles.container} aria-label="Time share by player">
-      <span className={styles.label}>Time share</span>
+      <SectionLabel as="span">Time share</SectionLabel>
       <div className={styles.bar}>
         {stats.map((s) => {
           const player = players[s.playerIndex];

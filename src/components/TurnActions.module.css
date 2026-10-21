@@ -1,0 +1,19 @@
+.region {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* Unavailable controls keep their box so nothing around them moves. */
+.action[data-available="false"] {
+  visibility: hidden;
+}
+
+/* Wide layouts seat the actions at the top left, under the header bar. */
+@media (min-width: 1024px) {
+  .region {
+    align-items: flex-start;
+  }
+}

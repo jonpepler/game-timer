@@ -4,5 +4,6 @@
   "name": "Generic",
   "description": "A neutral turn timer with no extra setup or score tracking. Suits any board game.",
   "defaultExpectedTurns": 90,
-  "defaultAverageSeconds": 300
+  "defaultAverageSeconds": 300,
+  "turnOrder": { "mode": "round-robin", "selectable": true }
 }

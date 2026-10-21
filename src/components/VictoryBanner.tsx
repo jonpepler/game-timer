@@ -2,15 +2,16 @@
 
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { Backdrop, IconButton, SectionLabel } from "@/components/ui";
 import styles from "./VictoryBanner.module.css";
 
 interface Player {
   name: string;
   color: string;
   // Optional head crop / silhouette. When present, sits inside the
-  // laurel as the hero's portrait. When absent (e.g. Generic flow
-  // without per-faction artwork), the banner falls back to a
-  // name-led layout — no decorative ring.
+  // laurel as the hero's portrait. When absent (a game without
+  // per-player artwork), the banner falls back to a name-led layout
+  // with no decorative ring.
   iconSrc?: string;
 }
 
@@ -18,11 +19,11 @@ interface VictoryBannerProps {
   victor: Player;
   // Optional laurel asset wrapping the head icon. The timer page
   // resolves it from the active definition's referenceCatalog
-  // (Root ships `games/root/vp/laurel.png`). When omitted, the
+  // (a game ships one under its own asset folder). When omitted, the
   // banner collapses to a clean name-led layout.
   laurelSrc?: string;
   // When provided, the banner takes over the whole viewport as a
-  // dismissable overlay — clicking the X (or anywhere on the
+  // dismissable overlay: clicking the X (or anywhere on the
   // backdrop, or pressing Escape) calls this. When omitted, the
   // banner renders inline.
   onDismiss?: () => void;
@@ -86,12 +87,12 @@ export function VictoryBanner({
   if (!dismissable) return content;
 
   return (
-    <div
+    <Backdrop
+      layer="hero"
       className={styles.overlay}
       onClick={(e) => {
-        // Tap-anywhere dismiss — but inner content shouldn't
-        // count if the user is e.g. tap-and-holding to copy
-        // text. Only bubble-target dismisses.
+        // Tap-anywhere dismiss, but a tap on the content itself (a
+        // long-press to copy the name, say) does not count.
         if (e.target === e.currentTarget) onDismiss?.();
       }}
       role="dialog"
@@ -99,20 +100,18 @@ export function VictoryBanner({
       aria-label="Victory banner"
     >
       {content}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDismiss?.();
-        }}
+      <IconButton
+        label="Dismiss victory banner"
+        tone="filled"
+        tooltipAlign="end"
         className={styles.dismissButton}
-        aria-label="Dismiss victory banner"
+        onClick={() => onDismiss?.()}
       >
-        <X size={20} aria-hidden />
-      </button>
-      <div className={styles.dismissHint} aria-hidden>
+        <X aria-hidden />
+      </IconButton>
+      <SectionLabel className={styles.dismissHint} aria-hidden>
         Tap anywhere to dismiss
-      </div>
-    </div>
+      </SectionLabel>
+    </Backdrop>
   );
 }

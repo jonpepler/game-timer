@@ -73,9 +73,13 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
   // ── Seat players ─────────────────────────────────────────
   await navigateToScreen(page, /seat players/i);
   await page.getByLabel(/^Seat 1 name$/).fill("Jon");
+  await page.getByLabel(/^Seat 1 name$/).press("Enter");
   await page.getByLabel(/^Seat 2 name$/).fill("Alex");
+  await page.getByLabel(/^Seat 2 name$/).press("Enter");
   await page.getByLabel(/^Seat 3 name$/).fill("Sam");
+  await page.getByLabel(/^Seat 3 name$/).press("Enter");
   await page.getByLabel(/^Seat 4 name$/).fill("Riley");
+  await page.getByLabel(/^Seat 4 name$/).press("Enter");
   // Reorder: nudge seat 2 up so Alex becomes seat 1.
   await page.getByRole("button", { name: /Move seat 2 up/ }).click();
   await save(page, "07-seating");
@@ -123,7 +127,7 @@ test("Root setup wizard — full ADSET walkthrough with screenshots", async ({
     page.getByRole("heading", { name: /Choose Starting Hands/i }),
   ).toBeVisible();
   await save(page, "12b-choose-starting-hands");
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
   await expect(page.getByRole("heading", { name: /game setup/i })).toHaveCount(
     0,
   );
@@ -267,7 +271,7 @@ test("Root faction picker — last seat keeps its metadata", async ({ page }) =>
   // Faction is no longer the final wizard step (A.10 Choose
   // Starting Hands follows). Hit Start Game on the info screen so
   // the timer actually mounts and the score panel renders.
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
 
   // After auto-start the score panel renders per-player markers
   // keyed by SEAT name (default "Player N"). The marker for the

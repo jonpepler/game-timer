@@ -1,0 +1,51 @@
+/* A folded section: a full-width label control, then what it reveals. */
+.disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.toggle {
+  width: 100%;
+  min-height: var(--control-height-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-label);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-label);
+  line-height: var(--line-height-tight);
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--color-text);
+}
+
+.toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.chevron {
+  flex: none;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.panel[hidden] {
+  display: none;
+}

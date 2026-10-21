@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Button, Chip, Disc, Stepper } from "@/components/ui";
 import styles from "./ScorePanel.module.css";
 import { PlayerMeeple } from "@/components/PlayerMeeple";
 import type { ScoreConfig } from "@/state/gameDefinition";
@@ -9,7 +10,7 @@ interface Player {
   color: string;
   // Optional silhouette SVG path (relative to the deployment).
   iconSrc?: string;
-  // Optional HEAD portrait crop — preferred over `iconSrc` for the
+  // Optional HEAD portrait crop: preferred over `iconSrc` for the
   // score panel since markers + chips are small circles and a
   // full-body meeple silhouette doesn't read at that size.
   headIconSrc?: string;
@@ -18,9 +19,16 @@ interface Player {
 interface ScorePanelProps {
   players: Player[];
   scores: Record<number, number>;
-  scoreConfig: ScoreConfig;
+  // Absent when the game tracks no score; the panel then only shows the
+  // chart (if there is one).
+  scoreConfig?: ScoreConfig;
   onIncrement?: (playerIndex: number, delta: number) => void;
-  // The player whose turn it currently is — used as the default
+  // Shown where a score track would be, for games without scores.
+  chart?: ReactNode;
+  // False when a turn order panel already carries every player's score
+  // controls, so the catch-up stack would repeat them.
+  catchUp?: boolean;
+  // The player whose turn it currently is: used as the default
   // selection for the +/- controls so the most common case (score the
   // player who just acted) is one tap.
   activePlayerIndex?: number | null;
@@ -34,6 +42,8 @@ interface ScorePanelProps {
   firedMilestones?: Record<number, number[]>;
 }
 
+const NO_SCORES: ScoreConfig = { displayStyle: "hidden", min: 0, increment: 1 };
+
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || "?";
 
 const stopProp = (fn: () => void) => (e: React.MouseEvent) => {
@@ -44,12 +54,15 @@ const stopProp = (fn: () => void) => (e: React.MouseEvent) => {
 export function ScorePanel({
   players,
   scores,
-  scoreConfig,
+  scoreConfig: scoreConfigProp,
   onIncrement,
   activePlayerIndex,
   readOnly = false,
   firedMilestones,
+  chart,
+  catchUp = true,
 }: ScorePanelProps) {
+  const scoreConfig = scoreConfigProp ?? NO_SCORES;
   // Always-on selection so the +/- controls don't appear and disappear.
   // Initialise to the active turn player if there is one, otherwise the
   // first player.
@@ -57,8 +70,9 @@ export function ScorePanel({
   const [selected, setSelected] = useState<number | null>(initialSelection);
   // Catch-up panel: a scrollable stack of +/- controls for the other
   // players, so missed scores can be added without rotating the
-  // selection through the track. Collapsed by default to keep the
-  // panel compact when the active player is the only thing changing.
+  // selection through the track. The other scores start collapsed to
+  // keep the panel compact when the active player is the only thing
+  // changing.
   const [othersExpanded, setOthersExpanded] = useState(false);
 
   // Follow the active player as turns rotate, unless the user has
@@ -70,8 +84,9 @@ export function ScorePanel({
     }
   }, [activePlayerIndex]);
 
-  if (scoreConfig.displayStyle === "hidden") return null;
-  if (players.length === 0) return null;
+  const scoresShown =
+    scoreConfig.displayStyle !== "hidden" && players.length > 0;
+  if (!scoresShown && !chart) return null;
 
   const min = scoreConfig.min;
   const max = scoreConfig.max;
@@ -93,19 +108,24 @@ export function ScorePanel({
   // can't make sense (read-only, no onIncrement, or nobody to catch up
   // on).
   const showOthersUi =
-    !readOnly && onIncrement !== undefined && otherIndices.length > 0;
+    catchUp &&
+    !readOnly &&
+    onIncrement !== undefined &&
+    otherIndices.length > 0;
 
   const othersToggleNode = showOthersUi && (
-    <button
-      type="button"
-      onClick={stopProp(() => setOthersExpanded((v) => !v))}
-      className={styles.othersToggle}
+    <Button
+      variant="ghost"
+      size="sm"
+      icon={
+        othersExpanded ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />
+      }
+      onClick={() => setOthersExpanded((v) => !v)}
       aria-expanded={othersExpanded}
       aria-controls="score-panel-others-stack"
     >
-      {othersExpanded ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
       {othersExpanded ? "Hide other scores" : "Show other scores"}
-    </button>
+    </Button>
   );
 
   const othersStackNode = showOthersUi && othersExpanded && (
@@ -121,35 +141,20 @@ export function ScorePanel({
         const rowAtMin = score <= min;
         const rowAtMax = max !== undefined ? score >= max : false;
         return (
-          <div key={i} className={styles.otherRow}>
-            <button
-              type="button"
-              onClick={stopProp(() => onIncrement!(i, -step))}
-              disabled={rowAtMin}
-              className={styles.scoreButtonSmall}
-              aria-label={`Decrease score for ${player.name}`}
-            >
-              <Minus aria-hidden />
-            </button>
-            <span className={styles.otherName} style={{ color: player.color }}>
-              <span
-                className={styles.selectedSwatch}
-                style={{ background: player.color }}
-                aria-hidden
-              />
-              {player.name}
-            </span>
-            <span className={styles.otherScore}>{score}</span>
-            <button
-              type="button"
-              onClick={stopProp(() => onIncrement!(i, step))}
-              disabled={rowAtMax}
-              className={styles.scoreButtonSmall}
-              aria-label={`Increase score for ${player.name}`}
-            >
-              <Plus aria-hidden />
-            </button>
-          </div>
+          <Stepper
+            key={i}
+            className={styles.otherRow}
+            value={score}
+            onDecrement={() => onIncrement!(i, -step)}
+            onIncrement={() => onIncrement!(i, step)}
+            canDecrement={!rowAtMin}
+            canIncrement={!rowAtMax}
+            decrementLabel={`Decrease score for ${player.name}`}
+            incrementLabel={`Increase score for ${player.name}`}
+          >
+            <Disc color={player.color} size="sm" />
+            <span>{player.name}</span>
+          </Stepper>
         );
       })}
     </div>
@@ -159,41 +164,24 @@ export function ScorePanel({
   // render so we can place it above the track (per user feedback)
   // OR keep it next to the leaderboard variant below.
   const adderNode = !readOnly && onIncrement && selectedPlayer && (
-    <div className={styles.selectedRow}>
-      <button
-        type="button"
-        onClick={stopProp(() => onIncrement(selected!, -step))}
-        disabled={atMin}
-        className={styles.scoreButton}
-        aria-label={`Decrease score for ${selectedPlayer.name}`}
-      >
-        <Minus aria-hidden />
-      </button>
-      <span
-        className={styles.selectedName}
-        style={{ color: selectedPlayer.color }}
-      >
-        <span
-          className={styles.selectedSwatch}
-          style={{ background: selectedPlayer.color }}
-          aria-hidden
-        />
-        {selectedPlayer.name}
-      </span>
-      <span className={styles.selectedScore}>{selectedScore}</span>
-      <button
-        type="button"
-        onClick={stopProp(() => onIncrement(selected!, step))}
-        disabled={atMax}
-        className={styles.scoreButton}
-        aria-label={`Increase score for ${selectedPlayer.name}`}
-      >
-        <Plus aria-hidden />
-      </button>
-    </div>
+    <Stepper
+      size="wide"
+      framed
+      className={styles.selectedRow}
+      value={selectedScore}
+      onDecrement={() => onIncrement(selected!, -step)}
+      onIncrement={() => onIncrement(selected!, step)}
+      canDecrement={!atMin}
+      canIncrement={!atMax}
+      decrementLabel={`Decrease score for ${selectedPlayer.name}`}
+      incrementLabel={`Increase score for ${selectedPlayer.name}`}
+    >
+      <Disc color={selectedPlayer.color} size="sm" />
+      <span>{selectedPlayer.name}</span>
+    </Stepper>
   );
 
-  // Unique score positions on the track — the 0 and max anchors
+  // Unique score positions on the track: the 0 and max anchors
   // plus each player's actual score. Drives the bottom row of
   // labels so the track reads as a sparse 0-to-max scale with
   // only the meaningful numbers shown.
@@ -203,6 +191,15 @@ export function ScorePanel({
     uniqueScoreSet.add(scores[i] ?? min);
   }
   const uniqueScores = Array.from(uniqueScoreSet).sort((a, b) => a - b);
+
+  // No score tracking: only the chart.
+  if (!scoresShown) {
+    return (
+      <div className={styles.container} data-compact data-chart-slot>
+        {chart}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container} aria-label="Scores">
@@ -217,14 +214,14 @@ export function ScorePanel({
         </div>
       )}
       {/* Adder sits above the track. With the SCORES heading
-          dropped, the adder pill IS the panel's chrome label —
+          dropped, the adder pill IS the panel's chrome label:
           its name + score effectively title the strip. */}
       {adderNode}
 
       {isTrack ? (
         <div className={styles.track}>
           <div className={styles.trackBar} aria-hidden />
-          {/* Milestone markers — small ticks at each configured
+          {/* Milestone markers: small ticks at each configured
                 atScore. Fire-once milestones disappear once anyone
                 has crossed them (they've done their job); per-player
                 milestones stay visible because each player can still
@@ -330,6 +327,7 @@ export function ScorePanel({
                   headIconSrc={player.headIconSrc}
                   color={player.color}
                   headClassName={styles.markerHead}
+                  framedHeadClassName={styles.markerHeadFramed}
                   silhouetteClassName={styles.markerIcon}
                   silhouetteFill="css"
                   fallback={initial(player.name)}
@@ -337,7 +335,7 @@ export function ScorePanel({
               </button>
             );
           })}
-          {/* Score labels under the track — reads as a sparse
+          {/* Score labels under the track: reads as a sparse
                 scale where only the meaningful numbers are shown
                 (anchors + each player's actual score). Positioned
                 absolutely against the same track box as the
@@ -365,32 +363,32 @@ export function ScorePanel({
             .map((p, i) => ({ player: p, index: i, score: scores[i] ?? min }))
             .sort((a, b) => b.score - a.score)
             .map(({ player, index, score }) => (
-              <button
+              <Chip
                 key={index}
-                type="button"
-                onClick={stopProp(() => setSelected(index))}
-                className={`${styles.chip} ${
-                  selected === index ? styles.chipSelected : ""
-                }`}
+                pressed={selected === index}
+                onPress={() => setSelected(index)}
                 aria-label={`${player.name} score ${score}`}
+                leading={
+                  <span
+                    className={styles.chipSwatch}
+                    style={{ background: player.color }}
+                  >
+                    <PlayerMeeple
+                      iconSrc={player.iconSrc}
+                      headIconSrc={player.headIconSrc}
+                      color={player.color}
+                      headClassName={styles.markerHead}
+                      framedHeadClassName={styles.markerHeadFramed}
+                      silhouetteClassName={styles.markerIcon}
+                      silhouetteFill="css"
+                      fallback={initial(player.name)}
+                    />
+                  </span>
+                }
               >
-                <span
-                  className={styles.chipSwatch}
-                  style={{ background: player.color }}
-                >
-                  <PlayerMeeple
-                    iconSrc={player.iconSrc}
-                    headIconSrc={player.headIconSrc}
-                    color={player.color}
-                    headClassName={styles.markerHead}
-                    silhouetteClassName={styles.markerIcon}
-                    silhouetteFill="css"
-                    fallback={initial(player.name)}
-                  />
-                </span>
                 {player.name}
                 <span className={styles.chipScore}>{score}</span>
-              </button>
+              </Chip>
             ))}
         </div>
       )}

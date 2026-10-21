@@ -1,0 +1,59 @@
+/* Each type style token mapped to its face, weight, width and tracking.
+   The faces and their fallbacks are --font-entry-* tokens in
+   src/app/globals.css. `--type-scale` evens out the faces' different x-heights. */
+.styled {
+  text-transform: uppercase;
+  font-size: calc(1em * var(--type-scale, 1));
+}
+
+.styled[data-type-style="condensed"] {
+  --type-scale: 1.12;
+  font-family: var(--font-entry-condensed);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.styled[data-type-style="wide"] {
+  --type-scale: 0.84;
+  font-family: var(--font-entry-wide);
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: 0.01em;
+}
+
+.styled[data-type-style="slab"] {
+  --type-scale: 0.86;
+  font-family: var(--font-entry-slab);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.styled[data-type-style="deco"] {
+  --type-scale: 0.98;
+  font-family: var(--font-entry-deco);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  -webkit-text-stroke: 0.02em currentColor;
+}
+
+.styled[data-type-style="serif"] {
+  --type-scale: 0.92;
+  font-family: var(--font-entry-serif);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.styled[data-type-style="italic"] {
+  --type-scale: 0.9;
+  font-family: var(--font-entry-italic);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.styled[data-type-style="stencil"] {
+  --type-scale: 0.9;
+  font-family: var(--font-entry-stencil);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}

@@ -28,7 +28,7 @@ export type CompanionConnectionState = "connected" | "reconnecting" | "closed";
 export interface CompanionSession {
   // The code of the host this companion is talking to.
   hostCode: string;
-  // The companion's own broker peer id — used by the companion to
+  // The companion's own broker peer id: used by the companion to
   // find itself in the host's per-seat `claimedBy[]` array so the
   // claim can follow a seat reorder.
   peerId: string;
@@ -37,7 +37,7 @@ export interface CompanionSession {
   onClose(handler: () => void): () => void;
   // Force the underlying connection to be rebuilt from scratch. The
   // app calls this as a last resort when it's connected (relay
-  // presence is live) yet no application data is flowing — e.g. a
+  // presence is live) yet no application data is flowing, e.g. a
   // half-open WebRTC data channel where our sends reach the host but
   // the host's replies never arrive. Tearing the peer connection down
   // and re-pairing re-negotiates a fresh data channel. Identity is
@@ -65,12 +65,12 @@ export interface CreateHostOptions {
   ) => Peer;
   peerOptions?: PeerOptions;
   // Desired peer id. Caller is responsible for collision-recovery (try
-  // a different id and retry createHost) — this layer just surfaces
+  // a different id and retry createHost): this layer just surfaces
   // the broker's "unavailable-id" error.
   desiredId?: string;
 }
 
-// Custom broker key — every peer (host + companion) registers
+// Custom broker key: every peer (host + companion) registers
 // under this namespace on the public PeerJS broker so we don't
 // share an id pool with random other apps using the default
 // "peerjs" key. Two peers on different keys never collide even if
@@ -156,11 +156,11 @@ export function createHost(
       tryReconnect();
     });
 
-    // Network / visibility nudges — when the OS reports we're back
+    // Network / visibility nudges, when the OS reports we're back
     // online or the user returns to the tab, immediately retry
     // rather than waiting for the scheduled backoff.
     const onOnline = () => {
-      log.info("host window online — kicking immediate reconnect");
+      log.info("host window online: kicking immediate reconnect");
       if (pendingReconnectTimer != null) {
         clearTimeout(pendingReconnectTimer);
         pendingReconnectTimer = null;
@@ -171,7 +171,7 @@ export function createHost(
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       if (!peer.disconnected) return;
-      log.info("host tab visible — kicking immediate reconnect");
+      log.info("host tab visible: kicking immediate reconnect");
       if (pendingReconnectTimer != null) {
         clearTimeout(pendingReconnectTimer);
         pendingReconnectTimer = null;
@@ -299,7 +299,7 @@ export function connectToHost(
 
     // Broker-flake mitigation: when the WSS to the broker drops,
     // keep trying to reconnect with exponential backoff capped at
-    // 60s. No hard attempt limit — when the network comes back the
+    // 60s. No hard attempt limit, when the network comes back the
     // peer should rejoin without the user reloading.
     let reconnectAttempts = 0;
     let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -329,11 +329,11 @@ export function connectToHost(
       tryReconnect();
     });
 
-    // Network / visibility nudges — when the OS reports we're back
+    // Network / visibility nudges, when the OS reports we're back
     // online or the user returns to the tab, immediately retry
     // rather than waiting for the next scheduled backoff.
     const onOnline = () => {
-      log.info("companion window online — kicking immediate reconnect");
+      log.info("companion window online: kicking immediate reconnect");
       if (pendingReconnectTimer != null) {
         clearTimeout(pendingReconnectTimer);
         pendingReconnectTimer = null;
@@ -344,7 +344,7 @@ export function connectToHost(
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       if (!peer.disconnected) return;
-      log.info("companion tab visible — kicking immediate reconnect");
+      log.info("companion tab visible: kicking immediate reconnect");
       if (pendingReconnectTimer != null) {
         clearTimeout(pendingReconnectTimer);
         pendingReconnectTimer = null;
@@ -420,7 +420,7 @@ export function connectToHost(
             },
             reconnect: () => {
               if (destroyed || peer.destroyed) return;
-              log.info("companion forced reconnect — redialing host", {
+              log.info("companion forced reconnect: redialing host", {
                 hostCode,
               });
               emitState("reconnecting");
@@ -430,7 +430,7 @@ export function connectToHost(
               try {
                 currentConn?.close();
               } catch {
-                // Already closing/closed — the redial below is what matters.
+                // Already closing/closed: the redial below is what matters.
               }
               dialHost();
             },
@@ -477,7 +477,7 @@ export function connectToHost(
         log.info("companion connection closed", { hostCode });
         emitState(destroyed ? "closed" : "reconnecting");
         // If the host's data channel closes but our peer is still
-        // open, try re-dialling — they might be reloading or had a
+        // open, try re-dialling: they might be reloading or had a
         // brief network blip. The peer's broker-level reconnect
         // logic handles the other case (broker WSS down).
         if (!destroyed && !peer.destroyed && !peer.disconnected) {
@@ -523,13 +523,13 @@ export function connectToHost(
 // Translate a raw PeerJS error into a short, user-facing sentence.
 // PeerJS exposes the failure mode on `err.type`; we map the common
 // ones we've actually hit in the wild. The default "couldn't
-// connect" stays generic on purpose — better than guessing.
+// connect" stays generic on purpose: better than guessing.
 export function describePeerError(err: unknown): string {
   if (err && typeof err === "object" && "type" in err) {
     const type = (err as { type?: unknown }).type;
     switch (type) {
       case "network":
-        return "Network unavailable — check your Wi-Fi or mobile data.";
+        return "Network unavailable: check your Wi-Fi or mobile data.";
       case "peer-unavailable":
         return "Host not found. They may have closed the session, or the code is wrong.";
       case "server-error":
@@ -538,7 +538,7 @@ export function describePeerError(err: unknown): string {
       case "socket-closed":
         return "Lost the connection to the sharing service. Retrying.";
       case "disconnected":
-        return "Disconnected — trying to reconnect.";
+        return "Disconnected: trying to reconnect.";
       case "browser-incompatible":
         return "This browser doesn't support the WebRTC features needed to share. Try a different browser.";
       case "ssl-unavailable":

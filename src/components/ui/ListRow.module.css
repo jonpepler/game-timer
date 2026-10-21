@@ -1,0 +1,146 @@
+/* A full-width choice in a prompt, sheet or setup list. An entry's colour,
+   when it has one, is the whole border. */
+.row {
+  width: 100%;
+  height: auto;
+  min-height: var(--control-height-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 2px solid var(--row-color, var(--color-border));
+  border-radius: var(--radius-control);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-press) var(--ease-standard);
+}
+
+.row:hover:not(:disabled) {
+  border-color: var(--row-color, var(--color-border-strong));
+  background: var(--color-surface-muted);
+}
+
+.row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.row:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.row:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Chosen: the accent border and a faint accent wash. */
+.row[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.lead {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lead svg {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+}
+
+/* A glyph in a round well, for a row whose lead is an action icon. */
+.iconWell {
+  width: calc(var(--icon-size-md) + var(--space-16));
+  height: calc(var(--icon-size-md) + var(--space-16));
+  border-radius: var(--radius-disc);
+  background: var(--color-surface-muted);
+}
+
+.danger .lead {
+  color: var(--color-danger);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.trailing {
+  flex: none;
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Wide: the choices as a grid of tiles, glyph and value along the top,
+   then the label and hint, so each has room without a long row. */
+@media (min-width: 720px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .grid > li {
+    display: flex;
+  }
+
+  .adaptive {
+    height: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "lead trailing"
+      "text text";
+    align-content: start;
+    align-items: center;
+    row-gap: var(--space-8);
+    padding: var(--space-12);
+  }
+
+  .adaptive .lead {
+    grid-area: lead;
+  }
+
+  .adaptive .text {
+    grid-area: text;
+  }
+
+  .adaptive .trailing {
+    grid-area: trailing;
+    justify-self: end;
+  }
+}

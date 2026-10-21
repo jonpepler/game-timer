@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Save, X } from "lucide-react";
+import { Button, Field, SectionLabel } from "@/components/ui";
 import styles from "./DefinitionEditor.module.css";
 import { NumberField } from "./NumberField";
 import {
@@ -17,8 +18,7 @@ interface DefinitionEditorProps {
 }
 
 // Minimal editor while the SetupStep authoring UI is being built. The
-// previous editor surfaced bespoke faction / score / maps / decks
-// sections that don't match the new schema shape; the rich editor
+// previous editor surfaced bespoke per-game sections that don't match the new schema shape; the rich editor
 // comes back as a setupSteps authoring flow in a follow-up commit.
 export function DefinitionEditor({
   initial,
@@ -66,57 +66,53 @@ export function DefinitionEditor({
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.section}>
-        <label htmlFor="def-name" className={styles.label}>
+        <SectionLabel as="label" htmlFor="def-name">
           Name
-        </label>
-        <input
+        </SectionLabel>
+        <Field
           id="def-name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className={styles.input}
           placeholder="e.g. Wingspan"
           required
         />
       </div>
 
       <div className={styles.section}>
-        <label htmlFor="def-description" className={styles.label}>
+        <SectionLabel as="label" htmlFor="def-description">
           Description (optional)
-        </label>
-        <input
+        </SectionLabel>
+        <Field
           id="def-description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className={styles.input}
           placeholder="A line of context shown in the Game picker."
         />
       </div>
 
       <div className={styles.row}>
         <div className={styles.section}>
-          <label htmlFor="def-turns" className={styles.label}>
+          <SectionLabel as="label" htmlFor="def-turns">
             Default expected turns
-          </label>
+          </SectionLabel>
           <NumberField
             id="def-turns"
             min={1}
             value={expectedTurns}
             onChange={setExpectedTurns}
-            className={styles.input}
           />
         </div>
         <div className={styles.section}>
-          <label htmlFor="def-average" className={styles.label}>
+          <SectionLabel as="label" htmlFor="def-average">
             Default average seconds per turn
-          </label>
+          </SectionLabel>
           <NumberField
             id="def-average"
             min={1}
             value={averageSeconds}
             onChange={setAverageSeconds}
-            className={styles.input}
           />
         </div>
       </div>
@@ -131,14 +127,12 @@ export function DefinitionEditor({
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.actions}>
-        <button type="button" onClick={onCancel} className={styles.secondary}>
-          <X size={16} aria-hidden />
+        <Button icon={<X aria-hidden />} onClick={onCancel}>
           Cancel
-        </button>
-        <button type="submit" className={styles.primary}>
-          <Save size={16} aria-hidden />
+        </Button>
+        <Button type="submit" variant="primary" icon={<Save aria-hidden />}>
           {initial ? "Save changes" : "Create game"}
-        </button>
+        </Button>
       </div>
     </form>
   );

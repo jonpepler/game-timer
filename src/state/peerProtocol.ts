@@ -6,8 +6,23 @@
  */
 import type { GameDefinition } from "./gameDefinition";
 import type { GameSessionState } from "./gameSession";
+import type { SeatColorOption } from "./seating";
+import type { SessionCommand } from "./sessionCommands";
 
-export const PEER_PROTOCOL_VERSION = 1;
+/**
+ * Bumped whenever a message changes shape. Each side drops messages at
+ * another version and says so on screen (a notice on the host, a reload
+ * banner on the companion) rather than ignoring them silently.
+ * 2: game actions moved onto COMMAND / COMMAND_RESULT.
+ * 3: seating and renames moved onto COMMAND; CLAIM covers setup too.
+ *
+ * Additions that both sides tolerate keep the version: an older host
+ * refuses an unknown command with a COMMAND_RESULT, and an older
+ * companion ignores an unknown STATE field (and the host drops a
+ * command field it does not know). UNDO, SET_PAUSED, SET_EXPECTED_TURNS,
+ * `STATE.canUndo` and `STATE.paused` were added this way.
+ */
+export const PEER_PROTOCOL_VERSION = 3;
 
 export type HostToCompanionMessage =
   | {
@@ -24,6 +39,13 @@ export type HostToCompanionMessage =
       // without trusting their local clock to be in sync with the
       // host's.
       sentAt: number;
+      // Whether the host has anything to undo (its snapshots stay on
+      // the host). A companion cites `state.revision` in UNDO. Absent
+      // from hosts that predate it, where a companion offers no Undo.
+      canUndo?: boolean;
+      // Whether the host's clock is paused. The clock is not game state,
+      // so it travels beside it. Absent from hosts that predate it.
+      paused?: boolean;
     }
   // Pre-game wizard signal: the host's faction-picker (or any
   // turn-based player-pick step) is currently asking the seated
@@ -51,28 +73,56 @@ export type HostToCompanionMessage =
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       stepId: string;
     }
-  // The host's wizard publishes its current seating list any time it
-  // mounts or the seats change. Lets companions see + collaboratively
-  // edit the seat list before the game starts — claim a seat, rename
-  // theirs, add a new one. `claimedBy` mirrors the host's claim map
-  // so every companion sees who's already grabbed which slot.
+  // The host's wizard publishes its seating list whenever it opens or
+  // the seats change, so seated companions can edit it with seat
+  // commands. `claimedBy` mirrors the host's claim map, so every
+  // companion sees who holds which seat and finds its own seat after a
+  // reorder. Seat ids are stable; commands may name a seat by id.
   | {
       type: "SETUP_SEATING";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
       stepId: string;
-      // `id` is host-internal — used to track the seat across
-      // host-driven reorders. Companions key by index; the id is
-      // safe to ignore but useful for richer companion UI later.
-      seats: Array<{ id?: string; name: string }>;
+      seats: Array<{ id: string; name: string; colorId?: string }>;
       claimedBy: Array<string | null>;
       minPlayers: number;
       maxPlayers: number;
+      colorOptions?: SeatColorOption[];
+    }
+  // Setup stopped seating players: the wizard closed, or the chosen game
+  // has no seating step. Companions drop the seat list.
+  | {
+      type: "SETUP_SEATING_CLOSED";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+    }
+  // The outcome of one COMMAND. Broadcast, so every peer sees it; only
+  // the issuer (matching `commandId`) acts on it, showing `reason` when
+  // the command was refused. A refusal usually means another screen got
+  // there first.
+  | {
+      type: "COMMAND_RESULT";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      commandId: string;
+      ok: boolean;
+      reason?: string;
+    }
+  // Sent when the host drops a message at another protocol version, so
+  // the companion that sent it (`peerId`; the send is a broadcast) can
+  // tell its user to reload. Companions older than this message ignore
+  // it; the host shows its own notice as well.
+  | {
+      type: "PROTOCOL_MISMATCH";
+      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      peerId: string;
+      peerVersion: number | null;
     };
 
 // Companion → host. The companion claims a player slot, then issues
 // action requests for that slot. The host validates each request
 // against the claim map before dispatching.
 export type CompanionToHostMessage =
+  // Bind this companion to a seat: a seat on the setup seating list
+  // while it is open (first come, first served), otherwise a player of
+  // the running game.
   | {
       type: "CLAIM";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
@@ -95,22 +145,16 @@ export type CompanionToHostMessage =
       type: "REQUEST_STATE";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
     }
+  // A game action (see SessionCommand). The host checks it against the
+  // sender's claimed seat with the same policy and runs it through the
+  // same code path as its own UI. `commandId` is chosen by the sender
+  // and echoed in COMMAND_RESULT. The host Zod-parses `command`, so a
+  // malformed one is refused rather than trusted.
   | {
-      type: "END_TURN";
+      type: "COMMAND";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
-    }
-  | {
-      type: "INCREMENT_SCORE";
-      protocolVersion: typeof PEER_PROTOCOL_VERSION;
-      delta: number;
-    }
-  // Lead-relative turn order: the active seat seizes the lead for the
-  // next round (Arcs' "Seize the Initiative"). Identity-bound — the
-  // host validates that the sending peer's claimed seat is the active
-  // seat before dispatching, the same gate END_TURN uses.
-  | {
-      type: "SEIZE";
-      protocolVersion: typeof PEER_PROTOCOL_VERSION;
+      commandId: string;
+      command: SessionCommand;
     }
   // Mid-game change to the option attached to the claiming companion
   // (e.g. swap faction on the fly). `stepId` names the player-pick
@@ -133,21 +177,6 @@ export type CompanionToHostMessage =
       seatIndex: number;
       optionId: string;
     }
-  // Companion-driven edits to the wizard's seating list. The host
-  // applies these to the wizard's setup-context (subject to the
-  // step's min/max bounds) and broadcasts a fresh SETUP_SEATING.
-  // `claim` doubles as the CLAIM message during setup — once the
-  // game has started, peers use the legacy CLAIM message instead.
-  | {
-      type: "SEATING_REQUEST";
-      protocolVersion: typeof PEER_PROTOCOL_VERSION;
-      stepId: string;
-      action:
-        | { kind: "add"; name: string }
-        | { kind: "rename"; seatIndex: number; name: string }
-        | { kind: "remove"; seatIndex: number }
-        | { kind: "claim"; seatIndex: number };
-    }
   // Generic-mode turn advance. END_TURN requires a slot claim; in a
   // Generic game with no per-player tracking there are no slots to
   // claim, but seated companions still need a way to advance the
@@ -164,13 +193,4 @@ export type CompanionToHostMessage =
   | {
       type: "DISMISS_MILESTONE";
       protocolVersion: typeof PEER_PROTOCOL_VERSION;
-    }
-  // Mid-game rename of the player attached to the claiming
-  // companion's seat. The host applies it via setPlayer, preserving
-  // metadata. Identity-bound (companion can only rename the seat
-  // they claimed), so no playerIndex on the wire.
-  | {
-      type: "RENAME_PLAYER";
-      protocolVersion: typeof PEER_PROTOCOL_VERSION;
-      name: string;
     };

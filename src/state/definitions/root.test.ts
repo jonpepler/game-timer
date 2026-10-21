@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  optionExcludedByDeals,
   optionVisibleUnderContext,
   type SetupContext,
   type SetupOption,
@@ -9,7 +10,7 @@ import { rootDefinition } from "./root";
 /*
  * Root hireling module gating. Hirelings are sold in standalone
  * Hirelings Packs, NOT the same-named faction expansions, and each pack
- * supplies its own meeples (Law of Root H.3.3 — a hireling never needs
+ * supplies its own meeples (Law of Root H.3.3: a hireling never needs
  * you to own the matching faction). So a hireling must be gated by its
  * pack toggle, never by the faction expansion. Verified against Leder
  * Games product pages (see modules.json referenceCatalog note).
@@ -121,5 +122,108 @@ describe("root hireling module gating", () => {
       "a faction gated on the riverfolk expansion",
     ).toBeDefined();
     if (riverfolkFaction) expect(visible(riverfolkFaction, ctx)).toBe(false);
+  });
+});
+
+/*
+ * Dealing a hireling rules its matching faction out of the faction draft.
+ * This table is the old per-faction `matchingHireling` field, inverted:
+ * the relation now lives on the hireling as the generic `excludeOptionIds`.
+ */
+describe("root hireling excludes its matching faction", () => {
+  const EXCLUDED_BY: Record<string, string[]> = {
+    patrol: ["marquise"],
+    dynasty: ["eyrie"],
+    uprising: ["alliance"],
+    exile: ["vagabond", "vagabond__2", "knaves"],
+    prophets: ["lizards"],
+    flotilla: ["riverfolk"],
+    expedition: ["duchy"],
+    spies: ["corvids"],
+    flameBearers: ["hundreds"],
+    vaultKeepers: ["keepers"],
+    advocates: ["twilight"],
+    roamers: ["lilypad"],
+    bandits: [],
+    protector: [],
+    band: [],
+    farmers: [],
+  };
+  const steps = rootDefinition.setupSteps ?? [];
+  const excludedWhen = (choice: SetupContext[string]) =>
+    factions
+      .filter((f) => optionExcludedByDeals(f.id, steps, { hirelings: choice }))
+      .map((f) => f.id)
+      .sort();
+  const dealt = (dealtIds: string[]) =>
+    excludedWhen({ kind: "deal-random", skipped: false, dealtIds });
+
+  it("covers every hireling", () => {
+    expect(Object.keys(EXCLUDED_BY).sort()).toEqual(
+      hirelings.map((h) => h.id).sort(),
+    );
+  });
+
+  for (const [hirelingId, expected] of Object.entries(EXCLUDED_BY)) {
+    it(`dealing ${hirelingId} excludes ${expected.join(", ") || "nothing"}`, () => {
+      expect(dealt([hirelingId])).toEqual([...expected].sort());
+    });
+  }
+
+  it("unions the exclusions of every dealt hireling", () => {
+    expect(dealt(["patrol", "dynasty", "bandits"])).toEqual([
+      "eyrie",
+      "marquise",
+    ]);
+  });
+
+  it("excludes nothing when the hireling deal was skipped", () => {
+    expect(excludedWhen({ kind: "deal-random", skipped: true })).toEqual([]);
+  });
+});
+
+describe("root definition shape", () => {
+  it("Root pressure-tests the schema: full player-pick roster + score subsystem", () => {
+    const root = rootDefinition;
+    const pickStep = root.setupSteps?.find(
+      (s) => s.kind.type === "player-pick",
+    );
+    expect(pickStep).toBeDefined();
+    if (pickStep && pickStep.kind.type === "player-pick") {
+      // 13 official factions across base + four expansions (Riverfolk,
+      // Underworld, Marauders, Homeland), plus the second Vagabond
+      // (Riverfolk variant, gated by the two-vagabonds toggle) = 14.
+      expect(pickStep.kind.options).toHaveLength(14);
+      // Factions are picked from the last seat back to the first.
+      expect(pickStep.kind.pickOrder).toBe("reverse-seat");
+      // The draft deals one more faction than there are seats.
+      expect(pickStep.kind.draft).toEqual({ dealExtra: 1 });
+      // Option ids must be unique: they are foreign keys for player
+      // metadata + the mutex constraint references.
+      const ids = pickStep.kind.options.map((o) => o.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      // Mutex pair (Vagabond ↔ Knaves) declared on the step.
+      expect(pickStep.kind.constraints).toContainEqual({
+        type: "mutually-exclusive",
+        optionIds: ["vagabond", "knaves"],
+      });
+    }
+    // maxPlayers caps the table even though there are 13 options to
+    // pick from.
+    expect(root.maxPlayers).toBe(6);
+    expect(root.score?.max).toBe(30);
+    expect(root.score?.victory?.type).toBe("firstToMax");
+  });
+});
+
+describe("Root rules held in config", () => {
+  it("Law of Root A.6.3: hirelings are set up starting with the last player in turn order, going counterclockwise", () => {
+    const step = rootDefinition.setupSteps?.find(
+      (s) => s.id === "hireling-setup",
+    );
+    expect(step?.kind).toMatchObject({
+      type: "dealt-resolve",
+      order: "reverse-seat",
+    });
   });
 });

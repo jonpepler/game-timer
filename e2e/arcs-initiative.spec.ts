@@ -1,12 +1,15 @@
 /*
- * Arcs lead-relative turn order — end-to-end.
+ * Arcs lead-relative turn order, end to end, through the generic
+ * controls API.
  *
- * Covers the two genuinely new runtime paths:
  *   1) Round-end picker (host-only): a round closes with nobody having
- *      seized, so the table is asked "Who took the initiative?".
- *   2) Companion seize (multi-screen): the active seat seizes from a
- *      companion device, the host validates + dispatches, and the lead
- *      auto-advances to the seizer at round end (no picker).
+ *      seized, so the table is asked "Who took the initiative?"
+ *   2) Host control: the seize control renders in the host's turn
+ *      actions region and claims the next lead for the active seat
+ *   3) Companion control: only the companion holding the active seat
+ *      is offered the control; triggering it sends TRIGGER_CONTROL, the
+ *      host validates and applies it, and the lead auto-advances to the
+ *      seizer at round end (no picker)
  *
  * Uses the same BroadcastChannel peer fake as companion-multiscreen.
  */
@@ -20,23 +23,25 @@ async function installTestPeer(context: BrowserContext) {
   await context.addInitScript({ content: PEER_TEST_INIT_SCRIPT });
 }
 
-// Advance the turn via the ring's keyboard affordance (Enter). A real
-// tap works too, but the score-panel overlay can sit over the lower
-// ring and intercept pointer clicks in a 2-player Arcs game; the
-// keyboard path drives the same handler without the occlusion.
+// Advance the turn with a real pointer tap on the timer ring.
 const tapRing = (page: Page) =>
-  page.getByRole("button", { name: "Advance turn" }).press("Enter");
+  page.getByRole("button", { name: "Advance turn" }).click();
 
 // The active-player banner container (not its child text spans, which
 // also carry an activePlayer* class — the trailing "__" pins the match
 // to the CSS-module container class).
 const activeBanner = (page: Page) => page.locator('[class*="activePlayer__"]');
 
+const seizeIn = (page: Page) =>
+  page
+    .getByRole("region", { name: "Turn actions" })
+    .getByRole("button", { name: /Seize the Initiative/i });
+
 const roundEndPicker = (page: Page) =>
   page.getByRole("alertdialog", { name: /Who took the initiative/i });
 
-// Walk the host through an Arcs setup: 2 seats, default initiative
-// (Player 1), two distinct leaders via the full pool (Skip draft), then
+// Walk the host through an Arcs setup: 2 seats, initiative with
+// Player 1, two distinct leaders via the full pool (Skip draft), then
 // start the game. Leaves the host on the timer view, not yet running.
 async function startArcs2p(page: Page) {
   await page.goto(`${BASE}/timer`);
@@ -46,6 +51,10 @@ async function startArcs2p(page: Page) {
   await navigateToScreen(page, /seat players/i);
   await page.getByRole("button", { name: /Remove seat 4/ }).click();
   await page.getByRole("button", { name: /Remove seat 3/ }).click();
+
+  // The rules hand initiative to a random player, so name Player 1.
+  await navigateToScreen(page, /^Initiative$/);
+  await page.getByRole("button", { name: "Player 1", exact: true }).click();
 
   // Leader pick: skip the dealt draft to expose the full pool, then
   // pick two distinct leaders (reverse seat order — seat 2 picks first).
@@ -120,6 +129,29 @@ test.describe("arcs lead-relative initiative", () => {
     await expect(activeBanner(page)).toContainText("Player 1");
   });
 
+  test("host turn actions: seizing claims the next lead for the active seat", async ({
+    page,
+  }) => {
+    await startArcs2p(page);
+    // Not offered before the clock starts.
+    await expect(seizeIn(page)).toBeHidden();
+    await tapRing(page); // start
+    await tapRing(page); // Player 2 active
+    await expect(activeBanner(page)).toContainText("Player 2");
+    await expect(seizeIn(page)).toBeVisible();
+    await seizeIn(page).click();
+    // Once per round: withdrawn after use, and not a turn advance.
+    await expect(seizeIn(page)).toBeHidden();
+    await expect(activeBanner(page)).toContainText("Player 2");
+
+    // Closing the round hands the lead to Player 2 without the picker,
+    // and the control is offered again for the new round.
+    await tapRing(page);
+    await expect(roundEndPicker(page)).toBeHidden();
+    await expect(activeBanner(page)).toContainText("Player 2");
+    await expect(seizeIn(page)).toBeVisible();
+  });
+
   test("companion at the active seat seizes; the lead auto-advances to it", async ({
     context,
   }) => {
@@ -127,8 +159,8 @@ test.describe("arcs lead-relative initiative", () => {
     const host = await context.newPage();
     await startArcs2p(host);
 
-    // Advance so Player 2 (seat index 1) is the active seat and one
-    // turn is on record (so the companion's gameStarted gate is met).
+    // Advance so Player 2 (seat index 1) is the active seat with one
+    // turn on record.
     await tapRing(host); // start
     await tapRing(host); // → Player 2 active, 1 turn recorded
     await expect(activeBanner(host)).toContainText("Player 2");
@@ -140,18 +172,20 @@ test.describe("arcs lead-relative initiative", () => {
     await expect(companion.getByText(/claim a player/i)).toBeVisible({
       timeout: 15_000,
     });
-    await companion.locator('[class*="claimRow"]').nth(1).click();
+    await companion
+      .getByRole("button", { name: "Player 2", exact: true })
+      .click();
 
-    // The companion offers the seize action (label sourced from the
-    // Arcs definition) because it holds the active seat.
-    const seize = companion.getByRole("button", {
-      name: /Seize the Initiative/i,
-    });
+    // The companion offers the seize control (label sourced from the
+    // Arcs definition) in its turn actions because it holds the active
+    // seat.
+    const seize = seizeIn(companion);
     await expect(seize).toBeVisible({ timeout: 10_000 });
     await seize.click();
 
-    // Round-trip proof: the host validated + dispatched, and the echoed
-    // STATE flips canSeize false, so the companion's button disappears.
+    // Round-trip proof: the host validated and applied it, and the
+    // echoed STATE withdraws the control, so the companion's button
+    // disappears.
     await expect(seize).toBeHidden({ timeout: 5000 });
 
     // Close the round on the host. Because Player 2 seized, the lead
@@ -159,5 +193,38 @@ test.describe("arcs lead-relative initiative", () => {
     await tapRing(host); // Player 2's turn recorded → round complete
     await expect(roundEndPicker(host)).toBeHidden();
     await expect(activeBanner(host)).toContainText("Player 2");
+  });
+
+  test("a companion not holding the active seat is never offered the control", async ({
+    context,
+  }) => {
+    test.setTimeout(120_000);
+    const host = await context.newPage();
+    await startArcs2p(host);
+    await tapRing(host); // start
+    await tapRing(host); // Player 2 active, one turn on record
+
+    const code = await readSessionCode(host);
+    const companion = await openCompanion(context, code);
+    await expect(companion.getByText(/claim a player/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    await companion
+      .getByRole("button", { name: "Player 1", exact: true })
+      .click(); // Player 1
+    await expect(
+      companion.getByRole("button", { name: /Waiting for your turn/i }),
+    ).toBeVisible({ timeout: 10_000 });
+    // The host offers it for the active seat; the companion does not.
+    await expect(seizeIn(host)).toBeVisible();
+    await expect(seizeIn(companion)).toBeHidden();
+
+    // Once Player 1 leads the next round the companion is offered it.
+    await tapRing(host);
+    await roundEndPicker(host)
+      .getByRole("button", { name: /^Player 1$/ })
+      .click();
+    await expect(activeBanner(host)).toContainText("Player 1");
+    await expect(seizeIn(companion)).toBeVisible({ timeout: 10_000 });
   });
 });

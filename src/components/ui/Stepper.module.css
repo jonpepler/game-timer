@@ -1,0 +1,44 @@
+/* A number with minus and plus. Compact sits in a stadium track; wide
+   leads with two filled 56px buttons for the hand that scores. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.framed {
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+}
+
+.content {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: var(--font-weight-semibold);
+}
+
+.value {
+  min-width: 2ch;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-flush);
+  text-align: center;
+  color: var(--color-text);
+}
+
+.wide {
+  gap: var(--space-16);
+}
+
+.wide .value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}

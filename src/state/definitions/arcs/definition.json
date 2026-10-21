@@ -2,28 +2,43 @@
   "schemaVersion": 1,
   "id": "arcs",
   "name": "Arcs",
-  "description": "A sci-fi game of bitter ambition for 2–4 players, played with the Leaders & Lore mode. Win by reaching the Power threshold for your player count.",
+  "gameSpecificTerms": [
+    "arcs",
+    "seize",
+    "initiative",
+    "leader",
+    "lore",
+    "ambition",
+    "court",
+    "starport",
+    "psionic",
+    "relic"
+  ],
+  "description": "A sci-fi game of bitter ambition for 2–4 players, with or without the Leaders & Lore setup. Win by reaching the Power threshold for your player count.",
   "contentSource": "./modules.json",
   "defaultExpectedTurns": 96,
   "turnsPerPlayer": 24,
-  "defaultAverageSeconds": 90,
+  "defaultAverageSeconds": 240,
   "maxPlayers": 4,
   "playerVisualFrom": "leader",
   "playerSubheadingFrom": "leader",
+  "playerColorFrom": "seating",
   "turnOrder": {
     "mode": "lead-relative",
-    "interrupt": {
-      "id": "seize",
-      "label": "Seize the Initiative",
-      "effect": "claim-next-lead",
-      "oncePerRound": true
-    },
     "roundEnd": {
       "type": "prompt-lead",
       "label": "Who took the initiative this round?",
       "default": "none"
     }
   },
+  "controls": [
+    {
+      "id": "seize",
+      "label": "Seize the initiative",
+      "effect": { "type": "claim-next-lead" },
+      "availability": { "actor": "active-seat", "limit": "once-per-round" }
+    }
+  ],
   "score": {
     "displayStyle": "linearTrack",
     "min": 0,
@@ -50,13 +65,24 @@
       }
     },
     {
+      "id": "leaders-lore",
+      "label": "Play with Leaders & Lore",
+      "description": "Draft a Leader and a Lore card each. Your Leader replaces the core starting pieces and resources.",
+      "kind": {
+        "type": "toggle",
+        "defaultValue": true
+      }
+    },
+    {
       "id": "seating",
       "label": "Seat players",
       "kind": {
         "type": "seat-players",
         "minPlayers": 2,
         "maxPlayers": 4,
-        "defaultPlayerCount": 4
+        "defaultPlayerCount": 4,
+        "colorOptionCategory": "colour",
+        "colorOptionIds": ["red", "blue", "yellow", "white", "pink"]
       }
     },
     {
@@ -65,13 +91,23 @@
       "description": "Choose which player starts with the initiative marker. Randomise it for a fair opening.",
       "kind": {
         "type": "select-lead",
-        "allowRandom": true
+        "allowRandom": true,
+        "defaultLead": "random"
       }
     },
     {
       "id": "map-setup",
       "label": "Set up the map",
-      "description": "Shuffle the setup cards for your player count and draw one. Cover the out-of-play clusters it shows (2 clusters for 2–3 players, 1 for 4). Going clockwise from the initiative player, place each player's starting ships, city, and starport on their A / B / C systems, and take the 2 starting resources shown.",
+      "description": "Shuffle the setup cards for your player count and draw one. Cover the out-of-play clusters it shows (2 clusters for 2–3 players, 1 for 4).",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "starting-pieces",
+      "label": "Place starting pieces",
+      "description": "Going clockwise from the initiative player, place each player's starting ships, city, and starport on their A / B / C systems, and take the 2 starting resources shown.",
+      "visibleWhen": { "type": "toggle-off", "step": "leaders-lore" },
       "kind": {
         "type": "info"
       }
@@ -79,6 +115,7 @@
     {
       "id": "draft-leaders",
       "label": "Lay out Leaders & Lore",
+      "visibleWhen": { "type": "toggle-on", "step": "leaders-lore" },
       "description": "Lay out a face-up row of Leaders and a face-up row of Lore, each with one more card than the number of players. Starting to the right of the initiative player and going counter-clockwise, take turns drafting one Leader or one Lore at a time until everyone has exactly one of each.",
       "kind": {
         "type": "info"
@@ -87,11 +124,15 @@
     {
       "id": "leader",
       "label": "Leader",
+      "visibleWhen": { "type": "toggle-on", "step": "leaders-lore" },
       "description": "Each player records the Leader they drafted. This sets your name graphic and your portrait on the score track.",
       "kind": {
         "type": "player-pick",
         "mode": "turn-based",
         "optionCategory": "leader",
+        "pickOrder": "reverse-seat",
+        "pickFrom": "lead",
+        "draft": { "dealExtra": 1 },
         "allowRandom": true,
         "optionIds": [
           "elder",
@@ -116,6 +157,7 @@
     {
       "id": "place-leader",
       "label": "Set up your Leader",
+      "visibleWhen": { "type": "toggle-on", "step": "leaders-lore" },
       "description": "Place your starting pieces in the A / B / C boxes on your Leader card and take the 2 resources it shows, in the two leftmost slots. Then, in turn order, resolve any extra setup steps your Leader lists.",
       "kind": {
         "type": "info"

@@ -16,9 +16,9 @@ vi.mock("next/navigation", () => ({
  * Connection-status UX. Asserts the companion's *display* status (the
  * derived one driving the header), not the raw transport status:
  *
- *   - Through the whole first sync — relay presence landing, the STATE
+ *   - Through the whole first sync: relay presence landing, the STATE
  *     pull, and a dead-channel recovery that flips the transport back to
- *     "reconnecting" — the header stays a single steady "Connecting…".
+ *     "reconnecting": the header stays a single steady "Connecting…".
  *     This is the no-flicker guarantee (no green→grey→green).
  *   - Once a snapshot has arrived, the real status shows honestly, so a
  *     genuine mid-game drop surfaces as "Reconnecting…".
@@ -54,7 +54,7 @@ const makeState = (): GameSessionState => ({
 });
 
 // Spy on console.error (where React routes "update not wrapped in
-// act(...)" warnings) — still printing through — so afterEach can fail
+// act(...)" warnings) (still printing through) so afterEach can fail
 // the test if any act warning slipped out.
 let errorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -103,7 +103,7 @@ afterEach(() => {
 
 // Fire a transport-originated update. The transport pushes to us from
 // outside React's event system (a socket-style callback), and there's no
-// fireEvent/userEvent equivalent for that — wrapping the external trigger
+// fireEvent/userEvent equivalent for that: wrapping the external trigger
 // in act() is the React-docs-sanctioned pattern. Sync act suffices: the
 // handlers are synchronous and act flushes the resulting render+effects
 // before returning, so assertions can follow immediately.
@@ -130,7 +130,7 @@ describe("companion connection-status UX", () => {
     const text = () => container.textContent ?? "";
     // Let the mount's connectToHost promise settle (it registers the
     // transport handlers we drive below). waitFor flushes the pending
-    // update inside act for us — no manual act() around render.
+    // update inside act for us, no manual act() around render.
     await waitFor(() => expect(stateHandler).not.toBeNull());
 
     // Phase 1: relay presence up, no data → steady "Connecting…".
@@ -140,7 +140,7 @@ describe("companion connection-status UX", () => {
     expect(text()).not.toContain("Connected to");
 
     // Phase 2: a dead-channel recovery flips the transport to
-    // "reconnecting" — but we haven't synced, so the user must still see
+    // "reconnecting", but we haven't synced, so the user must still see
     // one continuous "Connecting…", NOT a flicker to "Reconnecting…".
     emitState("reconnecting");
     expect(text()).toContain("Connecting to");
@@ -165,7 +165,7 @@ describe("companion connection-status UX", () => {
     const text = () => container.textContent ?? "";
     // Flush the pending connectToHost promise inside act. With fake
     // timers the async RTL helpers can't cleanly drain a microtask, so an
-    // explicit act flush is the honest tool — without it the mount's
+    // explicit act flush is the honest tool, without it the mount's
     // resolve would later fire a state update outside act.
     await act(async () => {});
 

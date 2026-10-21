@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "name": "Lost Atlas",
+  "fonts": {
+    "body": "old-standard",
+    "display": "big-shoulders",
+    "label": "big-shoulders",
+    "numeric": "old-standard"
+  },
+  "display": {
+    "case": "uppercase",
+    "tracking": 0.01
+  },
+  "radius": {
+    "control": 2,
+    "field": 2,
+    "chip": 2,
+    "panel": 2,
+    "sheet": 2,
+    "chrome": 2,
+    "tooltip": 2,
+    "bar": 2
+  },
+  "clock": {
+    "preset": "theodolite"
+  },
+  "light": {
+    "colors": {
+      "surface": "#F1E7CF",
+      "surface-elevated": "#FAF5E8",
+      "surface-muted": "#E6D8B6",
+      "text": "#1B2631",
+      "text-muted": "#47525D",
+      "text-subtle": "#515A61",
+      "text-dim": "#34404B",
+      "text-inverse": "#FAF5E8",
+      "border": "#1B263152",
+      "border-strong": "#1B2631",
+      "ring": "#1B263166",
+      "accent": "#8A4A1F",
+      "danger": "#9B3533",
+      "on-danger-tint": "#5E1A19",
+      "success": "#3F6B35",
+      "on-success-tint": "#223C1C",
+      "warning": "#8C5A12",
+      "on-warning-tint": "#4F3208",
+      "timer-paused": "#7D7563",
+      "timer-overtime": "#A23A37",
+      "player-fallback": "#8A8170",
+      "clock-track": "#1B263173",
+      "frame": "#1B2631",
+      "texture": "#6B4E22",
+      "clock-ornament-overtime": "#1B2631"
+    },
+    "elevation": {
+      "backdrop": "#1B26318C",
+      "shadow": "#1B2631"
+    },
+    "ornament": {
+      "frame": "double-rule",
+      "texture": "grain"
+    }
+  },
+  "dark": {
+    "colors": {
+      "surface": "#16212B",
+      "surface-elevated": "#1E2C38",
+      "surface-muted": "#263645",
+      "text": "#EFE4CB",
+      "text-muted": "#C7BCA4",
+      "text-subtle": "#B8AE97",
+      "text-dim": "#D8CDB3",
+      "text-inverse": "#16212B",
+      "border": "#E2B88752",
+      "border-strong": "#E2B887",
+      "ring": "#EFE4CB59",
+      "accent": "#E2B887",
+      "danger": "#EE9888",
+      "on-danger-tint": "#F7CDC4",
+      "success": "#8FBF7F",
+      "on-success-tint": "#D2E8CA",
+      "warning": "#E8B060",
+      "on-warning-tint": "#F2D29A",
+      "timer-paused": "#7F8B95",
+      "timer-overtime": "#EE8273",
+      "player-fallback": "#8F8A80",
+      "frame": "#C99A66",
+      "texture": "#B9C6D2",
+      "clock-ornament-overtime": "#FFF4E0"
+    },
+    "elevation": {
+      "backdrop": "#080C10B8",
+      "shadow": "#000000"
+    },
+    "ornament": {
+      "frame": "double-rule",
+      "texture": "grain"
+    }
+  }
+}

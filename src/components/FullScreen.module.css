@@ -1,37 +1,57 @@
-.menuContainer {
+/* The header bar: one row across the top of the page. It lets taps
+   through between its buttons, so it never blocks the page below. */
+.bar {
   position: absolute;
   top: 0;
   left: 0;
-  margin: 15px;
-  display: inline-flex;
+  right: 0;
+  z-index: var(--z-chrome);
+  display: flex;
   align-items: center;
-  gap: 8px;
-  z-index: 10;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  padding-top: max(var(--space-12), env(safe-area-inset-top, 0px));
+  pointer-events: none;
 }
 
-.toggle {
-  /* Override the global button reset; bumped to 44×44 (WCAG AAA
-     touch target minimum) so the chrome's icon buttons aren't
-     accidentally tapped or missed on phones. */
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+.bar > * {
+  pointer-events: auto;
 }
 
-.toggle:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+/* Pinned: stays at the top as the page scrolls. Only a portrait phone
+   scrolls the timer page, so only there does it need a ground of its
+   own to hide the panels passing beneath. */
+.pinned {
+  position: fixed;
+}
+
+@media (max-width: 1023px) and (orientation: portrait) {
+  /* Laid over the page like the footer: the raised sheet, a shadow on
+     the content passing beneath, and a bottom edge (a hairline, or a
+     ruled frame's double rule meeting its inner rules). */
+  .pinned {
+    background-color: var(--color-sheet);
+    background-image: var(--ornament-texture);
+    background-attachment: fixed;
+    border-bottom: calc(1px - var(--ornament-frame-rule)) solid
+      var(--color-border);
+    box-shadow: var(--elevation-dock-top);
+    pointer-events: auto;
+  }
+
+  .pinned::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    inset-inline: calc(var(--ornament-frame-rule) * 8);
+    height: calc(var(--ornament-frame-rule) * 5);
+    box-sizing: border-box;
+    border-block: var(--ornament-frame-rule) solid var(--color-frame);
+    pointer-events: none;
+  }
+}
+
+/* The debug log launcher sits at the far end, apart from page controls. */
+.end {
+  margin-left: auto;
 }

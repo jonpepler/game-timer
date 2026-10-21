@@ -21,7 +21,7 @@ const tapToAdvance = async (page: Page) => {
 };
 
 const undoButton = (page: Page) =>
-  page.getByRole("button", { name: /undo last turn/i });
+  page.getByRole("button", { name: "Undo", exact: true });
 
 test.describe("undo", () => {
   test("is disabled before any turns are taken", async ({ page }) => {

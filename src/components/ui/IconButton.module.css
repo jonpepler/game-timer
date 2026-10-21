@@ -1,0 +1,137 @@
+/* A glyph-only button: round in the page, square in the header bar. */
+.button {
+  position: relative;
+  flex: none;
+  width: var(--control-height-md);
+  height: var(--control-height-md);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-icon-button);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-press) var(--ease-standard);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.button svg {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+}
+
+.lg {
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
+  color: var(--color-text);
+}
+
+.lg svg {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+
+/* Filled: the one control a cluster leads with (pause, score +/-). */
+.filled {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.filled:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+}
+
+/* Plain: no frame, for a glyph inside a row that already has one. */
+.plain {
+  border-color: transparent;
+}
+
+.square {
+  border-radius: var(--radius-chrome);
+  background: var(--color-surface-muted);
+}
+
+.square:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+}
+
+/* Shown on hover (where there is one) and on keyboard focus. */
+.tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + var(--space-6));
+  z-index: var(--z-popover);
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tooltip);
+  box-shadow: var(--elevation-raised);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.tooltipTop {
+  top: auto;
+  bottom: calc(100% + var(--space-6));
+}
+
+/* Keeps a tooltip on a button at the screen edge inside the screen. */
+.tooltipStart {
+  left: 0;
+  transform: none;
+}
+
+.tooltipEnd {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+@media (hover: hover) {
+  .button:hover .tooltip {
+    opacity: 1;
+  }
+}
+
+.button:focus-visible .tooltip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+  }
+}

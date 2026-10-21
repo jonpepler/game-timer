@@ -1,0 +1,728 @@
+{
+  "schemaVersion": 1,
+  "id": "railways",
+  "name": "Railways of the Lost Atlas",
+  "gameSpecificTerms": [
+    "railway",
+    "company",
+    "corporation",
+    "minor",
+    "major",
+    "stock",
+    "merger",
+    "president",
+    "charter",
+    "shareholder",
+    "dividend"
+  ],
+  "description": "An 18xx-style train game for 2 to 5 players, or 6 to 7 with the Landmarks 6-7 Player Mode. Players take Stock Round turns; companies take Operating Round turns in share-price order, which the timer keeps from the share price you record after each company operates. Supports the Landmarks expansion modules.",
+  "contentSource": "./modules.json",
+  "defaultExpectedTurns": 120,
+  "turnsPerPlayer": 30,
+  "defaultAverageSeconds": 240,
+  "maxPlayers": 7,
+  "turnOrder": {
+    "mode": "variable",
+    "entryKinds": [
+      {
+        "id": "minor",
+        "label": "Minor"
+      },
+      {
+        "id": "major",
+        "label": "Major",
+        "prominent": true
+      },
+      {
+        "id": "neutral",
+        "label": "Neutral",
+        "prominent": true,
+        "ownerless": true,
+        "joinsAtTop": true,
+        "turnTiming": "untimed",
+        "untimedLabel": "Shareholders act"
+      }
+    ],
+    "entries": [
+      {
+        "id": "manufacturing",
+        "label": "Manufacturing",
+        "kind": "minor",
+        "color": "#AE9758",
+        "identity": {
+          "typeStyle": "serif",
+          "symbol": "anvil"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "coupling",
+        "label": "Coupling",
+        "kind": "minor",
+        "color": "#759999",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "link"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "twin-cities",
+        "label": "Twin Cities",
+        "kind": "minor",
+        "color": "#39536C",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "building-2"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "agricultural",
+        "label": "Agricultural",
+        "kind": "minor",
+        "color": "#536E54",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "sunrise"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "suburban",
+        "label": "Suburban",
+        "kind": "minor",
+        "color": "#DEAF97",
+        "identity": {
+          "typeStyle": "deco",
+          "symbol": "house"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "eastern-mining",
+        "label": "Eastern Mining",
+        "kind": "minor",
+        "color": "#A88367",
+        "identity": {
+          "typeStyle": "stencil",
+          "symbol": "pickaxe"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "northern-port",
+        "label": "Northern Port",
+        "kind": "minor",
+        "color": "#3F5064",
+        "identity": {
+          "typeStyle": "serif",
+          "symbol": "anchor"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "resourceful",
+        "label": "Resourceful",
+        "kind": "minor",
+        "color": "#F2E6C4",
+        "identity": {
+          "typeStyle": "serif",
+          "symbol": "cog"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "express",
+        "label": "Express",
+        "kind": "minor",
+        "color": "#894C48",
+        "identity": {
+          "typeStyle": "italic",
+          "symbol": "chevrons-right"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "tunneling",
+        "label": "Tunneling",
+        "kind": "minor",
+        "color": "#B3A997",
+        "identity": {
+          "typeStyle": "slab",
+          "symbol": "train-front-tunnel"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "expansive",
+        "label": "Expansive",
+        "kind": "minor",
+        "color": "#CC7C7F",
+        "identity": {
+          "typeStyle": "deco",
+          "symbol": "sun-dim"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "overnight",
+        "label": "Overnight",
+        "kind": "minor",
+        "color": "#5A564E",
+        "identity": {
+          "typeStyle": "slab",
+          "symbol": "moon"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "adaptive",
+        "label": "Adaptive",
+        "kind": "minor",
+        "color": "#92829A",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "orbit"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "spacious",
+        "label": "Spacious",
+        "kind": "minor",
+        "color": "#A5C491",
+        "identity": {
+          "typeStyle": "deco",
+          "symbol": "asterisk"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "bridging",
+        "label": "Bridging",
+        "kind": "minor",
+        "color": "#8AB5A1",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "train-track"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "circus",
+        "label": "Circus",
+        "kind": "minor",
+        "color": "#846C82",
+        "identity": {
+          "typeStyle": "italic",
+          "symbol": "ferris-wheel"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "international",
+        "label": "International",
+        "kind": "major",
+        "color": "#A4BEC7",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "globe"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "inc",
+        "label": "Inc.",
+        "kind": "major",
+        "color": "#A4BEC7",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "globe"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "consortium",
+        "label": "Consortium",
+        "kind": "major",
+        "color": "#C9594B",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "hexagon"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "conglomerate",
+        "label": "Conglomerate",
+        "kind": "major",
+        "color": "#C9594B",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "hexagon"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "firm",
+        "label": "Firm",
+        "kind": "major",
+        "color": "#89A76A",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "layers"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "federation",
+        "label": "Federation",
+        "kind": "major",
+        "color": "#89A76A",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "layers"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "enterprise",
+        "label": "Enterprise",
+        "kind": "major",
+        "color": "#8E6986",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "flask-conical"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "experiment",
+        "label": "Experiment",
+        "kind": "major",
+        "color": "#8E6986",
+        "identity": {
+          "typeStyle": "condensed",
+          "symbol": "flask-conical"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "system",
+        "label": "System",
+        "kind": "major",
+        "color": "#E7BE71",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "waypoints"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "syndicate",
+        "label": "Syndicate",
+        "kind": "major",
+        "color": "#E7BE71",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "waypoints"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "union",
+        "label": "Union",
+        "kind": "major",
+        "color": "#D88F5E",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "magnet"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "unlimited",
+        "label": "Unlimited",
+        "kind": "major",
+        "color": "#D88F5E",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "magnet"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "league",
+        "label": "League",
+        "kind": "major",
+        "color": "#726F67",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "layout-panel-left"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "llc",
+        "label": "LLC",
+        "kind": "major",
+        "color": "#726F67",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "layout-panel-left"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "alliance",
+        "label": "Alliance",
+        "kind": "major",
+        "color": "#C9C2B4",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "triangle"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "authority",
+        "label": "Authority",
+        "kind": "major",
+        "color": "#C9C2B4",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "triangle"
+        },
+        "inPlay": false
+      },
+      {
+        "id": "metropolitan",
+        "label": "Metropolitan",
+        "kind": "neutral",
+        "color": "#4F7BD9",
+        "identity": {
+          "typeStyle": "wide",
+          "symbol": "tram-front"
+        },
+        "inPlay": false,
+        "module": "metropolitan"
+      }
+    ],
+    "lists": [
+      {
+        "id": "players",
+        "label": "Players",
+        "includePlayers": true
+      },
+      {
+        "id": "companies",
+        "label": "Companies",
+        "kinds": ["minor", "major", "neutral"],
+        "orderBy": "value",
+        "ownerRequired": true
+      }
+    ],
+    "phases": [
+      {
+        "id": "stock",
+        "label": "Stock Round",
+        "list": "players",
+        "next": "operating",
+        "averageSeconds": 45,
+        "exitPrompt": "Who has priority now?"
+      },
+      {
+        "id": "operating",
+        "label": "Operating Round",
+        "list": "companies",
+        "next": "merger",
+        "repeat": 2,
+        "averageSeconds": 150,
+        "valueStepOnTurnEnd": true
+      },
+      {
+        "id": "merger",
+        "label": "Merger Round",
+        "list": "companies",
+        "next": "stock",
+        "averageSeconds": 60,
+        "kinds": ["minor"]
+      }
+    ],
+    "entryValues": {
+      "label": "Share price",
+      "stepsLabel": "Share price change (increments)",
+      "track": [
+        0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 135, 150, 165,
+        180, 200, 220, 245, 270, 300, 330, 360, 400, 450, 500
+      ],
+      "startValues": [60, 70, 80, 90, 100, 110, 120, 135],
+      "removeAt": 0,
+      "steps": [
+        {
+          "id": "bankrupt",
+          "label": "Bankrupt",
+          "hint": "Closed: removed from the game",
+          "effect": "remove"
+        },
+        {
+          "id": "down",
+          "label": "−1",
+          "hint": "Total payout zero / revenue withheld: drop by one increment",
+          "effect": "move",
+          "spaces": -1
+        },
+        {
+          "id": "same",
+          "label": "No change",
+          "hint": "Total payout < current stock value: move to bottom of same stock price column",
+          "effect": "move",
+          "spaces": 0
+        },
+        {
+          "id": "up",
+          "label": "+1",
+          "hint": "Total payout >= current stock value: increase by one increment",
+          "effect": "move",
+          "spaces": 1
+        },
+        {
+          "id": "up2",
+          "label": "+2",
+          "hint": "Total payout >= 2x current stock value: increase by two increments",
+          "effect": "move",
+          "spaces": 2
+        },
+        {
+          "id": "up3",
+          "label": "+3",
+          "hint": "Record Gains! event: total payout >= 3x current stock value: increase by three increments",
+          "effect": "move",
+          "spaces": 3,
+          "module": "events"
+        }
+      ]
+    },
+    "combine": {
+      "label": "Merge",
+      "sourceKind": "minor",
+      "count": 2,
+      "targetKind": "major",
+      "value": "mean-floor",
+      "extraSources": {
+        "label": "Charter Partners",
+        "entries": [
+          {
+            "id": "generic",
+            "label": "Generic",
+            "color": "#55B8CD",
+            "identity": {
+              "typeStyle": "condensed",
+              "symbol": "circle"
+            }
+          },
+          {
+            "id": "independent",
+            "label": "Independent",
+            "color": "#55B8CD",
+            "identity": {
+              "typeStyle": "condensed",
+              "symbol": "circle"
+            }
+          },
+          {
+            "id": "big",
+            "label": "Big",
+            "color": "#418BB4",
+            "identity": {
+              "typeStyle": "slab",
+              "symbol": "trophy"
+            }
+          },
+          {
+            "id": "the",
+            "label": "The",
+            "color": "#418BB4",
+            "identity": {
+              "typeStyle": "slab",
+              "symbol": "trophy"
+            }
+          },
+          {
+            "id": "mom-and-pop",
+            "label": "Mom & Pop",
+            "color": "#E4A7CC",
+            "identity": {
+              "typeStyle": "serif",
+              "symbol": "tent"
+            }
+          },
+          {
+            "id": "friendly-local",
+            "label": "Friendly Local",
+            "color": "#E4A7CC",
+            "identity": {
+              "typeStyle": "serif",
+              "symbol": "tent"
+            }
+          },
+          {
+            "id": "regional",
+            "label": "Regional",
+            "color": "#6D5D2C",
+            "identity": {
+              "typeStyle": "stencil",
+              "symbol": "wheat"
+            }
+          },
+          {
+            "id": "common",
+            "label": "Common",
+            "color": "#6D5D2C",
+            "identity": {
+              "typeStyle": "stencil",
+              "symbol": "wheat"
+            }
+          },
+          {
+            "id": "original",
+            "label": "Original",
+            "color": "#B0B5EC",
+            "identity": {
+              "typeStyle": "deco",
+              "symbol": "sparkle"
+            }
+          },
+          {
+            "id": "grand",
+            "label": "Grand",
+            "color": "#B0B5EC",
+            "identity": {
+              "typeStyle": "deco",
+              "symbol": "sparkle"
+            }
+          }
+        ]
+      },
+      "steps": {
+        "sources": "Which two Minor Companies merge?",
+        "target": "Corporation Name",
+        "owner": "Who is president?",
+        "confirm": "The new Corporation"
+      }
+    },
+    "model": {
+      "remainingLabel": { "one": "cycle left", "other": "cycles left" },
+      "length": {
+        "type": "setup-choice",
+        "step": "length",
+        "cycles": {
+          "short": 4,
+          "long": 6
+        },
+        "typical": 6
+      },
+      "cycle": [
+        {
+          "phase": "stock",
+          "rounds": 1,
+          "turnsPerRound": {
+            "type": "players",
+            "times": 3
+          }
+        },
+        {
+          "phase": "operating",
+          "rounds": 2,
+          "turnsPerRound": {
+            "type": "entries",
+            "atLeastPerPlayer": 1
+          }
+        },
+        {
+          "phase": "merger",
+          "rounds": 1,
+          "turnsPerRound": {
+            "type": "entries"
+          }
+        }
+      ]
+    }
+  },
+  "setupSteps": [
+    {
+      "id": "modules",
+      "label": "Modules",
+      "kind": {
+        "type": "multi-toggle",
+        "optionCategory": "expansion",
+        "defaultSelectedIds": ["base"],
+        "optionIds": ["base", "landmarkTiles", "metropolitan", "events"]
+      }
+    },
+    {
+      "id": "length",
+      "label": "Game length",
+      "description": "The Short Game plays four cycles and the Long Game six. A cycle is a Stock Round, two Operating Rounds and a Merger Round. The predicted finish uses this.",
+      "kind": {
+        "type": "select-one",
+        "optionCategory": "gameLength",
+        "defaultOptionId": "long",
+        "optionIds": ["short", "long"]
+      }
+    },
+    {
+      "id": "seating",
+      "label": "Seat players",
+      "kind": {
+        "type": "seat-players",
+        "minPlayers": 2,
+        "maxPlayers": 7,
+        "defaultPlayerCount": 4
+      }
+    },
+    {
+      "id": "map",
+      "label": "Build the map",
+      "description": "Pick a random first player. Going clockwise, take turns placing map tiles following the map-building rules. With the Landmark tiles module, shuffle in landmark tiles: 3 for a Long game, 2 for a Short game.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "charters",
+      "label": "Companies and trains",
+      "description": "Lay out the Minor Company charters in 3 columns of 4 (2 columns for a Short game, leaving out Adaptive, Bridging, Overnight and Spacious). Only the bottom charter of each column can be launched. With fewer than 4 players, remove the extra 3- and 6-trains marked for 4 or more players.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "capital",
+      "label": "Starting capital",
+      "description": "Each player takes 450 with 2 players, 300 with 3, 275 with 4, or 220 with 5. In the Landmarks 6-7 Player Mode, 265 with 6 or 225 with 7.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "events",
+      "label": "Events (Landmarks)",
+      "description": "Only with the Events module: build the event stack with Town Chronicle cards above New City Herald cards, 2 of each for a Short game or 3 of each for a Long game. When an event adds a round, pick it when the timer asks which round comes next.",
+      "kind": {
+        "type": "info"
+      }
+    },
+    {
+      "id": "priority",
+      "label": "Priority",
+      "description": "Choose who holds the priority marker and takes the first Stock Round turn. The rules choose at random.",
+      "kind": {
+        "type": "select-lead",
+        "allowRandom": true,
+        "defaultLead": "random"
+      }
+    }
+  ]
+}

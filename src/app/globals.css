@@ -1,9 +1,10 @@
 /*
- * Theme tokens. All colours used by chrome (surfaces, text, borders, timer
- * accents, fallbacks) flow through these variables — never hardcode colours
- * outside of this file.
+ * Theme tokens. Everything a theme may change is a custom property here:
+ * colour, elevation, type, spacing, corners, layers and motion. Stylesheets
+ * and inline styles read these and never write the literal, so a per-game
+ * theme overrides this block and reaches every screen.
  *
- * Player faction colours come from GameConfig data, not the theme, and stay
+ * Player colours come from GameConfig data, not the theme, and stay
  * inline at the source.
  *
  * To introduce a light theme later, override these tokens inside a media
@@ -13,49 +14,284 @@
 :root {
   color-scheme: dark;
 
-  /* Layout primitives */
-  --max-width: 1100px;
-  --border-radius: 12px;
+  /*
+   * Faces. --font-body is the one face the app reads; headings and labels
+   * read --font-display and numeric readouts read --font-numeric, both of
+   * which default to the body face. A theme may give the readouts their
+   * own face, but it must be one built for figures: a sans serif with
+   * tabular numerals, so a running clock never jitters. --font-mono is
+   * for codes and logs, never for numbers the table reads.
+   */
+  --font-body: var(--font-face-inter);
+  --font-display: var(--font-body);
+  /* Section labels and small headings: a theme whose display face is only
+     for large sizes points this elsewhere. */
+  --font-label: var(--font-display);
+  --font-numeric: var(--font-body);
+  /* How display headings are set: a theme may draw them uppercase and
+     tracked. */
+  --text-transform-display: none;
+  --letter-spacing-display: normal;
   --font-mono:
     ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
     "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro",
     "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
 
+  /* The bundled faces a game theme may pick (src/state/gameTheme.ts).
+     Each is self-hosted by src/app/fonts.ts and downloaded only once a
+     page draws text in it. */
+  --font-face-inter: var(--font-inter, system-ui), system-ui, sans-serif;
+  --font-face-old-standard: var(--font-type-serif), Georgia, serif;
+  --font-face-big-shoulders:
+    var(--font-type-condensed), "Arial Narrow", sans-serif;
+  --font-face-cinzel: var(--font-theme-cinzel), Georgia, serif;
+
+  /* The entry type styles (src/components/identity/typeStyles.module.css).
+     Each face is self-hosted by src/app/fonts.ts; the fallbacks keep the
+     style's shape while it loads. */
+  --font-entry-condensed:
+    var(--font-type-condensed), "Arial Narrow", sans-serif;
+  --font-entry-wide: var(--font-type-grotesk), "Arial Black", sans-serif;
+  --font-entry-slab: var(--font-type-slab), Rockwell, serif;
+  --font-entry-deco: var(--font-type-deco), sans-serif;
+  --font-entry-serif: var(--font-type-serif), Georgia, serif;
+  --font-entry-italic: var(--font-type-grotesk), sans-serif;
+  --font-entry-stencil: var(--font-type-stencil), "Arial Black", sans-serif;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+
+  /* Tracking for the uppercase section label. */
+  --letter-spacing-label: 0.06em;
+
   /* Surfaces */
   --color-surface: #000;
-  --color-surface-elevated: #141414; /* dialog/modal — visually lifts above the body */
-  --color-surface-muted: #1f1f1f; /* future panels/cards */
+  --color-surface-elevated: #141414; /* dialog/modal: visually lifts above the body */
+  --color-surface-muted: #1f1f1f; /* panels and filled controls */
 
   /* Foreground */
   --color-text: #ffffff;
   --color-text-muted: rgba(255, 255, 255, 0.6);
   /* 0.55 (not 0.4) so de-emphasised text still clears WCAG AA 4.5:1 on
-     the dark surfaces — at 0.4 it measured 3.82:1 and axe flagged it. */
+     the dark surfaces: at 0.4 it measured 3.82:1 and axe flagged it. */
   --color-text-subtle: rgba(255, 255, 255, 0.55);
+  /* Dimmed secondary text: kept light enough to clear WCAG AA on the
+     dark surfaces. */
+  --color-text-dim: rgba(255, 255, 255, 0.7);
 
   /* Borders */
   --color-border: rgba(255, 255, 255, 0.2);
   --color-border-strong: #ffffff;
+  /* The hairline drawn around a colour disc so a dark player colour
+     still reads against the surface. */
+  --color-ring: rgba(255, 255, 255, 0.35);
 
   /* Timer accents */
   --color-timer-active: var(--color-text);
   --color-timer-paused: grey;
   --color-timer-overtime: red;
 
-  /* Player fallback — when a player has no assigned colour */
+  /* Player fallback, when a player has no assigned colour */
   --color-player-fallback: #888;
 
-  /* Accent — monochrome theme: the accent IS the foreground white.
-     Drives selection highlights, focus rings/outlines, and solid fills.
-     These were previously referenced but never defined, so accent
-     backgrounds and (critically) keyboard focus indicators silently did
-     nothing. Text sitting on a solid accent fill uses --color-text-inverse. */
+  /* The clock face's own marks: its track and its ornament. */
+  --color-clock-track: var(--color-border);
+  --color-clock-ornament: var(--color-accent);
+  /* The ornament once a turn runs over the average. */
+  --color-clock-ornament-overtime: var(--color-clock-ornament);
+  /* How strong the overtime wash may get (0 to 1) while the value on it
+     keeps 3:1, and how faint an inactive player arc is. A theme's scheme
+     sets both from its palette. */
+  --clock-wash-cap: 1;
+  --clock-inactive-opacity: 0.3;
+
+  /* How far a spent entry's mark fades in a turn list (0 to 1). */
+  --opacity-spent: 0.4;
+
+  /* How much ink a seat colour takes when it is set as text: none on the
+     dark default, where seat colours were chosen to read; all of it on a
+     light scheme, where pale seats would vanish and the disc or meeple
+     beside the name carries the colour instead. */
+  --seat-text-ink: 0%;
+
+  /* Ornament: a frame drawn around the viewport and a texture over the
+     surface. The defaults draw nothing. */
+  --color-frame: var(--color-border-strong);
+  --color-texture: var(--color-text);
+  --ornament-frame: none;
+  --ornament-frame-rule: 0px;
+  --ornament-frame-spine: 0px;
+  --ornament-texture: none;
+
+  /* Accent (monochrome theme): the accent IS the foreground white.
+     Drives selection highlights, focus rings and solid fills. Text
+     sitting on a solid accent fill uses --color-text-inverse. */
   --color-accent: var(--color-text);
   --color-text-inverse: var(--color-surface);
-  /* Dimmed secondary text — kept light enough to clear WCAG AA on the
-     dark surfaces. */
-  --color-text-dim: rgba(255, 255, 255, 0.7);
+  --color-focus: var(--color-accent);
+
+  /* Text on a colour the theme does not own (a player colour): the one of
+     these two that contrasts with it. */
+  --color-on-light: #111111;
+  --color-on-dark: #ffffff;
+
+  /* Status. Each tone has a tint for a filled mark and a text colour that
+     reads on that tint. */
   --color-danger: #d96565;
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 25%, transparent);
+  --color-on-danger-tint: #f5b8b8;
+  --color-success: #4caf50;
+  --color-success-tint: color-mix(
+    in srgb,
+    var(--color-success) 25%,
+    transparent
+  );
+  --color-on-success-tint: #b8e4b9;
+  --color-warning: #e8a33d;
+  --color-warning-tint: color-mix(
+    in srgb,
+    var(--color-warning) 30%,
+    transparent
+  );
+  --color-on-warning-tint: var(--color-warning);
+
+  /* Charts */
+  --color-chart-grid: var(--color-border);
+  --color-chart-axis: var(--color-text-muted);
+  --color-chart-ring: var(--color-ring);
+
+  /*
+   * Elevation: what sits above the page and how it is set apart. The
+   * backdrop dims and blurs the page behind a sheet or prompt; raised is
+   * a popover or a dragged row; overlay is a sheet or prompt card; the
+   * drops are for cut-out artwork (heads, meeples), which take a
+   * drop-shadow filter rather than a box shadow.
+   */
+  --elevation-backdrop: rgba(0, 0, 0, 0.75);
+  --elevation-backdrop-blur: 8px;
+  /* The colour every shadow is cast in; a theme sets it per scheme. */
+  --elevation-shadow: #000;
+  --elevation-raised: 0 8px 24px
+    color-mix(in srgb, var(--elevation-shadow) 45%, transparent);
+  --elevation-overlay: 0 24px 80px
+    color-mix(in srgb, var(--elevation-shadow) 70%, transparent);
+  /*
+   * A sheet laid on the page (a panel, a sheet, the setup card): a
+   * marginally lighter tone, a soft offset shadow and an edge rule. A theme
+   * with a ruled frame also rules each sheet just inside its edge, so
+   * panels share the frame's double rule.
+   */
+  --color-sheet: var(--color-surface-elevated);
+  --color-sheet-rule: var(--color-border);
+  --sheet-inner-rule: var(--ornament-frame-rule);
+  --elevation-sheet:
+    0 1px 1px color-mix(in srgb, var(--elevation-shadow) 10%, transparent),
+    0 6px 14px -8px color-mix(in srgb, var(--elevation-shadow) 35%, transparent);
+  /* Cast upward by chrome docked at the viewport's foot, over the content
+     scrolling beneath it. */
+  --elevation-dock: 0 -6px 18px -6px
+    color-mix(in srgb, var(--elevation-shadow) 22%, transparent);
+  /* The same, cast downward by chrome pinned at the top. */
+  --elevation-dock-top: 0 6px 18px -6px
+    color-mix(in srgb, var(--elevation-shadow) 22%, transparent);
+  --elevation-drop-sm: drop-shadow(
+    0 2px 4px color-mix(in srgb, var(--elevation-shadow) 50%, transparent)
+  );
+  --elevation-drop: drop-shadow(
+    0 6px 14px color-mix(in srgb, var(--elevation-shadow) 45%, transparent)
+  );
+
+  /*
+   * Scales. Components read these instead of writing literals, and the
+   * design-token guard in src/guards fails on a new literal. Each ladder
+   * holds the values the app already leans on most; a value between rungs
+   * is a design question, not a reason for a new rung.
+   */
+
+  /* Spacing: padding, margin and gap. */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+
+  /* Type. Fluid display sizes (the timer readout, victory hero) stay
+     clamp() expressions at their call site. */
+  --font-size-2xs: 11px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+
+  --line-height-flush: 1;
+  --line-height-tight: 1.2;
+  --line-height-body: 1.4;
+  --line-height-prose: 1.5;
+
+  /*
+   * Corners, named for what the element is so a theme knows what it is
+   * changing. A control is a button or a selectable row; a field takes
+   * typing; a chip is a small stadium mark, static or a value picker; a panel groups
+   * content on the page; a sheet floats over it; chrome is the header bar;
+   * a tooltip names an icon button; a bar is a data bar in a chart or
+   * track; an icon button and a disc are round.
+   */
+  --radius-control: 12px;
+  --radius-field: 10px;
+  --radius-chip: 999px;
+  --radius-panel: 16px;
+  --radius-sheet: 18px;
+  --radius-chrome: 8px;
+  --radius-tooltip: 6px;
+  --radius-bar: 999px;
+  --radius-icon-button: 50%;
+  --radius-disc: 50%;
+
+  /* Control and mark sizes. The 44px control is the touch target floor:
+     no control is drawn smaller. */
+  --control-height-md: 44px;
+  --control-height-lg: 56px;
+  --disc-size-sm: 10px;
+  --disc-size-md: 14px;
+  --disc-size-lg: 20px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+
+  /* Focus ring, shared by every control. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* App-global layers, lowest first. Sibling order inside one component
+     (0 to 5) stays a literal. */
+  --z-chrome: 10;
+  --z-popover: 20;
+  --z-toast: 60;
+  --z-debug: 90;
+  --z-hero: 100;
+  --z-prompt: 200;
+  --z-sheet: 210;
+
+  /* Motion. */
+  --duration-press: 0.08s;
+  --duration-fast: 0.15s;
+  --duration-base: 0.2s;
+  --duration-slow: 0.4s;
+  /* The overtime wash creeps in over seconds, slower than any UI
+     transition. */
+  --duration-wash: 2s;
+  /* The countdown sweep eases between ticks. */
+  --duration-sweep: 0.5s;
+  --ease-standard: ease;
+  --ease-out: ease-out;
+  --ease-emphasis: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 * {
@@ -67,12 +303,47 @@
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
+  /* clip, not hidden: hidden makes body a scroll container and breaks
+     position: sticky on the timer ring. */
+  overflow-x: clip;
+}
+
+/* Scrolling an element into view (focus, find, scrollIntoView) stops
+   it clear of the timer page's pinned footer. */
+html {
+  scroll-padding-bottom: 104px;
 }
 
 body {
   color: var(--color-text);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
+  background-image: var(--ornament-texture);
+  background-attachment: fixed;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* A theme's frame: an inset double rule, or a band down the inline-start
+   edge (the spine). Both are off unless a theme turns them on. */
+body::after {
+  content: "";
+  display: var(--ornament-frame);
+  position: fixed;
+  inset: var(--space-4);
+  border: var(--ornament-frame-rule) solid var(--color-frame);
+  border-inline-start-width: max(
+    var(--ornament-frame-rule),
+    var(--ornament-frame-spine)
+  );
+  outline: var(--ornament-frame-rule) solid var(--color-frame);
+  outline-offset: calc(var(--space-4) * -1);
+  pointer-events: none;
+  z-index: var(--z-chrome);
 }
 
 a {
@@ -80,15 +351,16 @@ a {
   text-decoration: none;
 }
 
-button {
-  padding: 0px 10px;
-  font-size: 30px;
-  width: 50px;
-  height: 40px;
+/* Controls take the page face; the kit sizes every button itself. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 dialog {
-  /* Explicit centering — the user-agent default of `margin: auto` only
+  /* Explicit centering: the user-agent default of `margin: auto` only
      centers when combined with `inset: 0`, which not every UA sets. */
   position: fixed;
   inset: 0;
@@ -98,6 +370,6 @@ dialog {
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: var(--elevation-backdrop);
+  backdrop-filter: blur(var(--elevation-backdrop-blur));
 }

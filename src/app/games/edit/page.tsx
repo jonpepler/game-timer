@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { DefinitionEditor } from "@/components/DefinitionEditor";
 import {
@@ -9,6 +8,8 @@ import {
   saveCustomDefinition,
 } from "@/state/customDefinitions";
 import type { GameDefinition } from "@/state/gameDefinition";
+import { ArrowLeft } from "lucide-react";
+import { ButtonLink, Heading } from "@/components/ui";
 import styles from "../page.module.css";
 
 function EditGameDefinitionPage() {
@@ -36,10 +37,15 @@ function EditGameDefinitionPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Edit game</h1>
-        <Link href="/games" className={styles.backLink}>
-          ← Back to library
-        </Link>
+        <Heading level={1}>Edit game</Heading>
+        <ButtonLink
+          href="/games"
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft aria-hidden />}
+        >
+          Back to library
+        </ButtonLink>
       </div>
       {definition === null && <p>Loading…</p>}
       {definition === "missing" && (

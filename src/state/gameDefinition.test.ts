@@ -7,8 +7,10 @@ import {
   parseGameDefinition,
   parseGameDefinitionStructure,
   safeParseGameDefinition,
+  turnOrderForSetup,
+  visibleSetupSteps,
 } from "./gameDefinition";
-import type { SetupContext } from "./gameDefinition";
+import type { SetupContext, TurnOrder } from "./gameDefinition";
 
 const minimalValid = {
   schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
@@ -97,11 +99,11 @@ describe("GameDefinitionSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("parses a Root-shaped setupSteps array (every step kind)", () => {
+  it("parses a full setupSteps array (every step kind)", () => {
     const parsed = parseGameDefinition({
       ...minimalValid,
-      id: "root",
-      name: "Root",
+      id: "fixture",
+      name: "Fixture",
       maxPlayers: 6,
       setupSteps: [
         {
@@ -113,27 +115,27 @@ describe("GameDefinitionSchema", () => {
           },
         },
         {
-          id: "landmarks",
-          label: "Landmarks",
+          id: "sites",
+          label: "Sites",
           kind: { type: "select-count", min: 0, max: 2 },
         },
         {
           id: "draft",
-          label: "Draft factions",
+          label: "Draft roles",
           kind: { type: "toggle", defaultValue: false },
         },
         {
-          id: "faction",
-          label: "Faction",
+          id: "role",
+          label: "Role",
           kind: {
             type: "player-pick",
             mode: "host-only",
             options: [
-              { id: "vagabond", label: "Vagabond", color: "#aaa" },
-              { id: "knaves", label: "Knaves", color: "#bbb" },
+              { id: "wanderer", label: "Wanderer", color: "#aaa" },
+              { id: "rogues", label: "Rogues", color: "#bbb" },
             ],
             constraints: [
-              { type: "mutually-exclusive", optionIds: ["vagabond", "knaves"] },
+              { type: "mutually-exclusive", optionIds: ["wanderer", "rogues"] },
             ],
           },
         },
@@ -144,7 +146,7 @@ describe("GameDefinitionSchema", () => {
     expect(parsed.setupSteps?.[3].kind.type).toBe("player-pick");
     if (parsed.setupSteps?.[3].kind.type === "player-pick") {
       expect(parsed.setupSteps[3].kind.constraints).toEqual([
-        { type: "mutually-exclusive", optionIds: ["vagabond", "knaves"] },
+        { type: "mutually-exclusive", optionIds: ["wanderer", "rogues"] },
       ]);
     }
   });
@@ -164,6 +166,100 @@ describe("GameDefinitionSchema", () => {
   });
 });
 
+describe("visibleWhen gates", () => {
+  const withGate = (module: string) => ({
+    ...minimalValid,
+    setupSteps: [
+      {
+        id: "modules",
+        label: "Modules",
+        kind: {
+          type: "multi-toggle",
+          options: [
+            { id: "base", label: "Base" },
+            { id: "extra", label: "Extra" },
+          ],
+        },
+      },
+      {
+        id: "extra-setup",
+        label: "Extra setup",
+        visibleWhen: { type: "module-selected", module },
+        kind: { type: "info" },
+      },
+    ],
+  });
+
+  it("accepts a gate on a declared module", () => {
+    expect(safeParseGameDefinition(withGate("extra")).success).toBe(true);
+  });
+
+  it("rejects a gate on an unknown module id at load", () => {
+    const result = safeParseGameDefinition(withGate("extar"));
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path.join(".")).toBe(
+        "setupSteps.1.visibleWhen.module",
+      );
+      expect(result.error.issues[0].message).toContain('"extar"');
+    }
+  });
+
+  const withToggleGate = (
+    gate: { type: "toggle-on" | "toggle-off"; step: string },
+    toggleFirst = true,
+  ) => {
+    const toggle = {
+      id: "variant",
+      label: "Play the variant",
+      kind: { type: "toggle", defaultValue: true },
+    };
+    const gated = {
+      id: "variant-setup",
+      label: "Variant setup",
+      visibleWhen: gate,
+      kind: { type: "info" },
+    };
+    return parseGameDefinition({
+      ...minimalValid,
+      setupSteps: toggleFirst ? [toggle, gated] : [gated, toggle],
+    });
+  };
+
+  it("shows a toggle-on step only while the toggle is on", () => {
+    const def = withToggleGate({ type: "toggle-on", step: "variant" });
+    const ids = (value: boolean) =>
+      visibleSetupSteps(def, {
+        variant: { kind: "toggle", value },
+      }).map((s) => s.id);
+    expect(ids(true)).toContain("variant-setup");
+    expect(ids(false)).not.toContain("variant-setup");
+    // A toggle missing from the context counts as off.
+    expect(visibleSetupSteps(def, {}).map((s) => s.id)).not.toContain(
+      "variant-setup",
+    );
+  });
+
+  it("shows a toggle-off step only while the toggle is off", () => {
+    const def = withToggleGate({ type: "toggle-off", step: "variant" });
+    const ids = (value: boolean) =>
+      visibleSetupSteps(def, {
+        variant: { kind: "toggle", value },
+      }).map((s) => s.id);
+    expect(ids(false)).toContain("variant-setup");
+    expect(ids(true)).not.toContain("variant-setup");
+  });
+
+  it("rejects a toggle gate on an unknown or later step", () => {
+    expect(() =>
+      withToggleGate({ type: "toggle-on", step: "varaint" }),
+    ).toThrow(/not an earlier toggle step/);
+    expect(() =>
+      withToggleGate({ type: "toggle-on", step: "variant" }, false),
+    ).toThrow(/not an earlier toggle step/);
+  });
+});
+
 describe("structure + modules split", () => {
   const minimalStructure = {
     schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
@@ -179,7 +275,7 @@ describe("structure + modules split", () => {
         kind: {
           type: "player-pick",
           mode: "host-only",
-          optionCategory: "faction",
+          optionCategory: "role",
           optionIds: ["a", "b"],
         },
       },
@@ -189,7 +285,7 @@ describe("structure + modules split", () => {
   const minimalModules = {
     schemaVersion: 1,
     categories: {
-      faction: {
+      role: {
         a: { label: "Alpha", color: "#111", assets: { meeple: "alpha.svg" } },
         b: { label: "Beta", color: "#222" },
       },
@@ -203,7 +299,7 @@ describe("structure + modules split", () => {
 
   it("modules schema accepts an arbitrary category map", () => {
     const m = parseGameContentModules(minimalModules);
-    expect(m.categories.faction.a.label).toBe("Alpha");
+    expect(m.categories.role.a.label).toBe("Alpha");
   });
 
   it("loader joins structure ids + category content into full SetupOptions", () => {
@@ -267,7 +363,7 @@ describe("structure + modules split", () => {
   });
 });
 
-describe("ADSET-shaped step kinds", () => {
+describe("setup step kinds", () => {
   const struct = (kinds: Record<string, unknown>[]) => ({
     schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
     id: "x",
@@ -300,7 +396,7 @@ describe("ADSET-shaped step kinds", () => {
       struct([
         {
           type: "deal-random",
-          optionCategory: "hireling",
+          optionCategory: "helper",
           optionIds: ["x", "y", "z"],
           count: 3,
           optional: true,
@@ -339,16 +435,16 @@ describe("ADSET-shaped step kinds", () => {
             kind: {
               type: "multi-toggle",
               optionCategory: "expansion",
-              optionIds: ["base", "marauders"],
+              optionIds: ["base", "expansionB"],
               defaultSelectedIds: ["base"],
             },
           },
           {
             id: "hire",
-            label: "Hirelings",
+            label: "Helpers",
             kind: {
               type: "deal-random",
-              optionCategory: "hireling",
+              optionCategory: "helper",
               optionIds: ["h1", "h2", "h3"],
               count: 2,
               optional: true,
@@ -361,12 +457,12 @@ describe("ADSET-shaped step kinds", () => {
         categories: {
           expansion: {
             base: { label: "Base" },
-            marauders: { label: "Marauders" },
+            expansionB: { label: "Expansion B" },
           },
-          hireling: {
-            h1: { label: "Hireling One", module: "base" },
-            h2: { label: "Hireling Two", module: "marauders" },
-            h3: { label: "Hireling Three", module: "base" },
+          helper: {
+            h1: { label: "Helper One", module: "base" },
+            h2: { label: "Helper Two", module: "expansionB" },
+            h3: { label: "Helper Three", module: "base" },
           },
         },
       },
@@ -375,7 +471,7 @@ describe("ADSET-shaped step kinds", () => {
     const hire = def.setupSteps?.[1];
     if (exp?.kind.type !== "multi-toggle") throw new Error("not multi-toggle");
     if (hire?.kind.type !== "deal-random") throw new Error("not deal-random");
-    expect(exp.kind.options.map((o) => o.id)).toEqual(["base", "marauders"]);
+    expect(exp.kind.options.map((o) => o.id)).toEqual(["base", "expansionB"]);
     expect(hire.kind.options).toHaveLength(3);
     expect(hire.kind.count).toBe(2);
     expect(hire.kind.optional).toBe(true);
@@ -394,7 +490,9 @@ describe("optionVisibleUnderContext", () => {
     const ctx: SetupContext = {
       exp: { kind: "multi-toggle", selectedIds: ["base"] },
     };
-    expect(optionVisibleUnderContext({ module: "marauders" }, ctx)).toBe(false);
+    expect(optionVisibleUnderContext({ module: "expansionB" }, ctx)).toBe(
+      false,
+    );
     expect(optionVisibleUnderContext({ module: "base" }, ctx)).toBe(true);
   });
 
@@ -402,6 +500,97 @@ describe("optionVisibleUnderContext", () => {
     const ctx: SetupContext = {
       map: { kind: "select-one", optionId: "autumn" },
     };
-    expect(optionVisibleUnderContext({ module: "marauders" }, ctx)).toBe(true);
+    expect(optionVisibleUnderContext({ module: "expansionB" }, ctx)).toBe(true);
+  });
+});
+
+describe("turnOrderForSetup", () => {
+  const order: TurnOrder = {
+    mode: "variable",
+    entryKinds: [{ id: "k", label: "K" }],
+    entries: [
+      { id: "always", label: "Always", kind: "k" },
+      { id: "base", label: "Base", kind: "k", module: "base" },
+      { id: "extra", label: "Extra", kind: "k", module: "expansion" },
+      { id: "variant", label: "Variant", kind: "k", requiresToggle: "v" },
+    ],
+    lists: [
+      { id: "people", label: "People", includePlayers: true },
+      { id: "things", label: "Things", kinds: ["k"] },
+    ],
+    phases: [
+      { id: "a", label: "A", list: "people", next: "x" },
+      { id: "x", label: "X", list: "things", module: "expansion" },
+      { id: "b", label: "B", list: "things" },
+    ],
+  };
+  const ctx = (modules: string[], variant = true): SetupContext => ({
+    modules: { kind: "multi-toggle", selectedIds: modules },
+    v: { kind: "toggle", value: variant },
+  });
+  const entryIds = (o: TurnOrder) => o.entries?.map((e) => e.id);
+
+  it("keeps everything when every gate is open", () => {
+    const out = turnOrderForSetup(order, ctx(["base", "expansion"]));
+    expect(entryIds(out)).toEqual(["always", "base", "extra", "variant"]);
+    expect(out.phases?.map((p) => p.id)).toEqual(["a", "x", "b"]);
+    expect(out.phases?.[0].next).toBe("x");
+  });
+
+  it("drops entries and phases whose module is not selected", () => {
+    const out = turnOrderForSetup(order, ctx(["base"]));
+    expect(entryIds(out)).toEqual(["always", "base", "variant"]);
+    expect(out.phases?.map((p) => p.id)).toEqual(["a", "b"]);
+    // `next` pointed at the dropped phase, so it falls back to order.
+    expect(out.phases?.[0]).not.toHaveProperty("next");
+    expect(() =>
+      parseGameDefinition({ ...minimalValid, turnOrder: out }),
+    ).not.toThrow();
+  });
+
+  it("drops entries whose toggle is off", () => {
+    const out = turnOrderForSetup(order, ctx(["base", "expansion"], false));
+    expect(entryIds(out)).toEqual(["always", "base", "extra"]);
+  });
+
+  it("keeps everything with no multi-toggle in the setup", () => {
+    expect(entryIds(turnOrderForSetup(order, {}))).toEqual([
+      "always",
+      "base",
+      "extra",
+      "variant",
+    ]);
+  });
+
+  it("drops value steps whose module is not selected or toggle is off", () => {
+    const valued: TurnOrder = {
+      ...order,
+      entryValues: {
+        label: "Value",
+        track: [0, 10, 20],
+        steps: [
+          { id: "up", label: "+1", effect: "move", spaces: 1 },
+          {
+            id: "more",
+            label: "+2",
+            effect: "move",
+            spaces: 2,
+            module: "expansion",
+          },
+          { id: "gone", label: "Gone", effect: "remove", requiresToggle: "v" },
+        ],
+      },
+    };
+    const stepIds = (o: TurnOrder) => o.entryValues?.steps.map((s) => s.id);
+    expect(
+      stepIds(turnOrderForSetup(valued, ctx(["base", "expansion"]))),
+    ).toEqual(["up", "more", "gone"]);
+    expect(stepIds(turnOrderForSetup(valued, ctx(["base"])))).toEqual([
+      "up",
+      "gone",
+    ]);
+    expect(
+      stepIds(turnOrderForSetup(valued, ctx(["base", "expansion"], false))),
+    ).toEqual(["up", "more"]);
   });
 });

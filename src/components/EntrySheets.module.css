@@ -1,0 +1,81 @@
+/* Layout inside the turn-entry sheets. The frame, buttons, chips and rows
+   come from the kit. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.actions > * {
+  flex: 1 1 auto;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.currentValue {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.currentValue strong {
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview {
+  margin: 0;
+  padding: var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.previewRow .preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.ownerLine {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

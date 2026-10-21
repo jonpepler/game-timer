@@ -1,0 +1,68 @@
+{
+  "e2e/_peer-test-injection.ts": {
+    "em-dash": 3
+  },
+  "e2e/_review-shots.spec.ts": {
+    "em-dash": 1
+  },
+  "e2e/_setup-helpers.ts": {
+    "em-dash": 8
+  },
+  "e2e/arcs-initiative.spec.ts": {
+    "em-dash": 4
+  },
+  "e2e/axe.spec.ts": {
+    "em-dash": 2
+  },
+  "e2e/baseline-screens.spec.ts": {
+    "em-dash": 4
+  },
+  "e2e/companion-multiscreen.spec.ts": {
+    "em-dash": 32
+  },
+  "e2e/companion-vagabond.spec.ts": {
+    "em-dash": 6
+  },
+  "e2e/definitions.spec.ts": {
+    "em-dash": 3
+  },
+  "e2e/persistence.spec.ts": {
+    "em-dash": 5
+  },
+  "e2e/score.spec.ts": {
+    "em-dash": 5
+  },
+  "e2e/sharing.spec.ts": {
+    "em-dash": 2
+  },
+  "e2e/trystero-live.spec.ts": {
+    "em-dash": 5
+  },
+  "e2e/undo.spec.ts": {
+    "em-dash": 1
+  },
+  "e2e/wizard-walkthrough.spec.ts": {
+    "em-dash": 16
+  },
+  "src/app/companion/page.tsx": {
+    "em-dash": 1
+  },
+  "src/app/timer/page.tsx": {
+    "em-dash": 30
+  },
+  "src/hooks/useTimer.ts": {
+    "em-dash": 4
+  },
+  "src/state/definitions/arcs/definition.json": {
+    "em-dash": 2
+  },
+  "src/state/definitions/arcs/modules.json": {
+    "em-dash": 1
+  },
+  "src/state/gameSession.ts": {
+    "em-dash": 8
+  },
+  "src/state/peerProtocol.ts": {
+    "em-dash": 5
+  }
+}

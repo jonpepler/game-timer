@@ -1,0 +1,63 @@
+/* The clock's width is the query container the ornament reads, so the
+   ornament drops out on a small clock rather than blur into the figures. */
+.frame {
+  width: 100%;
+  container-type: inline-size;
+}
+
+/* The face never paints outside its own square. */
+.clock {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  dominant-baseline: middle;
+  text-anchor: middle;
+}
+
+.faceNumeric {
+  font-family: var(--font-numeric);
+  font-weight: var(--font-weight-semibold);
+}
+
+.faceInter {
+  font-family: var(--font-face-inter);
+  font-weight: var(--font-weight-semibold);
+}
+
+.faceOldStandard {
+  font-family: var(--font-face-old-standard);
+  font-weight: var(--font-weight-bold);
+}
+
+.faceBigShoulders {
+  font-family: var(--font-face-big-shoulders);
+  font-weight: var(--font-weight-heavy);
+}
+
+/* Below 160px the ornament's hairlines fall under a device pixel. */
+@container (max-width: 159px) {
+  .ornament {
+    display: none;
+  }
+}
+
+/* Sits inside the ring, where the time would be. The ring's wrapper is
+   the positioned square both are drawn in. */
+.untimed {
+  position: absolute;
+  inset: 25%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: clamp(18px, 4.5vmin, 28px);
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+  pointer-events: none;
+}

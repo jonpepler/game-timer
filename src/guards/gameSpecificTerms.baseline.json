@@ -1,0 +1,25 @@
+{
+  "e2e/_setup-helpers.ts": {
+    "adset": 2,
+    "faction": 11,
+    "hireling": 2,
+    "landmark": 1,
+    "marquise": 1,
+    "root": 8
+  },
+  "src/app/timer/page.tsx": {
+    "faction": 1,
+    "marquise": 1
+  },
+  "src/components/GameSetupWizard.tsx": {
+    "adset": 5
+  },
+  "src/state/gameSession.ts": {
+    "faction": 2
+  },
+  "src/state/peerProtocol.ts": {
+    "adset": 1,
+    "faction": 4,
+    "hireling": 1
+  }
+}

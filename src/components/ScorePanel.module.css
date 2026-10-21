@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   /* Tight gap so the adder + track pack as one strip. No heading
-     row — the adder pill carries the panel's identity. */
-  gap: 2px;
+     row: the adder pill carries the panel's identity. */
+  gap: var(--space-2);
   pointer-events: auto;
 }
 
@@ -13,13 +13,13 @@
   position: relative;
   /* Compact track height: ~78px of marker zone + ~22px label
      row. Cluster fans of 3+ players at the same score will
-     gracefully overflow vertically — the track doesn't clip. */
+     gracefully overflow vertically: the track doesn't clip. */
   height: 100px;
   /* Margins clear screen edge; padding leaves room for the
      marker's translateX(-50%) at the 0% and 100% positions so end
      markers stay tangent to the bar instead of half-off it. */
-  margin: 2px 28px;
-  padding: 0 20px;
+  margin: var(--space-2) var(--space-24);
+  padding: 0 var(--space-16);
 }
 
 .trackBar {
@@ -32,10 +32,10 @@
   right: 0;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-bar);
 }
 
-/* Milestone tick — small disc/glyph sitting at a configured
+/* Milestone tick: small disc/glyph sitting at a configured
    `atScore` position. Lives below the player markers (z-index)
    so a player camped on the milestone still reads. Centered on
    the track bar's midline. */
@@ -44,23 +44,24 @@
   top: 39px;
   width: 22px;
   height: 22px;
-  margin-top: -11px;
-  margin-left: -11px;
+  margin-top: calc(-1 * var(--space-12));
+  margin-left: calc(-1 * var(--space-12));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: var(--color-surface-elevated);
+  background-image: var(--ornament-texture);
   color: var(--color-text);
   border: 1px solid var(--color-border-strong, var(--color-border));
-  border-radius: 999px;
+  border-radius: var(--radius-disc);
   pointer-events: none;
   z-index: 1;
 }
 
 .trackMilestoneLabel {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
-  line-height: 1;
+  line-height: var(--line-height-flush);
   letter-spacing: 0;
 }
 
@@ -70,37 +71,37 @@
   object-fit: contain;
 }
 
-/* Score labels under the track — anchors (0, max) plus every
+/* Score labels under the track: anchors (0, max) plus every
    player's actual score. Positioned absolutely so each label
    sits directly under its marker's x-coordinate. */
 .scoreLabel {
   position: absolute;
   bottom: 0;
   transform: translateX(-50%);
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
   letter-spacing: 0.02em;
-  /* No background — the label sits on the surface as a plain
+  /* No background: the label sits on the surface as a plain
      number so it reads as part of the scale, not a chip. */
-  padding: 0 4px;
+  padding: 0 var(--space-4);
   pointer-events: none;
 }
 
 .trackTicks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-subtle);
   letter-spacing: 0.04em;
-  margin: 0 24px;
+  margin: 0 var(--space-24);
 }
 
 .marker {
   /* Override the global button reset. Markers with head icons
-     drop the circular container — the head image itself is the
+     drop the circular container: the head image itself is the
      marker. Without a head icon (Generic flow), a small coloured
      dot stands in. */
   width: 40px;
@@ -113,14 +114,14 @@
   background: transparent !important;
   border: none;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-on-light);
   cursor: pointer;
   transform: translateX(-50%);
   transition:
-    transform 0.12s ease,
-    filter 0.12s ease;
+    transform var(--duration-fast) var(--ease-standard),
+    filter var(--duration-fast) var(--ease-standard);
 }
 
 /* When the marker is just an initial (no icon), give it a small
@@ -128,7 +129,7 @@
 .marker:not(:has(img)) {
   width: 24px;
   height: 24px;
-  border-radius: 999px;
+  border-radius: var(--radius-disc);
   background: var(--marker-fallback-bg, currentColor) !important;
   border: 2px solid var(--color-surface);
 }
@@ -139,7 +140,7 @@
 }
 
 .markerSelected {
-  /* Subtle dropshadow only — was too punchy with the earlier
+  /* Subtle dropshadow only: was too punchy with the earlier
      duplicated drop-shadow stack. */
   filter: drop-shadow(
     0 0 4px color-mix(in srgb, var(--color-text) 40%, transparent)
@@ -152,7 +153,7 @@
   box-shadow: 0 0 0 3px var(--color-text);
 }
 
-/* The active player's marker is 50% larger and gently sways —
+/* The active player's marker is 50% larger and gently sways:
    reuses the victory hero's "alive" treatment so the current
    turn-taker reads at a glance. transform-origin: center bottom
    so the sway pivots from the foot of the head icon. */
@@ -161,9 +162,10 @@
 }
 .markerActive .markerHead {
   transform-origin: center bottom;
-  /* Faster sway than the victory hero's idle — reads as alert /
+  /* Faster sway than the victory hero's idle: reads as alert /
      "your turn" rather than the slower victorious bob. */
-  animation: markerSway 1.6s ease-in-out infinite alternate;
+  /* 1.6s is one sway, a physical rhythm rather than a UI transition. */
+  animation: markerSway 1.6s var(--ease-standard) infinite alternate;
   scale: 1.5;
 }
 
@@ -185,16 +187,16 @@
 
 /* Silhouette overlay used inside markers + chip swatches when the
    player carries an iconSrc. Solid dark fill via mask so the icon
-   reads against any faction colour. */
+   reads against any player colour. */
 .markerIcon {
   composes: maskBase from "@/components/PlayerMeeple.module.css";
   display: inline-block;
   width: 80%;
   height: 80%;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--color-on-light);
 }
 
-/* Raster head-icon variant — the head PNG fills the marker box,
+/* Raster head-icon variant: the head PNG fills the marker box,
    no circular crop. The artwork itself provides the silhouette so
    it reads as the player's face on the score track. */
 .markerHead {
@@ -202,82 +204,29 @@
   height: 100%;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  filter: var(--elevation-drop-sm);
+}
+
+/* Head art that is a full square picture rather than a cut-out is
+   cropped to a round token ringed in the player colour, so stacked
+   markers read as distinct pieces instead of overlapping tiles. */
+.markerHeadFramed {
+  width: 80%;
+  height: 80%;
+  margin: auto;
+  object-fit: cover;
+  border-radius: var(--radius-disc);
+  border: 2px solid var(--frame-color, var(--color-border));
+  background: var(--color-surface);
 }
 
 /* ── Selected-player controls (shared by track + leaderboard) ─────── */
 
+/* Don't take the full row width: sit on the right so the adder doesn't
+   compete with the timer for room. */
 .selectedRow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 6px 8px;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-size: 14px;
-  /* Don't take the full row width — sit on the right so it doesn't
-     compete with the timer for vertical real estate. */
   align-self: flex-end;
   max-width: max-content;
-}
-
-.selectedName {
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.selectedSwatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-.selectedScore {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 20px;
-  font-weight: 600;
-  min-width: 38px;
-  text-align: center;
-  color: var(--color-text);
-}
-
-.scoreButton {
-  /* Override the global button reset. Bumped to 56×56 — well above
-     WCAG's 44×44 minimum touch-target so the score adder works on
-     mobile without misfires. */
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.scoreButton:hover:not(:disabled) {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.scoreButton:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.scoreButton svg {
-  width: 22px;
-  height: 22px;
 }
 
 /* ── Catch-up panel (other-player +/- stack) ──────────────────────── */
@@ -289,115 +238,28 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: var(--space-6);
+  min-height: 0;
   /* Visual separation from the active-player adder so the catch-up
      panel reads as a distinct affordance. */
-  margin-bottom: 12px;
-}
-
-.othersToggle {
-  width: auto;
-  /* Meets the WCAG 2.5.5 (AAA) 44×44 target-size guideline so the
-     toggle taps cleanly on mobile, matching the primary adder
-     buttons below. */
-  min-height: 44px;
-  padding: 8px 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  color: var(--color-text-muted);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.othersToggle:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.othersToggle svg {
-  width: 18px;
-  height: 18px;
+  margin-bottom: var(--space-12);
 }
 
 .othersStack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
   align-self: stretch;
   align-items: flex-end;
   /* Cap at roughly three rows visible; the rest scrolls. Players
      with 4-6 seats start to overflow without this. */
   max-height: 200px;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--space-4) 0;
 }
 
 .otherRow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 4px 6px;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-size: 13px;
-}
-
-.otherName {
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.otherScore {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 16px;
-  font-weight: 600;
-  min-width: 30px;
-  text-align: center;
-  color: var(--color-text);
-}
-
-.scoreButtonSmall {
-  /* Slightly smaller than the primary adder so the catch-up stack
-     reads as secondary chrome. Still over the WCAG 44×44 minimum. */
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.scoreButtonSmall:hover:not(:disabled) {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.scoreButtonSmall:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.scoreButtonSmall svg {
-  width: 18px;
-  height: 18px;
+  font-size: var(--font-size-sm);
 }
 
 /* ── Compact leaderboard chips (one row, scoreConfig.displayStyle = leaderboard) ─ */
@@ -405,52 +267,56 @@
 .leaderboard {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-wrap: wrap;
-}
-
-.chip {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
-  padding: 4px 12px 4px 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.chip:hover,
-.chipSelected {
-  border-color: var(--color-border-strong);
-}
-
-.chipSelected {
-  background: var(--color-surface-elevated);
 }
 
 .chipSwatch {
   width: 18px;
   height: 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-disc);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.7);
+  color: var(--color-on-light);
 }
 
 .chipScore {
-  font-family: var(--font-mono);
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   min-width: 18px;
   text-align: right;
+}
+
+/*
+ * A wide row (the timer page's bottom row) has more width than height,
+ * so the catch-up toggle and the adder stand beside the track rather
+ * than above it, and the collapsed panel fits the row's fixed height.
+ */
+@container panel-row (min-width: 880px) {
+  .container:has(> .track) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    column-gap: var(--space-16);
+  }
+
+  .container:has(> .track) > .catchUp {
+    grid-row: 1;
+    grid-column: 2;
+    margin-bottom: 0;
+  }
+
+  .container:has(> .track) > .selectedRow {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .container:has(> .track) > .track {
+    grid-row: 1 / 3;
+    grid-column: 1;
+  }
 }

@@ -17,7 +17,7 @@ const CONFIG: ScoreConfig = {
   victory: { type: "firstToMax" },
 };
 
-describe("ScorePanel — catch-up stack", () => {
+describe("ScorePanel: catch-up stack", () => {
   it("hides the others stack by default and reveals it on toggle", () => {
     render(
       <ScorePanel
@@ -93,5 +93,38 @@ describe("ScorePanel — catch-up stack", () => {
     expect(
       screen.queryByRole("button", { name: /show other scores/i }),
     ).toBeNull();
+  });
+});
+
+describe("ScorePanel beside a turn order", () => {
+  it("leaves the other players' scores to the turn order's rows", () => {
+    render(
+      <ScorePanel
+        players={PLAYERS}
+        scores={{}}
+        scoreConfig={CONFIG}
+        onIncrement={() => {}}
+        activePlayerIndex={0}
+        catchUp={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /show other scores/i }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Increase score for Alice" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows only the chart when the game keeps no score", () => {
+    render(
+      <ScorePanel
+        players={PLAYERS}
+        scores={{}}
+        chart={<figure aria-label="Values" />}
+      />,
+    );
+    expect(screen.getByRole("figure", { name: "Values" })).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

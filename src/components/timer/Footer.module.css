@@ -1,14 +1,42 @@
+/* Pinned to the bottom of the viewport so pause and undo stay in reach
+   while the page scrolls on a phone. The side cells may shrink below
+   their content, so the footer never widens the page. */
 .footer {
-  position: absolute;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 24px;
-  width: 100%;
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-16) var(--space-24)
+    calc(16px + env(safe-area-inset-bottom, 0px));
+  /* A sheet laid over the page: the raised surface with the page's
+     texture, edged and shadowed so content scrolling beneath it reads as
+     passing under, not as cut off. */
+  background-color: var(--color-surface-elevated);
+  background-image: var(--ornament-texture);
+  background-attachment: fixed;
+  border-top: calc(1px - var(--ornament-frame-rule)) solid var(--color-border);
+  box-shadow: var(--elevation-dock);
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+}
+
+/* A theme with a ruled frame edges the footer in the same double rule,
+   running between the inner rules of the frame like a box ruled off on
+   the page. Without one, the top border's hairline stands in. */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: calc(var(--ornament-frame-rule) * 8);
+  height: calc(var(--ornament-frame-rule) * 5);
+  box-sizing: border-box;
+  border-block: var(--ornament-frame-rule) solid var(--color-frame);
+  pointer-events: none;
 }
 
 .footerLeft {
@@ -27,7 +55,7 @@
 .meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   white-space: nowrap;
 }
 
@@ -45,72 +73,41 @@
 .controls {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
-.toggle,
-.secondaryToggle {
-  /* Override the global button reset */
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.1s ease,
-    opacity 0.15s ease;
-}
+/* Narrow screens stack each value above its label so both sides fit
+   beside the buttons. */
+@media (max-width: 479px) {
+  .footer {
+    gap: var(--space-12);
+    padding-left: var(--space-16);
+    padding-right: var(--space-16);
+  }
 
-.toggle {
-  width: 56px;
-  height: 56px;
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-}
+  .meta {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    column-gap: var(--space-6);
+    row-gap: var(--space-2);
+  }
 
-.toggle:hover {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-border-strong);
-}
+  .metaIcon {
+    grid-row: 1;
+  }
 
-.toggle:active {
-  transform: scale(0.96);
-}
+  .metaValue {
+    grid-row: 1;
+  }
 
-.toggle svg {
-  width: 22px;
-  height: 22px;
-}
+  .metaLabel {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    font-size: var(--font-size-xs);
+  }
 
-.secondaryToggle {
-  width: 44px;
-  height: 44px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-}
-
-.secondaryToggle:hover:not(:disabled) {
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.secondaryToggle:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.secondaryToggle:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.secondaryToggle svg {
-  width: 18px;
-  height: 18px;
+  .footerRight .metaLabel {
+    justify-self: end;
+  }
 }

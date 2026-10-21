@@ -70,7 +70,7 @@ export const deleteCustomDefinition = (id: string): void => {
   saveAll(all);
 };
 
-// id helper — slug + short random suffix so concurrent edits don't
+// id helper: slug + short random suffix so concurrent edits don't
 // collide if a user opens two tabs.
 export const generateDefinitionId = (name: string): string => {
   const slug =

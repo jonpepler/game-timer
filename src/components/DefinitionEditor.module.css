@@ -1,150 +1,36 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-24);
   max-width: 640px;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-8);
 }
 
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.label {
-  composes: eyebrow from "@/styles/forms.module.css";
-}
-
-.input {
-  composes: input from "@/styles/forms.module.css";
-}
-
-.select {
-  composes: input from "@/styles/forms.module.css";
+  gap: var(--space-16);
 }
 
 .help {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-subtle);
   margin: 0;
-  line-height: 1.4;
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 15px;
-}
-
-.toggleRow input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-text);
-  cursor: pointer;
-}
-
-.subPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-}
-
-.factionList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.factionRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.colorSwatch {
-  composes: swatch from "@/styles/forms.module.css";
-}
-
-.iconButton {
-  /* Override the global button reset */
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.iconButton:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.iconButton svg {
-  width: 16px;
-  height: 16px;
-}
-
-.addRow {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
-  padding: 8px 14px;
-  align-self: flex-start;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px dashed var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.addRow:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  line-height: var(--line-height-body);
 }
 
 .error {
-  color: var(--color-timer-overtime);
-  font-size: 13px;
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
 }
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-12);
   justify-content: flex-end;
-}
-
-.primary {
-  composes: primary from "@/styles/buttons.module.css";
-}
-
-.secondary {
-  composes: secondary from "@/styles/buttons.module.css";
 }

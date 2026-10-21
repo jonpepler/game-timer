@@ -67,7 +67,7 @@ test("timer view baseline (Root, scores in play)", async ({ page }) => {
   // Starting Hands" is an info step after it — so the picker
   // advances rather than auto-starting. Click Start Game on the
   // final info screen to actually start the timer.
-  await page.getByRole("button", { name: /^Start Game$/ }).click();
+  await page.getByRole("button", { name: /^Start game$/ }).click();
 
   const selectMarker = (name: string) =>
     page.evaluate((n) => {

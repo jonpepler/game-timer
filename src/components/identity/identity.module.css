@@ -1,0 +1,188 @@
+.token {
+  width: var(--token-size, 16px);
+  height: var(--token-size, 16px);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-disc);
+  box-shadow: 0 0 0 1px var(--color-ring);
+}
+
+/* The disc and its glyph both take even whole-pixel sizes, so the glyph's
+   centre lands on the disc's centre rather than half a pixel off it. */
+.token svg {
+  display: block;
+  width: round(nearest, 60%, 2px);
+  height: round(nearest, 60%, 2px);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Pieces sharing a space: each overlaps the one before by 45%, ringed in
+   the surface colour so the edges read, then the shared value. */
+.stack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  white-space: nowrap;
+}
+
+.stackTokens {
+  display: inline-flex;
+  align-items: center;
+}
+
+.stackSlot {
+  position: relative;
+  display: inline-flex;
+  border-radius: var(--radius-disc);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+.stackSlot + .stackSlot {
+  margin-left: calc(var(--token-size) * -0.45);
+}
+
+.stackValue {
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* Inline: lineage then title, as the name reads. */
+.inline {
+  min-width: 0;
+}
+
+/* Banner: hairline rules either side of the lineage, the symbol and
+   title, a notched ribbon in the entry colour, then the subheading. */
+.banner {
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Room for the hairline rules to read as rules, not dashes. */
+.banner:has(.rule) {
+  min-width: min(440px, calc(100vw - 32px));
+}
+
+.rule {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-width: 0;
+  margin-bottom: var(--space-6);
+  /* The kit label, tracked wider so it reads as a rule across the banner. */
+  line-height: var(--line-height-body);
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  color: var(--color-text-dim);
+}
+
+.rule > i {
+  flex: 1 1 14px;
+  min-width: 14px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.ruleName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Equal side columns keep the title on the banner's centre line. */
+.head {
+  display: grid;
+  grid-template-columns:
+    minmax(min-content, 1fr) minmax(0, auto)
+    minmax(min-content, 1fr);
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.head > :first-child {
+  justify-self: end;
+  margin-right: var(--space-12);
+}
+
+/* Scales with the title beside it. */
+.bannerToken {
+  width: round(nearest, clamp(26px, 0.82em, 52px), 2px);
+  height: round(nearest, clamp(26px, 0.82em, 52px), 2px);
+}
+
+.bannerSwatch {
+  width: clamp(18px, 3vmin, 28px);
+  height: clamp(18px, 3vmin, 28px);
+  flex-shrink: 0;
+  border-radius: var(--radius-disc);
+  box-shadow: 0 0 0 2px var(--color-border);
+  background: var(--entry-color);
+}
+
+/* Its children are the title and suffix grid items. */
+.name {
+  display: contents;
+}
+
+.title {
+  min-width: 0;
+  line-height: var(--line-height-flush);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  align-self: last baseline;
+}
+
+.suffix {
+  justify-self: start;
+  margin-left: 0.12em;
+  align-self: last baseline;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: max(18px, 0.55em);
+  line-height: var(--line-height-flush);
+  white-space: nowrap;
+}
+
+.ribbon {
+  width: 70%;
+  max-width: 420px;
+  height: 5px;
+  margin-top: var(--space-8);
+  background: var(--entry-color);
+  clip-path: polygon(0 0, 100% 0, 97% 50%, 100% 100%, 0 100%, 3% 50%);
+}
+
+.subheading {
+  max-width: 100%;
+  margin-top: var(--space-4);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: clamp(14px, 2vmin, 18px);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+}

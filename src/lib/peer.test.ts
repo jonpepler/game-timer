@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { connectToHost, createHost } from "./peer";
 
-// Minimal fake of the peerjs Peer + DataConnection surface — just enough
+// Minimal fake of the peerjs Peer + DataConnection surface, just enough
 // for createHost to drive its event listeners. Tests reach in via the
 // captured instance to fire the events that simulate the broker /
 // remote peer.
@@ -152,7 +152,7 @@ describe("createHost", () => {
     queueMicrotask(() => FakePeer.instances[0].emit("open", "host-1"));
     const session = await promise;
 
-    // Late error — should not reject (promise already resolved) and
+    // Late error: should not reject (promise already resolved) and
     // should not throw synchronously.
     expect(() =>
       FakePeer.instances[0].emit("error", new Error("transient")),
@@ -272,14 +272,14 @@ describe("connectToHost", () => {
     });
     const session = await promise;
 
-    // Emit data BEFORE registering any onMessage handler — simulates
+    // Emit data BEFORE registering any onMessage handler: simulates
     // the host broadcasting STATE immediately on connect before the
     // React hook's .then() callback has had a chance to call onMessage.
     const conn = FakePeer.instances[0].outboundConnections[0];
     conn.emit("data", { type: "STATE", value: 1 });
     conn.emit("data", { type: "STATE", value: 2 });
 
-    // Now register the handler — buffered messages must replay.
+    // Now register the handler: buffered messages must replay.
     const received: unknown[] = [];
     session.onMessage((data) => received.push(data));
     expect(received).toEqual([

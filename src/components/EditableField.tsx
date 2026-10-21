@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Props = {
@@ -31,15 +32,16 @@ export const EditableField = ({
         value={newValue}
         onChange={(event) => setNewValue(event.target.value ?? "")}
       />
-      <button
-        type="button"
+      <Button
+        size="sm"
+        variant="primary"
         onClick={() => {
           onChange(newValue);
           setEditing(false);
         }}
       >
         Save
-      </button>
+      </Button>
     </div>
   ) : (
     <div onClick={() => setEditing(true)} className={className}>

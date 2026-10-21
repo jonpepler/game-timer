@@ -56,6 +56,13 @@ async function startHostAndShare(page: Page): Promise<string> {
   return match[1];
 }
 
+// A seat's row on a companion's setup seat list.
+const seatRow = (page: Page, seat: number) =>
+  page
+    .getByRole("list", { name: "Seats" })
+    .getByRole("listitem")
+    .nth(seat - 1);
+
 // Click "New game" in the host chrome to re-open the wizard so the
 // seating broadcast fires for connected companions.
 async function openNewGameWizard(page: Page) {
@@ -116,7 +123,7 @@ test.describe("companion multi-screen — setup-time seating", () => {
     // proof the host accepted the claim and the round-trip
     // SETUP_SEATING reached us.
     await expect(
-      companion.getByRole("textbox", { name: /Rename seat 1/i }),
+      companion.getByRole("textbox", { name: "Seat 1 name" }),
     ).toBeVisible({ timeout: 3000 });
   });
 
@@ -135,23 +142,15 @@ test.describe("companion multi-screen — setup-time seating", () => {
     await c1.getByRole("button", { name: /^Claim seat 1$/ }).click();
     await c2.getByRole("button", { name: /^Claim seat 2$/ }).click();
 
-    // c1 sees its own seat as a rename input, and c2's seat as
-    // claimed-by-someone-else (i.e. a "Seat 2 taken" disabled
-    // button via the aria-label projection).
-    await expect(
-      c1.getByRole("textbox", { name: /Rename seat 1/i }),
-    ).toBeVisible({ timeout: 3000 });
-    await expect(
-      c1.getByRole("button", { name: /^Seat 2 taken$/ }),
-    ).toBeVisible();
-
-    // Symmetric for c2.
-    await expect(
-      c2.getByRole("textbox", { name: /Rename seat 2/i }),
-    ).toBeVisible({ timeout: 3000 });
-    await expect(
-      c2.getByRole("button", { name: /^Seat 1 taken$/ }),
-    ).toBeVisible();
+    // Each sees its own seat as "You" and the other's as taken, with no
+    // claim button on either.
+    await expect(seatRow(c1, 1)).toContainText("You", { timeout: 3000 });
+    await expect(seatRow(c1, 2)).toContainText("Taken");
+    await expect(seatRow(c2, 2)).toContainText("You", { timeout: 3000 });
+    await expect(seatRow(c2, 1)).toContainText("Taken");
+    await expect(c2.getByRole("button", { name: "Claim seat 1" })).toHaveCount(
+      0,
+    );
   });
 
   test("companion rename propagates to other companions", async ({
@@ -166,15 +165,11 @@ test.describe("companion multi-screen — setup-time seating", () => {
     await host.getByLabel(/^Game$/).selectOption("root");
 
     await c1.getByRole("button", { name: /^Claim seat 1$/ }).click();
-    await c1.getByRole("textbox", { name: /Rename seat 1/i }).fill("Alice");
+    await c1.getByRole("textbox", { name: "Seat 1 name" }).fill("Alice");
+    await c1.getByRole("textbox", { name: "Seat 1 name" }).press("Enter");
 
-    // c2 should see seat 1's text change to include "Alice". The
-    // remaining-seat buttons render text "Seat N — <name>" inside
-    // the (aria-labelled) button; c2's view of seat 1 isn't a claim
-    // button (because c1 holds it) so we match the visible text.
-    await expect(c2.getByText(/Seat 1 — Alice/i)).toBeVisible({
-      timeout: 3000,
-    });
+    // c2 has no seat yet, so it sees seat 1's name as text.
+    await expect(seatRow(c2, 1)).toContainText("Alice", { timeout: 3000 });
 
     // And the host's wizard reflects the rename via the seat-name
     // input on the seating screen. Root's seating step is reached
@@ -203,8 +198,12 @@ test.describe("companion multi-screen — setup-time seating", () => {
       companion.getByRole("button", { name: /^Claim seat 5$/ }),
     ).toHaveCount(0);
 
-    // Add a seat from the companion.
-    await companion.getByRole("button", { name: /\+ Add seat/i }).click();
+    // A phone takes a seat before it can change the seating.
+    await expect(
+      companion.getByRole("button", { name: "Add seat" }),
+    ).toHaveCount(0);
+    await companion.getByRole("button", { name: /^Claim seat 1$/ }).click();
+    await companion.getByRole("button", { name: "Add seat" }).click();
 
     // Companion now sees seat 5.
     await expect(
@@ -225,9 +224,10 @@ test.describe("companion multi-screen — setup-time seating", () => {
     // Companion claims seat 3 and renames it so we can identify the
     // claim by the seat's name after the host shuffles.
     await companion.getByRole("button", { name: /^Claim seat 3$/ }).click();
+    await companion.getByRole("textbox", { name: "Seat 3 name" }).fill("Alice");
     await companion
-      .getByRole("textbox", { name: /Rename seat 3/i })
-      .fill("Alice");
+      .getByRole("textbox", { name: "Seat 3 name" })
+      .press("Enter");
     await expect(host).toHaveURL(/timer/); // sanity
 
     // Host walks to the seat-players screen so the move-up/down
@@ -251,14 +251,52 @@ test.describe("companion multi-screen — setup-time seating", () => {
     // change "Alice" — proof the claim followed the seat across the
     // reorder.
     await expect(
-      companion.getByRole("textbox", { name: /Rename seat 1/i }),
+      companion.getByRole("textbox", { name: "Seat 1 name" }),
     ).toBeVisible({ timeout: 3000 });
     await companion
-      .getByRole("textbox", { name: /Rename seat 1/i })
+      .getByRole("textbox", { name: "Seat 1 name" })
       .fill("Alice 2");
+    await companion
+      .getByRole("textbox", { name: "Seat 1 name" })
+      .press("Enter");
     await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue("Alice 2", {
       timeout: 3000,
     });
+  });
+  test("companion's claim follows its seat through two quick host reorders", async ({
+    context,
+  }) => {
+    const host = await context.newPage();
+    const code = await startHostAndShare(host);
+    const companion = await openCompanion(context, code);
+
+    await openNewGameWizard(host);
+    await host.getByLabel(/^Game$/).selectOption("root");
+    await companion.getByRole("button", { name: /^Claim seat 3$/ }).click();
+    await companion.getByRole("textbox", { name: "Seat 3 name" }).fill("Alice");
+    await companion
+      .getByRole("textbox", { name: "Seat 3 name" })
+      .press("Enter");
+    await navigateToScreen(host, /seat players/i);
+    await expect(host.getByLabel(/^Seat 3 name$/)).toHaveValue("Alice");
+
+    // Two taps a task apart: the second lands before React has
+    // re-rendered the first one's claim rewrite. Playwright's own
+    // clicks only sometimes fall inside that window, which is what made
+    // the test above flaky.
+    await host.evaluate(async () => {
+      const tap = (name: string) =>
+        document
+          .querySelector<HTMLButtonElement>(`[aria-label="${name}"]`)
+          ?.click();
+      tap("Move seat 3 up");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      tap("Move seat 2 up");
+    });
+    await expect(host.getByLabel(/^Seat 1 name$/)).toHaveValue("Alice");
+    await expect(
+      companion.getByRole("textbox", { name: "Seat 1 name" }),
+    ).toHaveValue("Alice");
   });
 });
 
@@ -277,11 +315,11 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     await openNewGameWizard(host);
     await host.getByLabel(/^Game$/).selectOption("root");
 
-    // Companion claims seat 1 (the first to resolve a hireling
-    // under dealt-resolve's player-order rule).
-    await companion.getByRole("button", { name: /^Claim seat 1$/ }).click();
+    // Companion claims seat 4: Root's hirelings are set up from the
+    // last seat in turn order (Law of Root A.6.3), four seats by default.
+    await companion.getByRole("button", { name: /^Claim seat 4$/ }).click();
     await expect(
-      companion.getByRole("textbox", { name: /Rename seat 1/i }),
+      companion.getByRole("textbox", { name: "Seat 4 name" }),
     ).toBeVisible({ timeout: 3000 });
 
     // Walk host to the upstream "hirelings" screen (deal-random,
@@ -307,10 +345,10 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     // confirm screen → Confirm setup commits the pick.
     await companion.getByRole("button", { name: /^Confirm setup$/ }).click();
 
-    // Host's dealt-resolve progress tile for seat 1 should now
-    // show that seat picked the named hireling.
+    // Host's first dealt-resolve progress tile should now show that
+    // seat 4 picked the named hireling.
     await expect(
-      host.getByTitle(new RegExp(`Player 1 — picked ${pickedLabel}`)),
+      host.getByTitle(new RegExp(`Player 4: picked ${pickedLabel}`)),
     ).toBeVisible({ timeout: 3000 });
   });
 
@@ -329,7 +367,7 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     // so the companion will be the first picker.
     await companion.getByRole("button", { name: /^Claim seat 4$/ }).click();
     await expect(
-      companion.getByRole("textbox", { name: /Rename seat 4/i }),
+      companion.getByRole("textbox", { name: "Seat 4 name" }),
     ).toBeVisible({ timeout: 3000 });
 
     // Host walks the wizard to the faction picker. Draft is ON by
@@ -365,7 +403,7 @@ test.describe("companion multi-screen — identity-bound picks", () => {
     // seat's pick — assert there's a dot titled "Player 4 — X" for
     // whichever faction the companion just picked.
     await expect(
-      host.getByTitle(new RegExp(`Player 4 — ${pickedLabel}`)),
+      host.getByTitle(new RegExp(`Player 4: ${pickedLabel}`)),
     ).toBeVisible({ timeout: 3000 });
   });
 });
@@ -391,8 +429,8 @@ test.describe("companion multi-screen — first-connection state delivery", () =
     await host.getByLabel(/track individual players/i).check();
     await host.getByRole("button", { name: /start game/i }).click();
 
-    // Tap twice to advance past the initial "start" tap and record
-    // turn 1 so the companion's gameStarted gating sees > 0 turns.
+    // Tap twice: the first tap starts the clock, the second records
+    // turn 1.
     await host.locator("main").click();
     await host.locator("main").click();
 
@@ -467,10 +505,7 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await host.getByRole("button", { name: /^Next/ }).click(); // Turns → Players
     await host.getByLabel(/track individual players/i).check();
     await host.getByRole("button", { name: /start game/i }).click();
-    // Kick the timer running so the companion's End-turn button
-    // isn't gated by `gameStarted` (requires at least one
-    // recorded turn). First tap starts the timer, second tap
-    // records turn 1.
+    // First tap starts the timer, second tap records turn 1.
     await host.locator("main").click();
     await host.locator("main").click();
 
@@ -557,6 +592,21 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await expect(host.getByText(/88\s*turns left/i)).toBeVisible({
       timeout: 3000,
     });
+
+    // With no seats to claim, the phone still speaks for the table: it
+    // undoes, pauses and resumes, and changes the turns left.
+    await companion.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(host.getByText(/89\s*turns left/i)).toBeVisible();
+    await companion.getByRole("button", { name: "Pause timer" }).click();
+    await expect(
+      host.getByRole("button", { name: "Resume timer" }),
+    ).toBeVisible();
+    await companion.getByRole("button", { name: "Resume timer" }).click();
+    await expect(
+      host.getByRole("button", { name: "Pause timer" }),
+    ).toBeVisible();
+    await companion.getByRole("button", { name: "One turn more" }).click();
+    await expect(host.getByText(/90\s*turns left/i)).toBeVisible();
   });
 
   test("companion score bump updates the companion's own My-score display", async ({
@@ -591,7 +641,7 @@ test.describe("companion multi-screen — game-time interaction", () => {
     });
     await companion.getByRole("button", { name: /^Claim seat 2$/ }).click();
     await expect(
-      companion.getByRole("textbox", { name: /Rename seat 2/i }),
+      companion.getByRole("textbox", { name: "Seat 2 name" }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Host opens the faction picker and skips the draft so the full pool
@@ -724,10 +774,13 @@ test.describe("companion multi-screen — game-time interaction", () => {
     await expect(companion.getByText(/claim a player/i)).toBeVisible({
       timeout: 15_000,
     });
-    await companion.locator('[class*="claimRow"]').nth(1).click();
+    await companion
+      .getByRole("button", { name: "Player 2", exact: true })
+      .click();
     const nameInput = companion.getByRole("textbox", { name: /your name/i });
     await expect(nameInput).toBeVisible({ timeout: 15_000 });
     await nameInput.fill("Jon");
+    await nameInput.press("Enter");
 
     // The host's main screen must adopt the name — proving it's no
     // longer companion-local. The score-panel marker is keyed by the

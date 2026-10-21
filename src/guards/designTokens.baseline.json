@@ -1,0 +1,11 @@
+{
+  "src/app/companion/page.module.css": {
+    "motion": 1
+  },
+  "src/components/ScorePanel.module.css": {
+    "motion": 1
+  },
+  "src/components/VictoryBanner.module.css": {
+    "motion": 7
+  }
+}

@@ -2,9 +2,8 @@
  * Multi-screen game-setup wizard. Replaces the single-panel modal.
  *
  * Screens come from two sources:
- *   1) Built-in: Game-picker, Expected-turns, ADSET confirmation,
- *      and a Track-players fallback for definitions without a
- *      seat-players step.
+ *   1) Built-in: Game-picker, Expected-turns, and a Track-players
+ *      fallback for definitions without a seat-players step.
  *   2) Definition setupSteps: rendered one per screen, in declared
  *      order. The visible option set within each step is filtered
  *      against the active modules selection (multi-toggle steps).
@@ -27,29 +26,38 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
-  ArrowDown,
   Dices,
-  Minus,
   Play,
-  Plus,
   RefreshCw,
   Settings,
-  Trash2,
   Users,
   X,
 } from "lucide-react";
 import styles from "./GameSetupWizard.module.css";
 import { FullScreenToggle } from "./FullScreen";
 import { NumberField } from "./NumberField";
+import { SeatList } from "./SeatList";
+import {
+  addSeat,
+  makeSeatId,
+  moveSeat,
+  removeSeat,
+  renameSeat,
+  type Seat,
+  type SeatColorOption,
+  setSeatColor,
+} from "@/state/seating";
 import {
   DEFAULT_DEFINITION_ID,
   findDefinition,
   listDefinitions,
 } from "@/state/definitionRegistry";
 import {
+  optionExcludedByDeals,
   optionVisibleUnderContext,
+  visibleSetupSteps,
   type GameDefinition,
+  type PickOrder,
   type SetupChoice,
   type SetupConstraint,
   type SetupContext,
@@ -57,7 +65,22 @@ import {
   type SetupStep,
 } from "@/state/gameDefinition";
 import type { Player, PlayerMetadataValue } from "@/state/gameSession";
+import { useGameThemePreview } from "@/hooks/useGameTheme";
 import { fallbackColor } from "@/lib/playerVisual";
+import {
+  Button,
+  Chip,
+  ColourField,
+  Field,
+  Heading,
+  ListRow,
+  SectionLabel,
+  SelectField,
+  Stepper,
+  Toggle,
+  VisuallyHidden,
+} from "@/components/ui";
+import { DEFAULT_PLAYER_PALETTE } from "@/lib/playerVisual";
 
 // ── Public contract ─────────────────────────────────────────────────
 
@@ -69,16 +92,26 @@ export interface GameConfig {
   // When true, the timer page starts the clock immediately on
   // applyConfig instead of waiting for the user's first tap. Set
   // by the wizard when the last seat has just confirmed its
-  // faction pick — the natural "start the game now" moment.
+  // pick: the natural "start the game now" moment.
   autoStart?: boolean;
+  // The table's turn-order choice, set only when the definition's turn
+  // order is `selectable`.
+  turnOrderMode?: SelectableTurnOrderMode;
 }
+
+export type SelectableTurnOrderMode = "round-robin" | "variable";
+
+const defaultTurnOrderMode = (
+  definition: GameDefinition,
+): SelectableTurnOrderMode =>
+  definition.turnOrder?.mode === "variable" ? "variable" : "round-robin";
 
 // Imperative handle exposed to parents (the timer page) so peer
 // messages can route into the wizard without lifting all of its state.
-// Currently a single method — adds more if more peer-driven steps land.
+// Currently a single method: adds more if more peer-driven steps land.
 export interface GameSetupWizardHandle {
   applyPick: (stepId: string, seatIndex: number, optionId: string) => void;
-  // Apply a peer-driven dealt-resolve pick — the seated companion
+  // Apply a peer-driven dealt-resolve pick: the seated companion
   // chose `optionId` from the remaining dealt items on the step.
   // Validates active-seat + not-already-confirmed under the hood.
   applyResolve: (stepId: string, seatIndex: number, optionId: string) => void;
@@ -88,23 +121,9 @@ export interface GameSetupWizardHandle {
   // host to route an incoming SETUP_PICK message to applyPick vs
   // applyResolve.
   getStepKind: (stepId: string) => string | undefined;
-  // Apply a peer-driven seating change (claim/rename/add/remove)
-  // to the wizard's setup-context. Bounds against the step's
-  // min/max enforced inside; out-of-bounds requests are no-ops.
-  // Returns whether the action mutated state — useful for the
-  // host's claim map (only update if the seat actually exists).
-  applySeatingChange: (
-    stepId: string,
-    action:
-      | { kind: "add"; name: string }
-      | { kind: "rename"; seatIndex: number; name: string }
-      | { kind: "remove"; seatIndex: number }
-      | { kind: "claim"; seatIndex: number },
-  ) => boolean;
-  // Whether a seating step exists in the current definition. The
-  // host uses this to decide whether to apply a seating change
-  // (during the wizard) or treat it as a no-op (e.g. Generic flow).
-  hasSeatingStep: () => boolean;
+  // Apply a seat command to the seating list. `change` runs against
+  // the wizard's latest seats, so changes queued in one tick compose.
+  updateSeats: (stepId: string, change: (seats: Seat[]) => Seat[]) => void;
 }
 
 // Signals the wizard emits when it's on a turn-based player-pick step.
@@ -124,17 +143,19 @@ export interface WizardPeerHooks {
   // Called when a turn-based step finishes (all seats filled, wizard
   // advances past the step, or wizard closes).
   onTurnEnd?: (info: { stepId: string }) => void;
-  // Called whenever the seating list changes (initial mount + every
-  // seat add/rename/remove/move, by host or peer). Includes stable
-  // seat ids so the parent can rewrite its claim map when seats are
-  // reordered. The wire-format SETUP_SEATING drops the ids before
-  // broadcasting (companions key by index).
-  onSeatingChange?: (info: {
-    stepId: string;
-    seats: Array<{ id: string; name: string }>;
-    minPlayers: number;
-    maxPlayers: number;
-  }) => void;
+  // Called whenever the seating list changes (any edit, on any
+  // screen) with stable seat ids so claims can follow their seats, and
+  // with null while setup is not seating players (wizard closed, or a
+  // game without a seating step).
+  onSeatingChange?: (info: SeatingInfo | null) => void;
+}
+
+export interface SeatingInfo {
+  stepId: string;
+  seats: Seat[];
+  minPlayers: number;
+  maxPlayers: number;
+  colorOptions?: SeatColorOption[];
 }
 
 interface GameSetupWizardProps {
@@ -163,10 +184,13 @@ type WizardScreen =
   | { kind: "setup-step"; id: string; label: string; step: SetupStep }
   | { kind: "track-players"; id: "track-players"; label: string };
 
-const buildScreens = (definition: GameDefinition): WizardScreen[] => {
+const buildScreens = (
+  definition: GameDefinition,
+  context: SetupContext,
+): WizardScreen[] => {
   const screens: WizardScreen[] = [{ kind: "game", id: "game", label: "Game" }];
   // Definitions with turnsPerPlayer derive expectedTurns from the
-  // seat count at submit time — no need to ask. Generic and similar
+  // seat count at submit time, no need to ask. Generic and similar
   // definitions without that field still get the Expected-turns
   // screen.
   if (definition.turnsPerPlayer == null) {
@@ -176,7 +200,7 @@ const buildScreens = (definition: GameDefinition): WizardScreen[] => {
       label: "Turns",
     });
   }
-  const steps = definition.setupSteps ?? [];
+  const steps = visibleSetupSteps(definition, context);
   let hasSeating = false;
   for (const step of steps) {
     screens.push({ kind: "setup-step", id: step.id, label: step.label, step });
@@ -189,8 +213,8 @@ const buildScreens = (definition: GameDefinition): WizardScreen[] => {
       label: "Players",
     });
   }
-  // Per ADSET: players perform their faction setup immediately on pick,
-  // not retrospectively. No closing confirmation screen.
+  // Players set up immediately on pick, not retrospectively, so there
+  // is no closing confirmation screen.
   return screens;
 };
 
@@ -258,11 +282,13 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
         break;
       case "seat-players": {
         const count = step.kind.defaultPlayerCount ?? step.kind.minPlayers ?? 2;
+        const colors = step.kind.colorOptions ?? [];
         ctx[step.id] = {
           kind: "seat-players",
           seats: Array.from({ length: count }, (_, i) => ({
             id: makeSeatId(),
             name: `Player ${i + 1}`,
+            ...(colors[i] ? { colorId: colors[i].id } : {}),
           })),
         };
         break;
@@ -274,25 +300,25 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
       case "dealt-resolve":
         ctx[step.id] = { kind: "dealt-resolve", confirmedIds: [] };
         break;
-      case "select-lead":
-        // Default the starting lead to the first seat; the screen lets
-        // the user reassign or randomise.
-        ctx[step.id] = { kind: "select-lead", seatIndex: 0 };
+      case "select-lead": {
+        // The step's declared default seat; the screen lets the user
+        // reassign or randomise. A random default draws from the seats
+        // seated by default and is clamped if seats are removed later.
+        const seated = Object.values(ctx).find(
+          (c) => c.kind === "seat-players",
+        );
+        const seatCount =
+          seated?.kind === "seat-players" ? seated.seats.length : 0;
+        ctx[step.id] = {
+          kind: "select-lead",
+          seatIndex:
+            step.kind.defaultLead === "random" ? randomIndex(seatCount) : 0,
+        };
         break;
+      }
     }
   }
   return ctx;
-};
-
-// Stable per-seat identifier. The host's claim map tracks a peer's
-// claim against this id so it follows the seat if the host reorders
-// seating. Falls back to a random-suffixed string when `crypto`
-// isn't available (tests, older environments).
-const makeSeatId = (): string => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `seat-${Math.random().toString(36).slice(2, 11)}`;
 };
 
 const randomIndex = (length: number): number =>
@@ -308,7 +334,7 @@ const shuffleAndTake = <T,>(items: T[], count: number): T[] => {
 };
 
 // Deal `count` ids at random, but never deal both members of a
-// mutually-exclusive pair into the same hand (e.g. Vagabond + Knaves):
+// mutually-exclusive pair into the same hand:
 // a drafted pool you can't fully use wastes a slot.
 const dealWithoutMutexClashes = (
   ids: string[],
@@ -326,32 +352,30 @@ const dealWithoutMutexClashes = (
   return out;
 };
 
-// Some faction-style options deal accompanying cards on pick (Root's
-// Vagabond character, Knaves' captains). Which pool + how many is
-// declared on the option itself (`characterDraw`), keeping faction ids
+// Some options deal accompanying cards on pick. Which pool and how many
+// is declared on the option itself (`characterDraw`), keeping option ids
 // out of core code. Pools live on the option as the named passthrough
-// array (e.g. `characterPool` / `captainPool`).
-const characterDrawOf = (
-  option: SetupOption | undefined,
-): { poolField: string; count: number; exclusiveGroup?: string } | undefined =>
-  (
-    option as unknown as {
-      characterDraw?: {
-        poolField: string;
-        count: number;
-        exclusiveGroup?: string;
-      };
-    }
-  )?.characterDraw;
+// array (`characterDraw.poolField`).
+const characterDrawOf = (option: SetupOption | undefined) =>
+  option?.characterDraw;
+
+// What `count` dealt characters are called on a card, from the option's
+// `characterDraw.noun`.
+const characterNoun = (option: SetupOption, count: number): string => {
+  const noun = characterDrawOf(option)?.noun;
+  return count === 1
+    ? (noun?.one ?? "character")
+    : (noun?.other ?? "characters");
+};
 
 const labelForCharacter = (
-  factionOption: SetupOption,
+  option: SetupOption,
   characterId: string,
 ): string => {
-  const draw = characterDrawOf(factionOption);
+  const draw = characterDrawOf(option);
   if (!draw) return characterId;
   const pool = (
-    factionOption as unknown as Record<
+    option as unknown as Record<
       string,
       Array<{ id: string; label?: string }> | undefined
     >
@@ -360,16 +384,16 @@ const labelForCharacter = (
   return pool.find((c) => c.id === characterId)?.label ?? characterId;
 };
 
-// The meeple to show for an option: if a character was dealt with it
-// (the Vagabond's character), that character's own meeple; otherwise the
-// option's default meeple. Keeps every surface (card, preview, in-game)
-// showing the chosen character rather than the generic faction pawn.
+// The meeple to show for an option: if a character was dealt with it,
+// that character's own meeple; otherwise the option's default meeple.
+// Keeps every surface (card, preview, in-game) showing the chosen
+// character rather than the option's generic pawn.
 const meepleAppPathFor = (
   option: SetupOption | undefined,
   characters: Record<string, string[]>,
 ): string | undefined => {
   if (!option) return undefined;
-  const factionMeeple = (
+  const optionMeeple = (
     option as unknown as { assets?: { meepleSvg?: { appPath?: string } } }
   ).assets?.meepleSvg?.appPath;
   const draw = characterDrawOf(option);
@@ -384,16 +408,16 @@ const meepleAppPathFor = (
     const charMeeple = pool?.find((c) => c.id === charId)?.meeple?.appPath;
     if (charMeeple) return charMeeple;
   }
-  return factionMeeple;
+  return optionMeeple;
 };
 
-// The setup instructions to print on an option's card. Factions carry an
-// explicit `adsetSteps` list; hirelings transcribe their (single) setup
-// line under `cards.promoted.setup`. Returns [] when neither is present.
+// The setup instructions to print on an option's card: its own
+// `setupInstructions`, or else a single setup line under
+// `cards.promoted.setup`. Returns [] when neither is present.
 const setupLinesFor = (option: SetupOption | undefined): string[] => {
   if (!option) return [];
-  const adset = (option as unknown as { adsetSteps?: string[] }).adsetSteps;
-  if (Array.isArray(adset) && adset.length > 0) return adset;
+  const lines = option.setupInstructions ?? [];
+  if (lines.length > 0) return lines;
   const setup = (
     option as unknown as { cards?: { promoted?: { setup?: string } } }
   ).cards?.promoted?.setup;
@@ -402,9 +426,9 @@ const setupLinesFor = (option: SetupOption | undefined): string[] => {
 
 // Project an option for transmission to a companion: bakes the dealt
 // character's meeple onto `assets.meepleSvg.appPath` (so the companion
-// shows the chosen Vagabond's pawn, not the generic faction one) and
-// fills `adsetSteps` from the card's setup line (so hireling setup text
-// renders on the companion using the same code path as faction ADSET).
+// shows the dealt character's pawn, not the option's generic one) and
+// fills `setupInstructions` from the card's setup line (so a single setup line
+// renders on the companion through the same code path as a list).
 // The companion has neither the dealt-characters map nor the card
 // transcription logic, so we resolve both host-side before sending.
 const optionForCompanion = (
@@ -415,7 +439,6 @@ const optionForCompanion = (
   const lines = setupLinesFor(option);
   const base = option as unknown as {
     assets?: { meepleSvg?: { appPath?: string } };
-    adsetSteps?: string[];
   };
   return {
     ...option,
@@ -427,7 +450,7 @@ const optionForCompanion = (
           },
         }
       : {}),
-    ...(lines.length > 0 ? { adsetSteps: lines } : {}),
+    ...(lines.length > 0 ? { setupInstructions: lines } : {}),
   } as unknown as SetupOption;
 };
 
@@ -436,12 +459,12 @@ const dealCharactersFor = (
   options: SetupOption[],
   context: SetupContext,
   // Characters already dealt this game (from the player-pick choice), so
-  // an `exclusive` group (e.g. the two Vagabonds) never repeats a
+  // an `exclusive` group (copies of one option) never repeats a
   // character across separate picks.
   existing: Record<string, string[]> = {},
 ): Record<string, string[]> => {
   const out: Record<string, string[]> = {};
-  // Per exclusive-group set of already-used character ids — seeded from
+  // Per exclusive-group set of already-used character ids: seeded from
   // prior picks, then grown as we deal within this call.
   const usedByGroup: Record<string, Set<string>> = {};
   for (const [oid, chars] of Object.entries(existing)) {
@@ -464,8 +487,8 @@ const dealCharactersFor = (
     )[draw.poolField];
     if (!Array.isArray(pool) || pool.length === 0) continue;
     // Gate pool members by their `module` against the enabled
-    // expansions — same rule as faction/map options — so e.g. the
-    // Vagabond Pack characters are only dealt when that module is on.
+    // modules, the same rule as any option, so characters from an
+    // expansion are only dealt when that module is on.
     let eligible = pool
       .filter((c) => optionVisibleUnderContext(c, context))
       .map((c) => c.id);
@@ -486,14 +509,8 @@ const dealCharactersFor = (
   return out;
 };
 
-const GENERIC_PALETTE = [
-  "#E8C547",
-  "#E85D47",
-  "#47B8E8",
-  "#7BE847",
-  "#E847B8",
-  "#E88947",
-];
+// The same colours the app falls back to for an unnamed player.
+const GENERIC_PALETTE = DEFAULT_PLAYER_PALETTE;
 
 interface TrackPlayersRow {
   name: string;
@@ -536,6 +553,10 @@ export const GameSetupWizard = forwardRef<
     [definitions, definitionId, initialDefinition],
   );
 
+  // The wizard stays mounted when closed, so the preview is tied to isOpen:
+  // a cancelled setup hands the look back to the running game.
+  useGameThemePreview(isOpen ? definitionId : undefined);
+
   const [expectedTurns, setExpectedTurns] = useState<number>(
     initialDefinition.defaultExpectedTurns,
   );
@@ -551,10 +572,20 @@ export const GameSetupWizard = forwardRef<
     { name: "Player 2", color: GENERIC_PALETTE[1] },
   ]);
 
-  const screens = useMemo(() => buildScreens(definition), [definition]);
+  // Turn-order choice for definitions that mark their turn order
+  // `selectable`; defaults to the declared mode.
+  const [turnOrderMode, setTurnOrderMode] = useState<SelectableTurnOrderMode>(
+    defaultTurnOrderMode(initialDefinition),
+  );
+
+  const screens = useMemo(
+    () => buildScreens(definition, context),
+    [definition, context],
+  );
   const [screenIndex, setScreenIndex] = useState(0);
   // Reset wizard when definition changes.
   useEffect(() => {
+    setTurnOrderMode(defaultTurnOrderMode(definition));
     setScreenIndex(0);
     setContext(defaultContext(definition));
     setExpectedTurns(definition.defaultExpectedTurns);
@@ -585,8 +616,10 @@ export const GameSetupWizard = forwardRef<
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen, definition]);
 
-  const currentScreen = screens[screenIndex];
-  const isLast = screenIndex === screens.length - 1;
+  // Steps gate on choices made on earlier screens, so the list can
+  // shrink under the cursor; clamp rather than index past the end.
+  const currentScreen = screens[Math.min(screenIndex, screens.length - 1)];
+  const isLast = screenIndex >= screens.length - 1;
   const isFirst = screenIndex === 0;
 
   // Imperative pick (driven by peer SETUP_PICK messages). Same shape
@@ -599,9 +632,9 @@ export const GameSetupWizard = forwardRef<
           prev[stepId]?.kind === "player-pick"
             ? (prev[stepId] as Extract<SetupChoice, { kind: "player-pick" }>)
             : { kind: "player-pick" as const, picks: {} };
-        // Deal any character that accompanies this faction (e.g. the
-        // Vagabond's character card), exactly as a local pick does — so a
-        // companion's turn-based pick still gets its character + meeple.
+        // Deal any character that accompanies this option, exactly as a
+        // local pick does, so a companion's turn-based pick still gets its
+        // character and meeple.
         const step = definition.setupSteps?.find((s) => s.id === stepId);
         const options =
           step?.kind.type === "player-pick" ? step.kind.options : [];
@@ -635,7 +668,7 @@ export const GameSetupWizard = forwardRef<
 
   // Imperative dealt-resolve pick (driven by peer SETUP_PICK
   // messages on a `dealt-resolve` step). Validates active-seat
-  // and not-already-confirmed under the hood — out-of-order or
+  // and not-already-confirmed under the hood: out-of-order or
   // duplicate requests are no-ops.
   const applyResolve = useCallback(
     (stepId: string, seatIndex: number, optionId: string) => {
@@ -644,9 +677,16 @@ export const GameSetupWizard = forwardRef<
           prev[stepId]?.kind === "dealt-resolve"
             ? (prev[stepId] as Extract<SetupChoice, { kind: "dealt-resolve" }>)
             : { kind: "dealt-resolve" as const, confirmedIds: [] };
-        // Only the seat whose turn it is (= confirmedIds.length)
-        // may confirm; ignore everyone else.
-        if (current.confirmedIds.length !== seatIndex) return prev;
+        // Only the seat whose turn it is may confirm; ignore everyone else.
+        const step = definition.setupSteps?.find((s) => s.id === stepId);
+        const seated = Object.values(prev).find(
+          (c) => c.kind === "seat-players",
+        );
+        const sequence = seatPickSequence(
+          seated?.kind === "seat-players" ? seated.seats.length : 0,
+          step?.kind.type === "dealt-resolve" ? step.kind.order : undefined,
+        );
+        if (sequence[current.confirmedIds.length] !== seatIndex) return prev;
         // Refuse duplicates.
         if (current.confirmedIds.includes(optionId)) return prev;
         return {
@@ -658,7 +698,7 @@ export const GameSetupWizard = forwardRef<
         };
       });
     },
-    [],
+    [definition],
   );
 
   // Bounds for the seating step (used by applySeatingChange below).
@@ -676,78 +716,19 @@ export const GameSetupWizard = forwardRef<
     };
   }, [seatingStep]);
 
-  // Imperative seating change (driven by peer SEATING_REQUEST
-  // messages). Lets companions claim/rename/add/remove seats from
-  // the very start of setup — the wizard's seating list is the
-  // source of truth, this just routes peer edits into it.
-  const applySeatingChange = useCallback<
-    GameSetupWizardHandle["applySeatingChange"]
-  >(
-    (stepId, action) => {
-      let mutated = false;
+  const updateSeats = useCallback<GameSetupWizardHandle["updateSeats"]>(
+    (stepId, change) => {
       setContext((prev) => {
-        const current =
-          prev[stepId]?.kind === "seat-players"
-            ? (prev[stepId] as Extract<SetupChoice, { kind: "seat-players" }>)
-            : null;
-        if (!current) return prev;
-        let nextSeats = current.seats;
-        switch (action.kind) {
-          case "add":
-            if (current.seats.length >= seatingBounds.max) break;
-            nextSeats = [
-              ...current.seats,
-              {
-                id: makeSeatId(),
-                name:
-                  action.name.trim() || `Player ${current.seats.length + 1}`,
-              },
-            ];
-            mutated = true;
-            break;
-          case "rename":
-            if (
-              action.seatIndex < 0 ||
-              action.seatIndex >= current.seats.length
-            )
-              break;
-            // Allow empty names during typing — without this the
-            // companion can't delete the last character (host
-            // would revert to the previous name and bounce the
-            // input back). validateScreen still requires every
-            // seat to have a non-blank name at submit time.
-            nextSeats = current.seats.map((s, i) =>
-              i === action.seatIndex ? { ...s, name: action.name } : s,
-            );
-            mutated = true;
-            break;
-          case "remove":
-            if (current.seats.length <= seatingBounds.min) break;
-            if (
-              action.seatIndex < 0 ||
-              action.seatIndex >= current.seats.length
-            )
-              break;
-            nextSeats = current.seats.filter((_, i) => i !== action.seatIndex);
-            mutated = true;
-            break;
-          case "claim":
-            // The wizard doesn't track claim ownership — the host
-            // owns the claim map. We just verify the seat exists so
-            // the host can mirror it in its own state.
-            mutated =
-              action.seatIndex >= 0 && action.seatIndex < current.seats.length;
-            return prev;
-        }
-        if (!mutated) return prev;
-        return { ...prev, [stepId]: { ...current, seats: nextSeats } };
+        const current = prev[stepId];
+        if (current?.kind !== "seat-players") return prev;
+        return {
+          ...prev,
+          [stepId]: { ...current, seats: change(current.seats) },
+        };
       });
-      return mutated;
     },
-    [seatingBounds.min, seatingBounds.max],
+    [],
   );
-
-  const hasSeatingStep = useCallback(() => seatingStep != null, [seatingStep]);
 
   const getStepKind = useCallback(
     (stepId: string) =>
@@ -760,11 +741,10 @@ export const GameSetupWizard = forwardRef<
     () => ({
       applyPick,
       applyResolve,
-      applySeatingChange,
-      hasSeatingStep,
+      updateSeats,
       getStepKind,
     }),
-    [applyPick, applyResolve, applySeatingChange, hasSeatingStep, getStepKind],
+    [applyPick, applyResolve, updateSeats, getStepKind],
   );
 
   // Broadcast seating updates so every connected companion can render
@@ -777,14 +757,23 @@ export const GameSetupWizard = forwardRef<
         >)
       : null;
   useEffect(() => {
-    if (!seatingStep || !seatingChoice) return;
+    if (
+      !isOpen ||
+      seatingStep?.kind.type !== "seat-players" ||
+      !seatingChoice
+    ) {
+      peerHooks?.onSeatingChange?.(null);
+      return;
+    }
     peerHooks?.onSeatingChange?.({
       stepId: seatingStep.id,
       seats: seatingChoice.seats,
       minPlayers: seatingBounds.min,
       maxPlayers: seatingBounds.max,
+      colorOptions: seatingStep.kind.colorOptions,
     });
   }, [
+    isOpen,
     peerHooks,
     seatingStep,
     seatingChoice,
@@ -825,15 +814,23 @@ export const GameSetupWizard = forwardRef<
   const back = () => setScreenIndex((i) => Math.max(0, i - 1));
 
   const submit = (autoStart = false) => {
+    // Only the steps that were actually offered contribute: a hidden
+    // step's default choice must not leak into the players or context.
+    const shownSteps = visibleSetupSteps(definition, context);
+    const shownContext: SetupContext = Object.fromEntries(
+      shownSteps
+        .filter((s) => context[s.id] !== undefined)
+        .map((s) => [s.id, context[s.id]]),
+    );
     const players = collectPlayers(
-      definition,
-      context,
+      { ...definition, setupSteps: shownSteps },
+      shownContext,
       trackPlayers,
       trackRoster,
     );
     // When the definition declares turnsPerPlayer, derive
     // expectedTurns at submit time from the seat count. Saves the
-    // user from a redundant screen and keeps Root's "8 turns each"
+    // user from a redundant screen and keeps a definition's turns-each
     // rule applied automatically.
     const resolvedExpectedTurns =
       definition.turnsPerPlayer != null && players && players.length > 0
@@ -843,7 +840,8 @@ export const GameSetupWizard = forwardRef<
       expectedTurns: resolvedExpectedTurns,
       players,
       definitionId: definition.id,
-      setupContext: definition.setupSteps?.length ? context : undefined,
+      setupContext: definition.setupSteps?.length ? shownContext : undefined,
+      ...(definition.turnOrder?.selectable ? { turnOrderMode } : {}),
       ...(autoStart ? { autoStart: true } : {}),
     });
   };
@@ -851,13 +849,13 @@ export const GameSetupWizard = forwardRef<
   // Defer auto-submit by one commit so the just-applied pick reaches
   // `context` before submit() reads it. Background: confirmPreview()
   // calls applyPick (which schedules setContext) and onAllConfirmed
-  // synchronously in the same event handler — if we submitted there
+  // synchronously in the same event handler, if we submitted there
   // and then, submit() would close over the stale pre-pick context
   // and emit a players[] missing the LAST seat's metadata. Flipping
   // a flag lets React commit setContext first, then the effect runs
   // with a fresh `context` in scope.
   const [autoSubmitPending, setAutoSubmitPending] = useState(false);
-  // submit() intentionally excluded from deps — it reads `context`
+  // submit() intentionally excluded from deps: it reads `context`
   // which IS a dep, and we don't want stale closures racing the
   // flag flip. The effect fires exactly once per request.
   // biome-ignore lint/correctness/useExhaustiveDependencies: submit excluded to fire once per request without stale-closure race
@@ -870,10 +868,10 @@ export const GameSetupWizard = forwardRef<
   // ── Render ──────────────────────────────────────────────────────
 
   // Show the side panel only on the very first screen. On later
-  // screens it slides out — see `.sidePanelHidden` for the
+  // screens it slides out: see `.sidePanelHidden` for the
   // transition (gated by prefers-reduced-motion in CSS).
   const sidePanelVisible = sidePanel != null && screenIndex === 0;
-  // Hero mode: the faction picker (and any future turn-based
+  // Hero mode: the option picker (and any future turn-based
   // player-pick step) takes the whole viewport. The wizard chrome
   // collapses, the modal goes edge-to-edge, and the step renders
   // its card row as the dominant visual.
@@ -910,16 +908,16 @@ export const GameSetupWizard = forwardRef<
         >
           <header className={styles.header}>
             <div className={styles.headerRow}>
-              <h2 id="wizard-title" className={styles.title}>
-                Game Setup
-              </h2>
+              <Heading level={2} size={3} id="wizard-title">
+                Game setup
+              </Heading>
               <span className={styles.crumbs}>
                 {screenIndex + 1} / {screens.length} · {currentScreen.label}
               </span>
-              {/* In-modal FullScreen toggle — the dialog's backdrop
+              {/* In-modal FullScreen toggle: the dialog's backdrop
                 blocks the one in the page chrome, so this mirrors
                 it inside the modal layer. */}
-              <FullScreenToggle className={styles.headerFullscreen} />
+              <FullScreenToggle tooltipAlign="end" />
             </div>
             <div
               className={styles.progress}
@@ -965,7 +963,7 @@ export const GameSetupWizard = forwardRef<
                 setContext={setContext}
                 peerHooks={peerHooks}
                 onAllConfirmed={() => {
-                  // Last seat just confirmed its pick — auto-advance
+                  // Last seat just confirmed its pick: auto-advance
                   // the wizard. If we're already on the final
                   // screen, we defer to a useEffect (see
                   // autoSubmitPending) so React commits the
@@ -983,6 +981,11 @@ export const GameSetupWizard = forwardRef<
                 onEnabledChange={setTrackPlayers}
                 roster={trackRoster}
                 onRosterChange={setTrackRoster}
+                turnOrderMode={
+                  definition.turnOrder?.selectable
+                    ? { value: turnOrderMode, onChange: setTurnOrderMode }
+                    : undefined
+                }
               />
             )}
             {screenError && <p className={styles.error}>{screenError}</p>}
@@ -991,39 +994,30 @@ export const GameSetupWizard = forwardRef<
           <footer className={styles.actions}>
             <div className={styles.actionsLeft}>
               {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className={styles.secondary}
-                >
+                <Button onClick={onClose}>
                   <X size={16} aria-hidden /> Cancel
-                </button>
+                </Button>
               )}
             </div>
             <div className={styles.actionsRight}>
-              <button
-                type="button"
-                onClick={back}
-                disabled={isFirst}
-                className={styles.secondary}
-              >
+              <Button onClick={back} disabled={isFirst}>
                 <ArrowLeft size={16} aria-hidden /> Back
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 type="submit"
-                className={styles.primary}
                 disabled={screenError != null}
               >
                 {isLast ? (
                   <>
-                    <Play size={16} aria-hidden /> Start Game
+                    <Play size={16} aria-hidden /> Start game
                   </>
                 ) : (
                   <>
                     Next <ArrowRight size={16} aria-hidden />
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </footer>
         </form>
@@ -1054,7 +1048,7 @@ function validateScreen(
         return `Every seat needs a name.`;
     }
     // Note: player-pick used to gate Next with an "Each of N players
-    // needs a faction." message. Dropped — the picker auto-submits
+    // needs a pick." message. Dropped: the picker auto-submits
     // when the last seat confirms (see PlayerPickScreen's
     // onAllConfirmed), so there's no in-practice scenario where a
     // user reaches a complete-picker screen with the button enabled.
@@ -1084,8 +1078,8 @@ function collectPlayers(
     if (seatChoice?.kind !== "seat-players") return undefined;
     const pickChoice = pickStep ? context[pickStep.id] : undefined;
     const picks = pickChoice?.kind === "player-pick" ? pickChoice.picks : {};
-    // Characters dealt alongside a faction (Vagabond's character card),
-    // keyed by faction option id. Used to pick a per-character meeple.
+    // Characters dealt alongside a pick, keyed by option id. Used to
+    // pick a per-character meeple.
     const characters =
       pickChoice?.kind === "player-pick" ? (pickChoice.characters ?? {}) : {};
     const pickOptions =
@@ -1093,9 +1087,9 @@ function collectPlayers(
         ? pickStep.kind.options
         : [];
     return seatChoice.seats.map((seat, i) => {
-      const factionId = picks[i];
-      const option = factionId
-        ? pickOptions.find((o) => o.id === factionId)
+      const pickedId = picks[i];
+      const option = pickedId
+        ? pickOptions.find((o) => o.id === pickedId)
         : undefined;
       const metadata: Record<string, PlayerMetadataValue> = {};
       if (visualKey && option) {
@@ -1107,10 +1101,10 @@ function collectPlayers(
             };
           }
         ).assets;
-        // Body meeple = the dealt character's meeple when there is one
-        // (Vagabond); HEAD stays the faction's own head art (the generic
-        // Vagabond crest) — the per-character meeple isn't a head crop, so
-        // the character comes through via the body meeple, not the head.
+        // Body meeple = the dealt character's meeple when there is one;
+        // HEAD stays the option's own head art. The per-character meeple
+        // isn't a head crop, so the character comes through via the body
+        // meeple, not the head.
         const meeple = meepleAppPathFor(option, characters);
         const head = assets?.headIcon?.[0]?.appPath;
         metadata[visualKey] = {
@@ -1121,6 +1115,20 @@ function collectPlayers(
           description: option.description,
           ...(meeple ? { iconSrc: meeple } : {}),
           ...(head ? { headIconSrc: head } : {}),
+        };
+      }
+      // The seat's own colour pick lands under the seating step's id;
+      // the definition's `playerColorFrom` points renderers at it.
+      const seatColor =
+        seatStep.kind.type === "seat-players"
+          ? seatStep.kind.colorOptions?.find((o) => o.id === seat.colorId)
+          : undefined;
+      if (seatColor) {
+        metadata[seatStep.id] = {
+          type: "selected-option",
+          optionId: seatColor.id,
+          label: seatColor.label,
+          color: seatColor.color,
         };
       }
       return { name: seat.name, metadata };
@@ -1159,11 +1167,15 @@ function GameScreen({
   const def = definitions.find((d) => d.id === definitionId);
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         <Dices size={18} aria-hidden /> Pick a game
-      </h3>
-      <select
-        className={styles.input}
+      </Heading>
+      <SelectField
         aria-label="Game"
         value={definitionId}
         onChange={(e) => onChange(e.target.value)}
@@ -1173,7 +1185,7 @@ function GameScreen({
             {d.name}
           </option>
         ))}
-      </select>
+      </SelectField>
       {def?.description && <p className={styles.help}>{def.description}</p>}
       <Link href="/games" className={styles.help}>
         <Settings size={12} aria-hidden /> Manage games
@@ -1191,22 +1203,22 @@ function ExpectedTurnsScreen({
 }) {
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         How long is this game?
-      </h3>
-      <p className={styles.screenSubtitle}>
-        Used to predict when the game will finish and to set the first
-        countdown.
-      </p>
-      <label htmlFor="expected-turns" className={styles.label}>
+      </Heading>
+      <SectionLabel as="label" htmlFor="expected-turns">
         Expected turns
-      </label>
+      </SectionLabel>
       <NumberField
         id="expected-turns"
         min={1}
         value={value}
         onChange={onChange}
-        className={styles.input}
       />
     </>
   );
@@ -1221,13 +1233,13 @@ function StepScreen({
   onAllConfirmed,
 }: {
   step: SetupStep;
-  // Sibling steps — used by `dealt-resolve` to look up option
+  // Sibling steps: used by `dealt-resolve` to look up option
   // labels on its upstream `sourceStepId`.
   steps: SetupStep[];
   context: SetupContext;
   setContext: (updater: (prev: SetupContext) => SetupContext) => void;
   peerHooks?: WizardPeerHooks;
-  // Forwarded to PlayerPickScreen — fires when the last seat
+  // Forwarded to PlayerPickScreen: fires when the last seat
   // confirms its pick so the wizard can auto-advance.
   onAllConfirmed?: () => void;
 }) {
@@ -1356,6 +1368,7 @@ function StepScreen({
       return (
         <PlayerPickScreen
           step={step}
+          steps={steps}
           options={step.kind.options}
           constraints={mutexPairsOf(step.kind.constraints)}
           mode={step.kind.mode}
@@ -1413,11 +1426,10 @@ function StepScreen({
       const seatStep = steps.find((s) => s.kind.type === "seat-players");
       const seatChoice = seatStep ? context[seatStep.id] : undefined;
       const seats = seatChoice?.kind === "seat-players" ? seatChoice.seats : [];
-      const current =
-        context[step.id]?.kind === "select-lead"
-          ? (context[step.id] as Extract<SetupChoice, { kind: "select-lead" }>)
-              .seatIndex
-          : 0;
+      const current = Math.min(
+        leadSeatOf(context, step.id),
+        Math.max(seats.length - 1, 0),
+      );
       return (
         <SelectLeadScreen
           step={step}
@@ -1438,10 +1450,9 @@ function StepScreen({
   }
 }
 
-// Pick which seat starts as the turn-order lead (e.g. Arcs' initiative
-// marker). Lists the seated roster as chips; an optional Randomise
+// Pick which seat starts as the turn-order lead. Lists the seated roster as chips; an optional Randomise
 // button rolls a fair starting lead. The chosen seat index is stored
-// generically — the timer page seeds its lead anchor from it.
+// generically: the timer page seeds its lead anchor from it.
 function SelectLeadScreen({
   step,
   seats,
@@ -1457,9 +1468,14 @@ function SelectLeadScreen({
 }) {
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
@@ -1469,28 +1485,19 @@ function SelectLeadScreen({
         <>
           <div className={styles.chipGrid}>
             {seats.map((seat, i) => (
-              <button
+              <ListRow
                 key={seat.id}
-                type="button"
-                className={`${styles.chip} ${
-                  i === selectedIndex ? styles.chipActive : ""
-                }`}
+                label={seat.name}
+                pressed={i === selectedIndex}
                 onClick={() => onChange(i)}
-                aria-pressed={i === selectedIndex}
                 aria-label={seat.name}
-              >
-                <span className={styles.chipLabel}>{seat.name}</span>
-              </button>
+              />
             ))}
           </div>
           {allowRandom && (
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => onChange(randomIndex(seats.length))}
-            >
+            <Button onClick={() => onChange(randomIndex(seats.length))}>
               <Dices size={14} aria-hidden /> Randomise
-            </button>
+            </Button>
           )}
         </>
       )}
@@ -1498,17 +1505,22 @@ function SelectLeadScreen({
   );
 }
 
-// Pure-text instructional screen — renders the step's label as the
+// Pure-text instructional screen: renders the step's label as the
 // heading and the description as body. No input, no context entry,
 // no validation. The wizard's Next button is the only action. Used
 // for table-side reminders that have to live in the flow but don't
-// need any decision (e.g. Root's A.7 "draw 5 cards" reminder).
+// need any decision (e.g. a "draw 5 cards" reminder).
 function InfoScreen({ step }: { step: SetupStep }) {
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
@@ -1534,9 +1546,14 @@ function MultiToggleScreen({
   };
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
@@ -1544,20 +1561,13 @@ function MultiToggleScreen({
         {options.map((o) => {
           const checked = selectedIds.includes(o.id);
           return (
-            <label
+            <Toggle
               key={o.id}
-              className={`${styles.toggleRow} ${
-                checked ? styles.toggleRowChecked : ""
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggle(o.id)}
-                aria-label={o.label}
-              />
-              <span className={styles.toggleRowLabel}>{o.label}</span>
-            </label>
+              label={o.label}
+              description={o.description}
+              checked={checked}
+              onChange={() => toggle(o.id)}
+            />
           );
         })}
       </div>
@@ -1581,30 +1591,36 @@ function SelectOneScreen({
   const filtered = visibleOptions(options, context);
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
       <div className={styles.chipGrid}>
         {filtered.map((o) => (
-          <button
+          <ListRow
             key={o.id}
-            type="button"
-            className={`${styles.chip} ${
-              o.id === selectedId ? styles.chipActive : ""
-            }`}
+            label={o.label}
+            hint={
+              (o.module || o.description) && (
+                <>
+                  {o.module && (
+                    <span className={styles.chipModule}>{o.module}</span>
+                  )}
+                  {o.description}
+                </>
+              )
+            }
+            pressed={o.id === selectedId}
             onClick={() => onChange(o.id)}
-            aria-pressed={o.id === selectedId}
             aria-label={o.label}
-          >
-            <span className={styles.chipLabel}>{o.label}</span>
-            {o.module && <span className={styles.chipModule}>{o.module}</span>}
-            {o.description && (
-              <span className={styles.chipDesc}>{o.description}</span>
-            )}
-          </button>
+          />
         ))}
       </div>
     </>
@@ -1628,39 +1644,28 @@ function CountScreen({
   const atMax = value >= max;
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      <div className={styles.stepper}>
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          disabled={atMin}
-          className={styles.stepperBtn}
-          aria-label={`Decrease ${step.label.toLowerCase()}`}
-        >
-          <Minus size={16} aria-hidden />
-        </button>
-        <span
-          className={styles.stepperValue}
-          aria-live="polite"
-          aria-label={`${step.label}: ${value}`}
-        >
-          {value}
-        </span>
-        <button
-          type="button"
-          onClick={() => onChange(Math.min(max, value + 1))}
-          disabled={atMax}
-          className={styles.stepperBtn}
-          aria-label={`Increase ${step.label.toLowerCase()}`}
-        >
-          <Plus size={16} aria-hidden />
-        </button>
-      </div>
+      <Stepper
+        className={styles.stepper}
+        value={value}
+        valueLabel={`${step.label}: ${value}`}
+        onDecrement={() => onChange(Math.max(min, value - 1))}
+        onIncrement={() => onChange(Math.min(max, value + 1))}
+        canDecrement={!atMin}
+        canIncrement={!atMax}
+        decrementLabel={`Decrease ${step.label.toLowerCase()}`}
+        incrementLabel={`Increase ${step.label.toLowerCase()}`}
+      />
     </>
   );
 }
@@ -1676,22 +1681,22 @@ function ToggleScreen({
 }) {
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      <label className={styles.toggleRow}>
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className={styles.toggleRowLabel}>
-          {value ? "Enabled" : "Disabled"}
-        </span>
-      </label>
+      <Toggle
+        label={value ? "Enabled" : "Disabled"}
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+      />
     </>
   );
 }
@@ -1709,92 +1714,40 @@ function SeatPlayersScreen({
   const min = step.kind.minPlayers ?? 1;
   const max = step.kind.maxPlayers ?? 99;
   const seats = choice.seats;
-  const update = (seats: Array<{ id: string; name: string }>) =>
-    onChange({ kind: "seat-players", seats });
-
-  const setName = (i: number, name: string) =>
-    update(seats.map((s, j) => (i === j ? { ...s, name } : s)));
-
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= seats.length) return;
-    const next = [...seats];
-    [next[i], next[j]] = [next[j], next[i]];
-    update(next);
-  };
-
-  const remove = (i: number) => {
-    if (seats.length <= min) return;
-    update(seats.filter((_, j) => j !== i));
-  };
-
-  const add = () => {
-    if (seats.length >= max) return;
-    update([
-      ...seats,
-      { id: makeSeatId(), name: `Player ${seats.length + 1}` },
-    ]);
-  };
+  const colorOptions = step.kind.colorOptions ?? [];
+  const update = (next: typeof seats) =>
+    onChange({ kind: "seat-players", seats: next });
 
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         <Users size={18} aria-hidden /> {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      <div className={styles.seatList}>
-        {seats.map((seat, i) => (
-          <div key={i} className={styles.seatRow}>
-            <span className={styles.seatIndex} aria-hidden>
-              {i + 1}
-            </span>
-            <input
-              type="text"
-              value={seat.name}
-              onChange={(e) => setName(i, e.target.value)}
-              aria-label={`Seat ${i + 1} name`}
-              className={styles.seatName}
-            />
-            <button
-              type="button"
-              onClick={() => move(i, -1)}
-              disabled={i === 0}
-              className={styles.seatNudge}
-              aria-label={`Move seat ${i + 1} up`}
-            >
-              <ArrowUp size={14} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => move(i, 1)}
-              disabled={i === seats.length - 1}
-              className={styles.seatNudge}
-              aria-label={`Move seat ${i + 1} down`}
-            >
-              <ArrowDown size={14} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              disabled={seats.length <= min}
-              className={styles.seatRemove}
-              aria-label={`Remove seat ${i + 1}`}
-            >
-              <Trash2 size={14} aria-hidden />
-            </button>
-          </div>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={add}
-        disabled={seats.length >= max}
-        className={styles.seatAdd}
-      >
-        <Plus size={14} aria-hidden /> Add seat
-      </button>
+      <SeatList
+        seats={seats}
+        label="Seats"
+        colorOptions={colorOptions}
+        minPlayers={min}
+        maxPlayers={max}
+        onRename={(i, name) => update(renameSeat(seats, i, name))}
+        onMove={(from, to) => update(moveSeat(seats, from, to))}
+        onRemove={(i) => {
+          if (seats.length > min) update(removeSeat(seats, i));
+        }}
+        onAdd={() => {
+          if (seats.length < max)
+            update(addSeat(seats, { id: makeSeatId() }, colorOptions));
+        }}
+        onColor={(i, colorId) => update(setSeatColor(seats, i, colorId))}
+      />
     </>
   );
 }
@@ -1842,7 +1795,7 @@ function DealRandomScreen({
       : [];
 
   // Seat count drives the demote rule. We treat any seat-players choice
-  // in the context as the source — Root has one, generic games have
+  // in the context as the source: a game with seating has one, others have
   // none (in which case demoteCount = 0).
   const seatChoice = Object.values(context).find(
     (c): c is Extract<SetupChoice, { kind: "seat-players" }> =>
@@ -1850,7 +1803,7 @@ function DealRandomScreen({
   );
   const seatCount = seatChoice?.seats.length ?? 0;
   // Demotion is opt-in per step via the definition's `demote` rule; steps
-  // without one (e.g. landmarks) never demote.
+  // without one never demote.
   const demoteRule =
     step.kind.type === "deal-random" ? step.kind.demote : undefined;
   const demoteN = demoteCountForSeats(demoteRule, seatCount);
@@ -1878,7 +1831,7 @@ function DealRandomScreen({
   };
 
   // When the step sets maxCount, the player picks how many to deal
-  // (0..maxCount, e.g. Root landmarks). Otherwise it's a fixed `count`.
+  // (0..maxCount). Otherwise it's a fixed `count`.
   const maxCount =
     step.kind.type === "deal-random" ? step.kind.maxCount : undefined;
   const selectedCount = isSkipped ? 0 : (dealtIds?.length ?? 0);
@@ -1890,16 +1843,21 @@ function DealRandomScreen({
 
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
       <div className={styles.deck}>
         {isSkipped && (
           <div className={styles.skipNotice}>
-            Skipped — no {step.label.toLowerCase()} this game.
+            Skipped: no {step.label.toLowerCase()} this game.
           </div>
         )}
         {!isSkipped && dealtIds && (
@@ -1938,9 +1896,7 @@ function DealRandomScreen({
                     <span className={styles.dealtLabel}>
                       {isDemoted && demoLabel ? demoLabel : o.label}
                     </span>
-                    {isDemoted && (
-                      <span className={styles.dealtDemotedTag}>demoted</span>
-                    )}
+                    {isDemoted && <Chip tone="muted">demoted</Chip>}
                     {(() => {
                       const lines = setupLinesFor(o);
                       if (lines.length === 0) return null;
@@ -1964,42 +1920,30 @@ function DealRandomScreen({
         {maxCount != null ? (
           <div className={styles.actionsLeft}>
             {Array.from({ length: maxCount + 1 }, (_, n) => (
-              <button
+              <Chip
                 key={n}
-                type="button"
-                onClick={() => dealN(n)}
-                aria-pressed={selectedCount === n}
-                className={
-                  selectedCount === n ? styles.secondary : styles.ghost
-                }
+                pressed={selectedCount === n}
+                onPress={() => dealN(n)}
               >
                 {n === 0 ? "None" : n}
-              </button>
+              </Chip>
             ))}
             {selectedCount > 0 && (
-              <button
-                type="button"
-                onClick={reshuffle}
-                className={styles.ghost}
-              >
+              <Button variant="ghost" onClick={reshuffle}>
                 <RefreshCw size={14} aria-hidden /> Shuffle again
-              </button>
+              </Button>
             )}
           </div>
         ) : (
           <div className={styles.actionsLeft}>
-            <button
-              type="button"
-              onClick={reshuffle}
-              className={styles.secondary}
-            >
+            <Button onClick={reshuffle}>
               <RefreshCw size={14} aria-hidden /> Shuffle
               {dealtIds ? " again" : ""}
-            </button>
+            </Button>
             {optional && (
-              <button type="button" onClick={skip} className={styles.ghost}>
+              <Button variant="ghost" onClick={skip}>
                 Skip
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -2008,27 +1952,38 @@ function DealRandomScreen({
   );
 }
 
-// Draft mode is the default for the player-pick screen — players
+// Draft mode is the default for the player-pick screen: players
 // receive a dealt hand of n+1 cards. The picker offers a local
 // toggle to fall back to "show every legal option" when needed.
 // The setup-context-driven toggle convention is gone; this is now
 // purely picker-local state.
 
-// Find the dealt hireling ids (if any). Walks every deal-random in
-// the context — pragmatic for now; if a definition has more than one
-// deal-random step the picker would treat both as sources of exclusion.
-const findDealtHirelingIds = (context: SetupContext): string[] => {
-  const ids: string[] = [];
-  for (const choice of Object.values(context)) {
-    if (choice.kind === "deal-random" && choice.skipped === false) {
-      ids.push(...choice.dealtIds);
-    }
-  }
-  return ids;
+/** The seat chosen on a select-lead step (the first such step when no id is given), else 0. */
+const leadSeatOf = (context: SetupContext, stepId?: string): number => {
+  const choice =
+    stepId !== undefined
+      ? context[stepId]
+      : Object.values(context).find((c) => c.kind === "select-lead");
+  return choice?.kind === "select-lead" ? choice.seatIndex : 0;
+};
+
+/**
+ * Seat indices in the order a player-pick step visits them: seat order
+ * from `start`, reversed for `reverse-seat` (so the walk ends at `start`).
+ */
+const seatPickSequence = (
+  count: number,
+  order: PickOrder | undefined,
+  start = 0,
+): number[] => {
+  const from = count > 0 ? Math.min(start, count - 1) : 0;
+  const listed = Array.from({ length: count }, (_, i) => (from + i) % count);
+  return order === "reverse-seat" ? listed.reverse() : listed;
 };
 
 function PlayerPickScreen({
   step,
+  steps,
   options,
   constraints,
   mode,
@@ -2038,6 +1993,8 @@ function PlayerPickScreen({
   onAllConfirmed,
 }: {
   step: SetupStep;
+  // Every setup step, so options dealt earlier can rule picks out.
+  steps: SetupStep[];
   options: SetupOption[];
   constraints: [string, string][];
   mode: "host-only" | "turn-based";
@@ -2050,7 +2007,7 @@ function PlayerPickScreen({
   ) => void;
   // Fired once the last seat confirms its pick. The wizard
   // responds by auto-submitting (and the timer page auto-starts
-  // the clock — see GameConfig.autoStart).
+  // the clock: see GameConfig.autoStart).
   onAllConfirmed?: () => void;
 }) {
   const seatChoice = Object.values(context).find(
@@ -2058,6 +2015,17 @@ function PlayerPickScreen({
       c.kind === "seat-players",
   );
   const seats = seatChoice?.seats ?? [];
+  const pickOrder =
+    step.kind.type === "player-pick" ? step.kind.pickOrder : undefined;
+  const pickStart =
+    step.kind.type === "player-pick" && step.kind.pickFrom === "lead"
+      ? leadSeatOf(context)
+      : 0;
+  const seatSequence = useMemo(
+    () => seatPickSequence(seats.length, pickOrder, pickStart),
+    [seats.length, pickOrder, pickStart],
+  );
+  const firstSeat = seatSequence[0] ?? 0;
   const choice = context[step.id];
   const playerPick: Extract<SetupChoice, { kind: "player-pick" }> =
     choice?.kind === "player-pick"
@@ -2067,41 +2035,36 @@ function PlayerPickScreen({
   const dealtIds = playerPick.dealtIds;
   const characters = playerPick.characters ?? {};
 
-  // Draft is on by default; the picker exposes a local toggle to
-  // fall back to the full pool when the table wants free choice.
-  const [draftEnabled, setDraftEnabled] = useState(true);
+  // A step that declares a draft starts on the dealt hand; the picker
+  // exposes a local toggle to fall back to the full pool when the table
+  // wants free choice. Without one there is only the full pool.
+  const draft = step.kind.type === "player-pick" ? step.kind.draft : undefined;
+  const [draftChosen, setDraftEnabled] = useState(draft?.startsOn ?? true);
+  const draftEnabled = draft !== undefined && draftChosen;
+  const draftSkippable = draft?.skippable ?? true;
   // Two-step pick: clicking a card opens a full-screen preview
-  // (showing the ADSET steps) instead of immediately committing.
+  // (showing the option's setup steps) instead of immediately committing.
   // A Confirm button accepts the pick; Back returns to the draft.
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
-  const dealtHirelings = findDealtHirelingIds(context);
 
-  // Faction ids excluded by any dealt hireling (via faction.matchingHireling).
-  const hirelingExcludedIds = useMemo(() => {
-    if (dealtHirelings.length === 0) return new Set<string>();
-    const excluded = new Set<string>();
-    for (const o of options) {
-      const mh = (o as { matchingHireling?: string }).matchingHireling;
-      if (mh && dealtHirelings.includes(mh)) excluded.add(o.id);
-    }
-    return excluded;
-  }, [options, dealtHirelings]);
-
-  // The legal pool — module-visible AND not hireling-excluded. This
-  // is what the draft draws from, and what's shown when draft is off.
-  const pool = useMemo(
-    () =>
-      visibleOptions(options, context).filter(
-        (o) => !hirelingExcludedIds.has(o.id),
-      ),
-    [options, context, hirelingExcludedIds],
+  // The legal pool: module-visible AND not ruled out by an option dealt
+  // earlier. This is what the draft draws from, and what's shown when
+  // draft is off.
+  const offered = useMemo(
+    () => visibleOptions(options, context),
+    [options, context],
   );
+  const pool = useMemo(
+    () => offered.filter((o) => !optionExcludedByDeals(o.id, steps, context)),
+    [offered, context, steps],
+  );
+  const excludedCount = offered.length - pool.length;
 
-  const targetDealCount = seats.length + 1;
+  const targetDealCount = seats.length + (draft?.dealExtra ?? 0);
 
   // Lazy deal when draft turns on and we don't yet have a hand.
   // useLayoutEffect (not useEffect) so the deal commits in the same
-  // browser task as the picker's first paint — without this, the
+  // browser task as the picker's first paint, without this, the
   // hero card row paints empty for a frame between mount and the
   // post-paint useEffect that fills dealtIds. That empty frame is
   // both a visible flash and a real race for code (or tests) that
@@ -2142,7 +2105,7 @@ function PlayerPickScreen({
   // Note: previous version dropped dealtIds when draft toggled off,
   // so re-enabling re-dealt a fresh hand and lost the player's
   // remaining picks. The dealt list now persists across draft
-  // toggles — `visible` (above) renders the full pool when draft
+  // toggles: `visible` (above) renders the full pool when draft
   // is off and the still-in-hand subset when draft is on. Users
   // wanting a fresh deal use the Shuffle button explicitly.
 
@@ -2159,34 +2122,30 @@ function PlayerPickScreen({
       dealtIds: newDealt,
       characters: newCharacters,
     }));
-    setActiveSeat(Math.max(0, seats.length - 1));
+    setActiveSeat(firstSeat);
   };
 
-  // Per ADSET A.8.3: picking goes counterclockwise starting from the
-  // LAST seated player. So the picker starts at the last seat and
-  // counts down; the last to pick (seat 0) is implicitly the first to
-  // play, matching the timer's existing turn order.
-  const [activeSeat, setActiveSeat] = useState(() =>
-    Math.max(0, seats.length - 1),
-  );
+  // The step's pickOrder decides which seat picks first and which way
+  // picking moves.
+  const [activeSeat, setActiveSeat] = useState(firstSeat);
   // If the picker mounts before the seat-players context has
   // propagated, useState's initializer lands at 0. Once seats
-  // populate, snap once to the last seat per ADSET A.8.3.
+  // populate, snap once to the first seat in pick order.
   const seatsInitialisedRef = useRef(false);
   useEffect(() => {
     if (seats.length === 0) return;
     if (!seatsInitialisedRef.current) {
       seatsInitialisedRef.current = true;
-      setActiveSeat(seats.length - 1);
+      setActiveSeat(firstSeat);
       return;
     }
     // Pin activeSeat in range when the seat count shrinks.
     if (activeSeat >= seats.length) {
-      setActiveSeat(Math.max(0, seats.length - 1));
+      setActiveSeat(firstSeat);
     }
-  }, [seats.length, activeSeat]);
+  }, [seats.length, activeSeat, firstSeat]);
 
-  const [adsetOpen, setAdsetOpen] = useState<string | null>(null);
+  const [stepsOpenId, setStepsOpenId] = useState<string | null>(null);
 
   // When a card is picked in draft mode it animates out before being
   // removed from the dealt hand. `leavingIds` tracks the cards mid-
@@ -2217,10 +2176,10 @@ function PlayerPickScreen({
 
   // pick() writes via the updater so it composes correctly even when
   // multiple clicks land before React re-renders. Auto-advance happens
-  // in an effect below — keeping pick() pure on the choice.
+  // in an effect below: keeping pick() pure on the choice.
   //
-  // For options that have a character/captain pool (Vagabond /
-  // Knaves), we also deal characters here so the picker can render
+  // For options that have a character pool (`characterDraw`), we also
+  // deal characters here so the picker can render
   // them even outside of draft mode (draft-mode dealing happens up
   // front via the deal effect).
   // Confirming the preview commits the pick AND, if this is the
@@ -2231,7 +2190,7 @@ function PlayerPickScreen({
     setPreviewCardId(null);
   };
 
-  // Fire onAllConfirmed once every seat has a pick — watching the
+  // Fire onAllConfirmed once every seat has a pick: watching the
   // committed `picks` rather than firing inline from confirmPreview, so
   // a remote (companion) pick applied via applyPick advances the wizard
   // exactly like a local one. Guarded by a ref so it fires a single
@@ -2253,16 +2212,16 @@ function PlayerPickScreen({
 
   const pick = (optionId: string) => {
     const seatIdx = activeSeat;
-    // Defensive: refuse to pick a faction that another seat already
+    // Defensive: refuse to pick an option that another seat already
     // claims. The card UI marks claimed cards as `blocked`, but the
     // last-seat case has surfaced edge bugs (e.g. draft animation
-    // race) — this short-circuits any stale path.
+    // race): this short-circuits any stale path.
     const takenBy = Object.entries(picks).find(
       ([s, id]) => Number(s) !== seatIdx && id === optionId,
     );
     if (takenBy) return;
     // Preserve a character already dealt for this option (in draft mode
-    // it was dealt up front, and the preview showed its meeple) — only
+    // it was dealt up front, and the preview showed its meeple), only
     // deal on pick when none exists yet (skip-draft mode).
     const alreadyDealt = (characters[optionId]?.length ?? 0) > 0;
     const characterDeal =
@@ -2286,23 +2245,17 @@ function PlayerPickScreen({
     }
   };
 
-  // After a seat is filled, jump to the next unfilled seat counting
-  // BACKWARDS (counterclockwise per ADSET A.8.3). If none unfilled
-  // remain going down, fall back to the first unfilled going up so
-  // the wizard can recover when the user re-edits an earlier pick.
+  // After a seat is filled, jump to the next unfilled seat in pick
+  // order. If none remain after it, fall back to the first unfilled
+  // seat in pick order, so the wizard recovers when the user re-edits
+  // an earlier pick.
   useEffect(() => {
     if (picks[activeSeat] == null) return;
-    let nextDown = -1;
-    for (let i = activeSeat - 1; i >= 0; i--) {
-      if (picks[i] == null) {
-        nextDown = i;
-        break;
-      }
-    }
-    const next =
-      nextDown !== -1 ? nextDown : seats.findIndex((_, i) => picks[i] == null);
-    if (next !== -1 && next !== activeSeat) setActiveSeat(next);
-  }, [picks, activeSeat, seats]);
+    const unfilled = (i: number) => picks[i] == null;
+    const after = seatSequence.slice(seatSequence.indexOf(activeSeat) + 1);
+    const next = after.find(unfilled) ?? seatSequence.find(unfilled);
+    if (next !== undefined && next !== activeSeat) setActiveSeat(next);
+  }, [picks, activeSeat, seatSequence]);
 
   // Emit onTurnStart per active seat when in turn-based mode. The
   // parent broadcasts SETUP_TURN; companions seated at that index
@@ -2312,7 +2265,7 @@ function PlayerPickScreen({
   const findDefinition = (): GameDefinition | undefined => {
     // The picker has access to the merged option list but not the
     // top-level definition. Reconstruct a minimal definition so the
-    // companion can render the picker — for now we ship the step's
+    // companion can render the picker: for now we ship the step's
     // options inline as `definition.setupSteps[0].kind.options` via
     // the picker-only synthetic def below.
     return undefined;
@@ -2346,7 +2299,7 @@ function PlayerPickScreen({
       excludedOptionIds: Array.from(blockedForActive),
       definition:
         findDefinition() ??
-        // Synthetic minimal definition for the companion picker —
+        // Synthetic minimal definition for the companion picker:
         // a single-step shell with this step's resolved options.
         ({
           schemaVersion: 1,
@@ -2374,9 +2327,14 @@ function PlayerPickScreen({
   if (seats.length === 0) {
     return (
       <>
-        <h3 className={styles.screenTitle} id="screen-title">
+        <Heading
+          level={3}
+          size={2}
+          className={styles.screenTitle}
+          id="screen-title"
+        >
           {step.label}
-        </h3>
+        </Heading>
         <p className={styles.help}>
           No seated players yet. Go back to the seating step first.
         </p>
@@ -2385,7 +2343,7 @@ function PlayerPickScreen({
   }
 
   // Hero mode: dominate the viewport with a card row. Triggered
-  // for turn-based player-pick steps (Root). Other modes (host-only)
+  // for turn-based player-pick steps. Other modes (host-only)
   // keep the compact panel further below.
   if (mode === "turn-based") {
     const seatName = seats[activeSeat]?.name ?? `Seat ${activeSeat + 1}`;
@@ -2394,9 +2352,7 @@ function PlayerPickScreen({
     // and gates the pick behind an explicit Confirm.
     if (previewCardId != null) {
       const previewOption = options.find((o) => o.id === previewCardId) ?? null;
-      const previewAdset = previewOption
-        ? (previewOption as unknown as { adsetSteps?: string[] }).adsetSteps
-        : undefined;
+      const previewSteps = setupLinesFor(previewOption ?? undefined);
       const previewMeeple = meepleAppPathFor(
         previewOption ?? undefined,
         characters,
@@ -2412,13 +2368,11 @@ function PlayerPickScreen({
           )?.assets?.headIcon?.[0]?.appPath;
       return (
         <div className={styles.heroPreview}>
-          <h3 className={styles.heroPickerSrOnly} id="screen-title">
+          <VisuallyHidden as="h3" id="screen-title">
             {step.label}
-          </h3>
+          </VisuallyHidden>
           <div className={styles.heroPreviewInstruction}>
-            <span className={styles.heroPickerInstructionSubtle}>
-              {seatName} — confirm your pick
-            </span>
+            <SectionLabel as="span">{seatName}: confirm your pick</SectionLabel>
             <span className={styles.heroPreviewTitle}>{previewLabel}</span>
           </div>
           <div
@@ -2450,9 +2404,9 @@ function PlayerPickScreen({
                 className={styles.heroPreviewPortrait}
               />
             ) : null}
-            {previewAdset && previewAdset.length > 0 && (
+            {previewSteps.length > 0 && (
               <ol className={styles.heroPreviewSteps}>
-                {previewAdset.map((s, i) => (
+                {previewSteps.map((s, i) => (
                   <li key={i}>
                     <span className={styles.heroCardStepsIndex}>{i + 1}.</span>
                     <span>{s}</span>
@@ -2465,9 +2419,10 @@ function PlayerPickScreen({
               characters[previewOption.id].length > 0 && (
                 <div className={styles.heroCardCharacters}>
                   Dealt{" "}
-                  {characters[previewOption.id].length === 1
-                    ? "character"
-                    : "captains"}
+                  {characterNoun(
+                    previewOption,
+                    characters[previewOption.id].length,
+                  )}
                   <ul className={styles.heroCardCharactersList}>
                     {characters[previewOption.id].map((charId) => (
                       <li key={charId}>
@@ -2479,20 +2434,15 @@ function PlayerPickScreen({
               )}
           </div>
           <div className={styles.heroPreviewActions}>
-            <button
-              type="button"
-              onClick={() => setPreviewCardId(null)}
-              className={styles.secondary}
-            >
+            <Button onClick={() => setPreviewCardId(null)}>
               <ArrowLeft size={16} aria-hidden /> Back
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
               onClick={() => confirmPreview(previewCardId)}
-              className={styles.primary}
             >
               Confirm setup
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -2501,16 +2451,16 @@ function PlayerPickScreen({
       <div className={styles.heroPicker}>
         {/* Visually-hidden heading keeps screen reader + Playwright
             navigation working alongside the visible instruction. */}
-        <h3 className={styles.heroPickerSrOnly} id="screen-title">
+        <VisuallyHidden as="h3" id="screen-title">
           {step.label}
-        </h3>
+        </VisuallyHidden>
         <div className={styles.heroPickerInstruction}>
-          <span className={styles.heroPickerInstructionSubtle}>
+          <SectionLabel as="span">
             {seats.filter((_, i) => picks[i] != null).length}/{seats.length}{" "}
             picked · seat {activeSeat + 1} of {seats.length}
-          </span>
+          </SectionLabel>
           <span>
-            {seatName} — choose your {step.label.toLowerCase()}
+            {seatName}: choose your {step.label.toLowerCase()}
           </span>
         </div>
 
@@ -2519,12 +2469,11 @@ function PlayerPickScreen({
             const blocked = blockedForActive.has(o.id);
             const active = picks[activeSeat] === o.id;
             const leaving = leavingIds.includes(o.id);
-            const adsetSteps = (o as unknown as { adsetSteps?: string[] })
-              .adsetSteps;
+            const adsetSteps = o.setupInstructions;
             const meepleSrc = meepleAppPathFor(o, characters);
             // Fallback art for options that ship a portrait (headIcon)
-            // but no silhouette meeple — e.g. Arcs leaders. Rendered as
-            // a plain image, not a tinted mask.
+            // but no silhouette meeple. Rendered as a plain image, not a
+            // tinted mask.
             const portraitSrc = meepleSrc
               ? undefined
               : (
@@ -2574,12 +2523,13 @@ function PlayerPickScreen({
                     if (military !== "militant" && military !== "insurgent")
                       return null;
                     return (
-                      <span
+                      <Chip
+                        tone="muted"
                         className={styles.heroCardMilitary}
                         data-variant={military}
                       >
                         {military}
-                      </span>
+                      </Chip>
                     );
                   })()}
                 </span>
@@ -2597,8 +2547,7 @@ function PlayerPickScreen({
                 )}
                 {characters[o.id] && characters[o.id].length > 0 && (
                   <div className={styles.heroCardCharacters}>
-                    Dealt{" "}
-                    {characters[o.id].length === 1 ? "character" : "captains"}
+                    Dealt {characterNoun(o, characters[o.id].length)}
                     <ul className={styles.heroCardCharactersList}>
                       {characters[o.id].map((charId) => (
                         <li key={charId}>{labelForCharacter(o, charId)}</li>
@@ -2637,14 +2586,14 @@ function PlayerPickScreen({
             aria-label="Seat picks so far"
           >
             {seats.map((seat, i) => {
-              const factionId = picks[i];
-              const option = factionId
-                ? (visible.find((o) => o.id === factionId) ??
-                  options.find((o) => o.id === factionId))
+              const pickedId = picks[i];
+              const option = pickedId
+                ? (visible.find((o) => o.id === pickedId) ??
+                  options.find((o) => o.id === pickedId))
                 : undefined;
               const label = option
-                ? `${seat.name} — ${option.label}`
-                : `${seat.name} — not yet`;
+                ? `${seat.name}: ${option.label}`
+                : `${seat.name}: not yet`;
               return (
                 <li
                   key={i}
@@ -2663,30 +2612,20 @@ function PlayerPickScreen({
           </ul>
           {draftEnabled && (
             <>
-              <button
-                type="button"
-                onClick={reshuffle}
-                className={styles.secondary}
-              >
+              <Button onClick={reshuffle}>
                 <RefreshCw size={14} aria-hidden /> Shuffle
-              </button>
-              <button
-                type="button"
-                onClick={() => setDraftEnabled(false)}
-                className={styles.ghost}
-              >
-                Skip draft
-              </button>
+              </Button>
+              {draftSkippable && (
+                <Button variant="ghost" onClick={() => setDraftEnabled(false)}>
+                  Skip draft
+                </Button>
+              )}
             </>
           )}
-          {!draftEnabled && (
-            <button
-              type="button"
-              onClick={() => setDraftEnabled(true)}
-              className={styles.secondary}
-            >
+          {draft && draftSkippable && !draftEnabled && (
+            <Button onClick={() => setDraftEnabled(true)}>
               <RefreshCw size={14} aria-hidden /> Back to draft
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -2695,9 +2634,14 @@ function PlayerPickScreen({
 
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
@@ -2705,7 +2649,7 @@ function PlayerPickScreen({
       <div className={styles.activePickerHeader}>
         <span className={styles.pickerSeatIndex}>{activeSeat + 1}</span>
         <span className={styles.pickerSeatName}>
-          {seats[activeSeat]?.name} — choose a {step.label.toLowerCase()}
+          {seats[activeSeat]?.name}: choose a {step.label.toLowerCase()}
         </span>
       </div>
 
@@ -2713,41 +2657,31 @@ function PlayerPickScreen({
         <div className={styles.draftBar}>
           <span className={styles.help}>
             Drafting {targetDealCount} cards from {pool.length} legal options
-            {dealtHirelings.length > 0
-              ? ` (${hirelingExcludedIds.size} excluded by dealt hirelings)`
+            {excludedCount > 0
+              ? ` (${excludedCount} excluded by dealt options)`
               : ""}
             .
           </span>
           <div className={styles.draftBarButtons}>
-            <button
-              type="button"
-              onClick={reshuffle}
-              className={styles.secondary}
-            >
+            <Button onClick={reshuffle}>
               <RefreshCw size={14} aria-hidden /> Shuffle again
-            </button>
-            <button
-              type="button"
-              onClick={() => setDraftEnabled(false)}
-              className={styles.ghost}
-            >
-              Skip draft
-            </button>
+            </Button>
+            {draftSkippable && (
+              <Button variant="ghost" onClick={() => setDraftEnabled(false)}>
+                Skip draft
+              </Button>
+            )}
           </div>
         </div>
       )}
-      {!draftEnabled && (
+      {draft && draftSkippable && !draftEnabled && (
         <div className={styles.draftBar}>
           <span className={styles.help}>
-            Free pick — every legal option visible.
+            Free pick: every legal option visible.
           </span>
-          <button
-            type="button"
-            onClick={() => setDraftEnabled(true)}
-            className={styles.secondary}
-          >
+          <Button onClick={() => setDraftEnabled(true)}>
             <RefreshCw size={14} aria-hidden /> Back to draft
-          </button>
+          </Button>
         </div>
       )}
 
@@ -2755,10 +2689,9 @@ function PlayerPickScreen({
         {visible.map((o) => {
           const blocked = blockedForActive.has(o.id);
           const active = picks[activeSeat] === o.id;
-          const open = adsetOpen === o.id;
+          const open = stepsOpenId === o.id;
           const leaving = leavingIds.includes(o.id);
-          const adsetSteps = (o as unknown as { adsetSteps?: string[] })
-            .adsetSteps;
+          const setupSteps = setupLinesFor(o);
           const meepleSrc = meepleAppPathFor(o, characters);
           // Card is a div, not a button, so it can host the inner
           // "Show setup" button. role="button" + tabIndex keeps it
@@ -2774,7 +2707,7 @@ function PlayerPickScreen({
               aria-pressed={active}
               aria-disabled={blocked || leaving}
               // Explicit aria-label so the card's accessible name is
-              // just the faction label, not the computed text of all
+              // just the option label, not the computed text of all
               // its children (which would include the nested toggle).
               aria-label={o.label}
               tabIndex={blocked || leaving ? -1 : 0}
@@ -2784,8 +2717,8 @@ function PlayerPickScreen({
                 leaving ? styles.pickCardLeaving : ""
               }`}
               style={{
-                // Faint faction-coloured wash on the card so each one
-                // reads as belonging to its faction even at a glance.
+                // Faint wash of the option's colour so each card reads
+                // as belonging to its option even at a glance.
                 background: o.color
                   ? `color-mix(in srgb, ${o.color} 14%, transparent)`
                   : undefined,
@@ -2804,10 +2737,9 @@ function PlayerPickScreen({
               </div>
               {characters[o.id] && characters[o.id].length > 0 && (
                 <div className={styles.characterDeal}>
-                  <span className={styles.characterDealHeader}>
-                    Dealt{" "}
-                    {characters[o.id].length === 1 ? "character" : "captains"}
-                  </span>
+                  <SectionLabel as="span">
+                    Dealt {characterNoun(o, characters[o.id].length)}
+                  </SectionLabel>
                   <ul className={styles.characterList}>
                     {characters[o.id].map((charId) => (
                       <li key={charId} className={styles.characterChip}>
@@ -2817,22 +2749,20 @@ function PlayerPickScreen({
                   </ul>
                 </div>
               )}
-              {adsetSteps && adsetSteps.length > 0 && (
+              {setupSteps.length > 0 && (
                 <>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className={styles.pickStepsToggle}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAdsetOpen(open ? null : o.id);
-                    }}
+                    onClick={() => setStepsOpenId(open ? null : o.id)}
                     aria-label={`${open ? "Hide" : "Show"} setup for ${o.label}`}
                   >
                     {open ? "Hide setup" : "Show setup"}
-                  </button>
+                  </Button>
                   {open && (
                     <ol className={styles.pickStepsList}>
-                      {adsetSteps.map((s, i) => (
+                      {setupSteps.map((s, i) => (
                         <li key={i}>
                           <span className={styles.pickStepsIndex}>
                             {i + 1}.
@@ -2852,9 +2782,9 @@ function PlayerPickScreen({
                   className={styles.pickCardIcon}
                   style={{
                     // Tint the silhouette via background + mask so the
-                    // meeple takes the faction colour. Browsers without
+                    // meeple takes the option colour. Browsers without
                     // mask-image support fall back to the native black
-                    // SVG over the card wash — still readable.
+                    // SVG over the card wash: still readable.
                     background: o.color ?? "var(--color-text)",
                     WebkitMaskImage: `url(${meepleSrc})`,
                     maskImage: `url(${meepleSrc})`,
@@ -2868,21 +2798,20 @@ function PlayerPickScreen({
 
       <div className={styles.pickerSummary} aria-label="Seat picks so far">
         {seats.map((seat, i) => {
-          const factionId = picks[i];
-          const option = factionId
-            ? (visible.find((o) => o.id === factionId) ??
-              options.find((o) => o.id === factionId))
+          const pickedId = picks[i];
+          const option = pickedId
+            ? (visible.find((o) => o.id === pickedId) ??
+              options.find((o) => o.id === pickedId))
             : undefined;
           const isActive = i === activeSeat;
           return (
             <button
               type="button"
               key={i}
-              className={`${styles.pickerSummaryRow} ${
+              className={`${styles.summaryButton} ${
                 isActive ? styles.pickerSummaryActive : ""
               }`}
               onClick={() => setActiveSeat(i)}
-              style={{ all: "unset", cursor: "pointer", padding: "4px 0" }}
             >
               <span
                 className={styles.pickSwatch}
@@ -2891,7 +2820,7 @@ function PlayerPickScreen({
               />
               <span>
                 <strong>{seat.name}</strong>
-                {" — "}
+                {": "}
                 {option ? (
                   option.label
                 ) : (
@@ -2906,8 +2835,8 @@ function PlayerPickScreen({
   );
 }
 
-// Per ADSET A.7.3: each seated player takes turns setting up one
-// hireling at a time, starting with the alphabetically earliest.
+// Each seated player takes turns setting up one dealt item at a time,
+// in seat order; each chooses from what the earlier seats left.
 // This screen walks the dealt hand (from `sourceStepId`) one card
 // at a time, names the seated player whose turn it is, and tracks
 // confirmed setups in setupContext so Back/Next behave sanely.
@@ -2928,7 +2857,7 @@ function DealtResolveScreen({
       current: Extract<SetupChoice, { kind: "dealt-resolve" }>,
     ) => Extract<SetupChoice, { kind: "dealt-resolve" }>,
   ) => void;
-  // Same hooks as PlayerPickScreen — when the active seat changes
+  // Same hooks as PlayerPickScreen, when the active seat changes
   // we broadcast SETUP_TURN with a synthetic player-pick step
   // containing the remaining dealt items, so the seated companion
   // can pick on its own device via the same SETUP_PICK round-trip.
@@ -2950,15 +2879,18 @@ function DealtResolveScreen({
   const confirmedIds =
     current?.kind === "dealt-resolve" ? current.confirmedIds : [];
 
-  // Player order: seats in their declared order. Each player picks
-  // ONE dealt item in turn; subsequent players choose from what's
-  // left. `activeSeatIndex` is the player whose turn it is —
-  // equals the count already confirmed. When it reaches either
-  // `seats.length` or `dealtIds.length`, the step is complete.
-  const activeSeatIndex = confirmedIds.length;
+  // Each player resolves ONE dealt item in turn, walking the seats in
+  // the step's `order`; later players choose from what's left. The step
+  // is complete once every item or every seat has had its turn.
+  const order =
+    step.kind.type === "dealt-resolve" ? step.kind.order : undefined;
+  const sequence = seatPickSequence(seats.length, order);
+  const allDone =
+    dealtIds.every((id) => confirmedIds.includes(id)) ||
+    confirmedIds.length >= seats.length;
+  const activeSeatIndex = allDone ? -1 : sequence[confirmedIds.length];
   const activePlayer = seats[activeSeatIndex];
   const remainingIds = dealtIds.filter((id) => !confirmedIds.includes(id));
-  const allDone = remainingIds.length === 0 || activeSeatIndex >= seats.length;
 
   // Broadcast the active seat's choice list to companions via the
   // SETUP_TURN message. The synthetic definition wraps this step
@@ -2998,7 +2930,7 @@ function DealtResolveScreen({
             kind: {
               type: "player-pick",
               // Project setup text + meeple onto each option so the
-              // companion shows the hireling's setup line (it has no
+              // companion shows the item's setup line (it has no
               // card-transcription logic of its own).
               options: visibleOptions.map((o) => optionForCompanion(o, {})),
               mode: "turn-based",
@@ -3012,11 +2944,16 @@ function DealtResolveScreen({
   if (dealtIds.length === 0) {
     return (
       <>
-        <h3 className={styles.screenTitle} id="screen-title">
+        <Heading
+          level={3}
+          size={2}
+          className={styles.screenTitle}
+          id="screen-title"
+        >
           {step.label}
-        </h3>
+        </Heading>
         <p className={styles.help}>
-          No hirelings dealt this game — continue to the next screen.
+          Nothing was dealt this game. Continue to the next screen.
         </p>
       </>
     );
@@ -3024,9 +2961,14 @@ function DealtResolveScreen({
 
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         {step.label}
-      </h3>
+      </Heading>
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
@@ -3036,7 +2978,7 @@ function DealtResolveScreen({
       <ol className={styles.resolveProgress} aria-label="Pick order">
         {dealtIds.map((_, i) => {
           if (i >= seats.length) return null;
-          const seat = seats[i];
+          const seat = seats[sequence[i]];
           const pickedId = confirmedIds[i];
           const pickedOption = pickedId
             ? (sourceOptions.find((o) => o.id === pickedId) ?? {
@@ -3044,12 +2986,12 @@ function DealtResolveScreen({
                 label: pickedId,
               })
             : null;
-          const isActive = i === activeSeatIndex && !allDone;
+          const isActive = i === confirmedIds.length && !allDone;
           const tip = pickedOption
-            ? `${seat.name} — picked ${pickedOption.label}`
+            ? `${seat.name}: picked ${pickedOption.label}`
             : isActive
-              ? `${seat.name} — choosing now`
-              : `${seat.name} — waiting`;
+              ? `${seat.name}: choosing now`
+              : `${seat.name}: waiting`;
           return (
             <li
               key={i}
@@ -3073,7 +3015,7 @@ function DealtResolveScreen({
           <div className={styles.resolvePrompt}>
             <span className={styles.resolvePromptSeat}>
               <strong>{activePlayer.name}</strong>
-              {" — choose a hireling to set up"}
+              {": choose one to set up"}
             </span>
           </div>
           <div className={styles.resolveChoiceList}>
@@ -3082,7 +3024,7 @@ function DealtResolveScreen({
                 id,
                 label: id,
               };
-              const adsetSteps = setupLinesFor(option as SetupOption);
+              const setupSteps = setupLinesFor(option as SetupOption);
               const meepleSrc = meepleAppPathFor(option as SetupOption, {});
               return (
                 <button
@@ -3108,9 +3050,9 @@ function DealtResolveScreen({
                   <span className={styles.resolveChoiceLabel}>
                     {option.label}
                   </span>
-                  {adsetSteps && adsetSteps.length > 0 && (
+                  {setupSteps.length > 0 && (
                     <ol className={styles.resolveChoiceSteps}>
-                      {adsetSteps.map((s, i) => (
+                      {setupSteps.map((s, i) => (
                         <li key={i}>{s}</li>
                       ))}
                     </ol>
@@ -3122,9 +3064,7 @@ function DealtResolveScreen({
         </>
       )}
       {allDone && (
-        <p className={styles.help}>
-          All hirelings resolved. Continue to the next screen.
-        </p>
+        <p className={styles.help}>All set up. Continue to the next screen.</p>
       )}
     </>
   );
@@ -3136,12 +3076,12 @@ function blockedFor(
   mutex: [string, string][],
 ): Set<string> {
   const blocked = new Set<string>();
-  for (const [i, factionId] of Object.entries(picks)) {
-    if (Number(i) === seatIndex || !factionId) continue;
-    blocked.add(factionId);
+  for (const [i, pickedId] of Object.entries(picks)) {
+    if (Number(i) === seatIndex || !pickedId) continue;
+    blocked.add(pickedId);
     for (const [a, b] of mutex) {
-      if (factionId === a) blocked.add(b);
-      if (factionId === b) blocked.add(a);
+      if (pickedId === a) blocked.add(b);
+      if (pickedId === b) blocked.add(a);
     }
   }
   return blocked;
@@ -3152,11 +3092,17 @@ function TrackPlayersScreen({
   onEnabledChange,
   roster,
   onRosterChange,
+  turnOrderMode,
 }: {
   enabled: boolean;
   onEnabledChange: (b: boolean) => void;
   roster: TrackPlayersRow[];
   onRosterChange: (next: TrackPlayersRow[]) => void;
+  // Present when the definition lets the table choose the turn order.
+  turnOrderMode?: {
+    value: SelectableTurnOrderMode;
+    onChange: (mode: SelectableTurnOrderMode) => void;
+  };
 }) {
   const updateRow = (i: number, field: keyof TrackPlayersRow, value: string) =>
     onRosterChange(
@@ -3173,55 +3119,87 @@ function TrackPlayersScreen({
   };
   return (
     <>
-      <h3 className={styles.screenTitle} id="screen-title">
+      <Heading
+        level={3}
+        size={2}
+        className={styles.screenTitle}
+        id="screen-title"
+      >
         <Users size={18} aria-hidden /> Players (optional)
-      </h3>
+      </Heading>
       <p className={styles.screenSubtitle}>
         Tracking lets the timer show whose turn it is and break time by player.
       </p>
-      <label className={styles.toggleRow}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => onEnabledChange(e.target.checked)}
-        />
-        <span className={styles.toggleRowLabel}>Track individual players</span>
-      </label>
+      <Toggle
+        label="Track individual players"
+        checked={enabled}
+        onChange={(e) => onEnabledChange(e.target.checked)}
+      />
       {enabled && (
         <div className={styles.trackBlock}>
-          <label htmlFor="track-player-count" className={styles.label}>
+          <SectionLabel as="label" htmlFor="track-player-count">
             Number of players
-          </label>
+          </SectionLabel>
           <NumberField
             id="track-player-count"
             min={1}
             max={GENERIC_PALETTE.length}
             value={roster.length}
             onChange={setCount}
-            className={styles.input}
           />
           <div className={styles.trackRoster}>
             {roster.map((row, i) => (
               <div key={i} className={styles.trackRow}>
-                <input
-                  type="color"
+                <ColourField
                   value={row.color}
                   onChange={(e) => updateRow(i, "color", e.target.value)}
-                  className={styles.trackColor}
                   aria-label={`Player ${i + 1} colour`}
                 />
-                <input
+                <Field
                   type="text"
                   value={row.name}
                   onChange={(e) => updateRow(i, "name", e.target.value)}
-                  className={styles.input}
                   aria-label={`Player ${i + 1} name`}
                 />
               </div>
             ))}
           </div>
+          {turnOrderMode && (
+            <fieldset className={styles.turnOrderField}>
+              <SectionLabel as="legend">Turn order</SectionLabel>
+              {TURN_ORDER_CHOICES.map((choice) => (
+                <Toggle
+                  key={choice.mode}
+                  type="radio"
+                  name="turn-order-mode"
+                  value={choice.mode}
+                  label={choice.label}
+                  description={choice.hint}
+                  checked={turnOrderMode.value === choice.mode}
+                  onChange={() => turnOrderMode.onChange(choice.mode)}
+                />
+              ))}
+            </fieldset>
+          )}
         </div>
       )}
     </>
   );
 }
+
+const TURN_ORDER_CHOICES: Array<{
+  mode: SelectableTurnOrderMode;
+  label: string;
+  hint: string;
+}> = [
+  {
+    mode: "round-robin",
+    label: "Fixed rotation",
+    hint: "Players always go in seat order",
+  },
+  {
+    mode: "variable",
+    label: "Variable (reorder during play)",
+    hint: "Drag players into a new order from the score panel at any time",
+  },
+];

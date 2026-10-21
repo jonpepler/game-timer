@@ -126,7 +126,7 @@ test.describe("session persistence", () => {
     await expect(page.getByText(/50\s*turns left/i)).toBeVisible();
     // Undo should be disabled — no turns recorded against the new session.
     await expect(
-      page.getByRole("button", { name: /undo last turn/i }),
+      page.getByRole("button", { name: "Undo", exact: true }),
     ).toBeDisabled();
   });
 });

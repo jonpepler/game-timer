@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { connectToHost, type CompanionSession } from "@/lib/peerTransport";
 import { toPeerId } from "@/lib/sessionCode";
 
@@ -34,15 +35,18 @@ export function useSessionCompanion<TMessage>(
 
   // Inbound messages are surfaced one at a time through `lastMessage`,
   // which consumers read in a `[lastMessage]` effect. Several messages
-  // can arrive in a single tick — e.g. the transport buffers them while
+  // can arrive in a single tick, e.g. the transport buffers them while
   // a handler (re)attaches, then flushes synchronously, and the host
   // sends STATE + SETUP_SEATING back-to-back on connect. If we called
   // setLastMessage() for each synchronously, React would batch them and
   // the consumer's effect would only ever see the LAST one, silently
   // dropping the rest (e.g. a connecting companion would process the
   // stale seating snapshot but miss the STATE behind it). So we queue
-  // and drain one per commit, each on its own task, guaranteeing the
-  // consumer's effect fires for every message.
+  // and drain one per commit, each on its own task. Each message is
+  // committed with flushSync, which also runs the consumer's effect
+  // before returning: a plain setState could still be batched with the
+  // next task's when React has not rendered in between, dropping a
+  // message (a seat list closing just before the STATE behind it).
   const queueRef = useRef<TMessage[]>([]);
   const pumpingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -60,7 +64,7 @@ export function useSessionCompanion<TMessage>(
       return;
     }
     pumpingRef.current = true;
-    setLastMessage(next);
+    flushSync(() => setLastMessage(next));
     // Deliver the next message on a fresh task so this one commits (and
     // the consumer effect runs) before the next setLastMessage lands.
     setTimeout(pump, 0);

@@ -2,84 +2,38 @@
    onDismiss). Tap-anywhere dismisses, X in the corner is an
    explicit affordance. */
 .overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-24);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: none;
   cursor: pointer;
-  animation: overlayFadeIn 0.4s ease-out backwards;
-}
-
-@keyframes overlayFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .dismissButton {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  top: var(--space-24);
+  right: var(--space-24);
 }
 
-.dismissButton:hover,
-.dismissButton:focus-visible {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-  outline: none;
-}
-
+/* A regular flex child below the hero, so it never overlaps a long
+   victor name on a tall phone. */
 .dismissHint {
-  /* Sits as a regular flex child below the hero so it can never
-     overlap the victor name on tall viewports. The overlay's flex
-     column centres the hero + this hint together; gap keeps them
-     spaced. Was previously absolutely-positioned at bottom: 32px
-     which clipped under the victor name once it grew large enough
-     on phones. */
-  font-size: 13px;
-  color: var(--color-text-subtle);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  margin-top: var(--space-8);
   pointer-events: none;
-  margin-top: 8px;
 }
 
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: var(--space-32);
   /* Cursor stays default on the content itself so users don't
      read "click to do something" on the laurel/name. */
   cursor: default;
 }
 
 /* Inside the overlay, the hero scales up further to fill the
-   viewport — the wreath becomes the dominant visual. */
+   viewport: the wreath becomes the dominant visual. */
 .overlay .hero {
   gap: clamp(24px, 5vmin, 56px);
 }
@@ -94,10 +48,10 @@
 }
 
 /* The wreath is a square holding the laurel image + the head
-   portrait floating in front of it. Both fill the square — the
+   portrait floating in front of it. Both fill the square: the
    laurel as an overlay, the portrait as a centred image without
    a circular clip so the full artwork reads. The wreath itself
-   doesn't animate on entry — its children do, separately. The
+   doesn't animate on entry: its children do, separately. The
    pulse glow kicks in after the entry completes (delay = entry
    duration). */
 .wreath {
@@ -107,7 +61,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: victoryPulse 2.4s ease-in-out infinite alternate;
+  /* The victory sequence is choreographed: the glow starts once the
+     laurel (0.75s) and head (0.4s + 0.6s) have landed, and each
+     timing is a beat in that sequence rather than a UI transition. */
+  animation: victoryPulse 2.4s var(--ease-standard) infinite alternate;
   animation-delay: 1.1s;
 }
 
@@ -129,11 +86,12 @@
   height: 100%;
   object-fit: contain;
   z-index: 0;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
-  /* Flies in from the front — starts huge + transparent, settles
+  filter: var(--elevation-drop);
+  /* Flies in from the front: starts huge + transparent, settles
      into the final size as it fades in. cubic-bezier with a soft
      overshoot at the end so it lands with a touch of weight. */
-  animation: laurelFlyIn 0.75s cubic-bezier(0.18, 0.78, 0.32, 1.06) backwards;
+  /* A beat of the victory sequence: see .wreath. */
+  animation: laurelFlyIn 0.75s var(--ease-emphasis) backwards;
 }
 
 @keyframes laurelFlyIn {
@@ -147,16 +105,16 @@
   }
 }
 
-/* Head portrait sits in front of the wreath. No circular clip —
+/* Head portrait sits in front of the wreath. No circular clip:
    the full PNG reads through. Sized roughly 70% of the wreath
    square so it fills the laurel's open middle without overlapping
    the leaves. Nudged up by 6% to align with the laurel's empty
    top half.
 
    Two animations layered:
-   1. `headEmerge` — grows out from a tiny centre point once the
+   1. `headEmerge`: grows out from a tiny centre point once the
       laurel has mostly settled.
-   2. `headSway` — once landed, a gentle infinite back-and-forth
+   2. `headSway`: once landed, a gentle infinite back-and-forth
       rotate so the portrait reads as alive instead of static. */
 .headPortrait {
   position: relative;
@@ -165,11 +123,12 @@
   height: 70%;
   object-fit: contain;
   margin-top: -6%;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+  filter: var(--elevation-drop);
   transform-origin: center bottom;
+  /* Beats of the victory sequence: see .wreath. */
   animation:
-    headEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards,
-    headSway 3.6s ease-in-out 1.1s infinite alternate;
+    headEmerge 0.6s var(--ease-emphasis) var(--duration-slow) backwards,
+    headSway 3.6s var(--ease-standard) 1.1s infinite alternate;
 }
 
 @keyframes headEmerge {
@@ -199,11 +158,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
   text-align: center;
   /* Name + WINS fade in after the head has emerged, completing
      the staged entry. */
-  animation: labelFadeIn 0.45s ease-out 0.85s backwards;
+  /* Lands as the head settles: a beat of the victory sequence. */
+  animation: labelFadeIn var(--duration-slow) var(--ease-out) 0.85s backwards;
 }
 
 @keyframes labelFadeIn {
@@ -231,7 +191,7 @@
   font-weight: 800;
   color: var(--victor-color);
   letter-spacing: 0.01em;
-  line-height: 1.1;
+  line-height: var(--line-height-tight);
 }
 
 .suffix {

@@ -1,14 +1,14 @@
 "use client";
 
 /*
- * Fullscreen, dismiss-required picker for "who leads the next round?".
- * The lead-relative turn order renders this when a round ends with no
- * interrupt (Arcs: nobody seized, so the highest surpasser — which the
- * timer can't observe — takes initiative). Generic: it just lists the
- * seated players and reports the chosen index. No pre-selection — the
- * table must tap an explicit answer.
+ * Must-answer picker for "who leads the next round?". The lead-relative
+ * turn order renders this when a round ends with no control having
+ * claimed the next lead, for games where the lead can change in ways the
+ * timer can't observe. It lists the seated players and reports the
+ * chosen index. No pre-selection: the table must tap an explicit answer.
  */
 import { useEffect } from "react";
+import { Button, Disc, ListRow, Prompt } from "@/components/ui";
 import styles from "./LeadPrompt.module.css";
 
 export interface LeadPromptPlayer {
@@ -22,12 +22,48 @@ interface LeadPromptProps {
   label: string;
   players: LeadPromptPlayer[];
   onPick: (seatIndex: number) => void;
+  // Optional way out, for pickers reached from an earlier choice that
+  // the table may want to revisit.
+  onBack?: () => void;
+  backLabel?: string;
 }
 
-export function LeadPrompt({ label, players, onPick }: LeadPromptProps) {
-  // Number keys 1..9 select the matching seat — quick on a shared
-  // table device. Escape is intentionally NOT wired: a round can't
-  // proceed until the lead is named.
+/** A player's face for a row: their head art, meeple or colour. */
+export function PlayerMark({ player }: { player: LeadPromptPlayer }) {
+  if (player.headIconSrc)
+    return (
+      <img
+        src={player.headIconSrc}
+        alt=""
+        aria-hidden
+        className={styles.head}
+      />
+    );
+  if (player.iconSrc)
+    return (
+      <span
+        className={styles.meeple}
+        aria-hidden
+        style={{
+          background: player.color,
+          WebkitMaskImage: `url(${player.iconSrc})`,
+          maskImage: `url(${player.iconSrc})`,
+        }}
+      />
+    );
+  return <Disc color={player.color} size="lg" />;
+}
+
+export function LeadPrompt({
+  label,
+  players,
+  onPick,
+  onBack,
+  backLabel = "Back",
+}: LeadPromptProps) {
+  // Number keys 1..9 select the matching seat, quick on a shared table
+  // device. Escape is intentionally not wired: a round can't proceed
+  // until the lead is named.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const n = Number.parseInt(e.key, 10);
@@ -41,56 +77,28 @@ export function LeadPrompt({ label, players, onPick }: LeadPromptProps) {
   }, [players.length, onPick]);
 
   return (
-    <div
-      className={styles.overlay}
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="lead-prompt-title"
-      onClick={(e) => e.stopPropagation()}
+    <Prompt
+      title={label}
+      actions={
+        onBack && (
+          <Button variant="ghost" fullWidth onClick={onBack}>
+            {backLabel}
+          </Button>
+        )
+      }
     >
-      <div className={styles.card}>
-        <h2 id="lead-prompt-title" className={styles.title}>
-          {label}
-        </h2>
-        <ul className={styles.list}>
-          {players.map((p, i) => (
-            <li key={`${p.name}-${i}`}>
-              <button
-                type="button"
-                className={styles.option}
-                style={{ borderColor: p.color }}
-                onClick={() => onPick(i)}
-              >
-                {p.headIconSrc ? (
-                  <img
-                    src={p.headIconSrc}
-                    alt=""
-                    aria-hidden
-                    className={styles.head}
-                  />
-                ) : p.iconSrc ? (
-                  <span
-                    className={styles.meeple}
-                    aria-hidden
-                    style={{
-                      background: p.color,
-                      WebkitMaskImage: `url(${p.iconSrc})`,
-                      maskImage: `url(${p.iconSrc})`,
-                    }}
-                  />
-                ) : (
-                  <span
-                    className={styles.swatch}
-                    aria-hidden
-                    style={{ background: p.color }}
-                  />
-                )}
-                <span className={styles.name}>{p.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+      <ul className={styles.list}>
+        {players.map((p, i) => (
+          <li key={`${p.name}-${i}`}>
+            <ListRow
+              color={p.color}
+              lead={<PlayerMark player={p} />}
+              label={p.name}
+              onClick={() => onPick(i)}
+            />
+          </li>
+        ))}
+      </ul>
+    </Prompt>
   );
 }

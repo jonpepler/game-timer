@@ -61,7 +61,7 @@ test("trystero: companion connects to host, then reconnects after a fresh join",
     await comp.goto(`${BASE}/companion?code=${code}`);
 
     await expect
-      .poll(() => hasLog(logs, "host identified — connected"), {
+      .poll(() => hasLog(logs, "host identified: connected"), {
         timeout: HANDSHAKE_TIMEOUT,
       })
       .toBe(true);
@@ -86,7 +86,7 @@ test("trystero: companion connects to host, then reconnects after a fresh join",
         () =>
           logs
             .slice(reconnectMarker)
-            .some((l) => l.includes("host identified — connected")),
+            .some((l) => l.includes("host identified: connected")),
         { timeout: HANDSHAKE_TIMEOUT },
       )
       .toBe(true);
@@ -176,7 +176,7 @@ test("trystero: companion at the active seat seizes the initiative, live", async
     await expect(comp.getByText(/claim a player/i)).toBeVisible({
       timeout: HANDSHAKE_TIMEOUT,
     });
-    await comp.locator('[class*="claimRow"]').nth(1).click();
+    await comp.getByRole("button", { name: "Player 2", exact: true }).click();
 
     // The companion holds the active seat → it gets the seize action.
     const seize = comp.getByRole("button", { name: /Seize the Initiative/i });

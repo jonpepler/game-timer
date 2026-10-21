@@ -1,20 +1,23 @@
 .panel {
   width: 320px;
   max-width: 90vw;
-  padding: 16px;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  padding: var(--space-16);
+  background-color: var(--color-sheet);
+  background-image: var(--ornament-texture);
+  border: 1px solid var(--color-sheet-rule);
+  border-radius: var(--radius-panel);
+  outline: var(--sheet-inner-rule) solid var(--color-sheet-rule);
+  outline-offset: calc(var(--space-4) * -1);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  gap: var(--space-12);
+  box-shadow: var(--elevation-raised);
   /* Ensures the panel paints on its own composited layer so the
      wizard's `transition: transform` runs smoothly. */
   will-change: transform, opacity;
 }
 
-/* Landscape mode — when the wizard stacks the side panel above the
+/* Landscape mode, when the wizard stacks the side panel above the
    form on narrow viewports, the SharePanel reflows to a two-column
    grid so it's much shorter vertically. QR on the left (slightly
    smaller), rest of the content stacks on the right. Scoped via
@@ -22,18 +25,20 @@
    simple column layout. */
 @media (max-width: 980px) {
   .panel:has(.qrFrame) {
-    width: min(640px, 94vw);
+    /* Its holder's width, so a phone's stacked wizard never clips it.
+       The text column may shrink below its content: the link wraps. */
+    width: min(640px, 100%);
     max-width: none;
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       "header header"
       "qr code"
       "qr link"
       "qr help"
       "footer footer";
-    column-gap: 16px;
-    row-gap: 8px;
+    column-gap: var(--space-16);
+    row-gap: var(--space-8);
     align-items: start;
   }
   .panel:has(.qrFrame) .header {
@@ -42,7 +47,7 @@
   .panel:has(.qrFrame) .qrFrame {
     grid-area: qr;
     align-self: center;
-    padding: 10px;
+    padding: var(--space-8);
   }
   .panel:has(.qrFrame) .qrFrame svg,
   .panel:has(.qrFrame) .qrFrame img {
@@ -63,7 +68,7 @@
   .panel:has(.qrFrame) .footerActions {
     grid-area: footer;
     border-top: 1px solid var(--color-border);
-    padding-top: 12px;
+    padding-top: var(--space-12);
   }
 }
 
@@ -71,87 +76,49 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
-.closeButton {
-  /* Override the global button reset */
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.closeButton:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.closeButton svg {
-  width: 14px;
-  height: 14px;
+.title svg {
+  width: var(--font-size-xs);
+  height: var(--font-size-xs);
 }
 
 .loading {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   color: var(--color-text-muted);
-  font-size: 13px;
-  padding: 24px 0;
+  font-size: var(--font-size-xs);
+  padding: var(--space-24) 0;
   justify-content: center;
 }
 
 .errorBlock {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-8);
   align-items: flex-start;
 }
 
 .errorMessage {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin: 0;
-  line-height: 1.4;
-}
-
-.retryButton {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-family: inherit;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
+  line-height: var(--line-height-body);
 }
 
 .qrFrame {
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--radius-panel);
+  padding: var(--space-12);
   align-self: center;
   display: inline-flex;
 }
@@ -159,74 +126,43 @@
 .codeRow {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.codeLabel {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+  gap: var(--space-6);
 }
 
 .codeValue {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: var(--color-text);
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-8);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-field);
   user-select: all;
 }
 
 .urlValue {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
   word-break: break-all;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-8);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-field);
   user-select: all;
 }
 
 .copyButton {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
   margin-left: auto;
 }
 
-.copyButton:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-}
-
-.copyButton svg {
-  width: 12px;
-  height: 12px;
-}
-
 .help {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-subtle);
-  line-height: 1.4;
+  line-height: var(--line-height-body);
   margin: 0;
 }
 
@@ -234,29 +170,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .deviceCount {
   color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.stopButton {
-  /* Override the global button reset */
-  width: auto;
-  height: auto;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-family: inherit;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.stopButton:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  font-size: var(--font-size-xs);
 }

@@ -88,6 +88,18 @@ test.describe("score layer", () => {
     // selected-row text so the assertion can't be satisfied by any
     // other "N" elsewhere on the score panel (track ticks, the other
     // player coincidentally holding the same score).
+    //
+    // Selecting a marker re-points the +/- controls. Done while both
+    // markers share a score and fan apart: on a wide screen the track
+    // lives in a side column, where markers a point or two apart
+    // overlap, so the rest goes through the other-scores stack.
+    await marker(page, "Eyrie Dynasties").click();
+    await incButton(page, "Eyrie Dynasties").click();
+    await expect(marker(page, "Eyrie Dynasties")).toHaveAccessibleName(
+      /score 1$/i,
+    );
+
+    await page.getByRole("button", { name: /show other scores/i }).click();
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
     await incButton(page, "Marquise de Cat").click();
@@ -99,16 +111,9 @@ test.describe("score layer", () => {
     await expect(marker(page, "Marquise de Cat")).toHaveAccessibleName(
       /score 2$/i,
     );
-
-    // Selecting Eyrie's marker re-points the +/- controls to Eyrie.
-    await marker(page, "Eyrie Dynasties").click();
-    await incButton(page, "Eyrie Dynasties").click();
+    // Eyrie's recorded score didn't change.
     await expect(marker(page, "Eyrie Dynasties")).toHaveAccessibleName(
       /score 1$/i,
-    );
-    // Marquise's recorded score didn't change.
-    await expect(marker(page, "Marquise de Cat")).toHaveAccessibleName(
-      /score 2$/i,
     );
   });
 

@@ -1,0 +1,61 @@
+/* Text, number and select fields share one frame. */
+.field {
+  width: 100%;
+  min-height: var(--control-height-md);
+  padding: var(--space-12) var(--space-12);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  font: inherit;
+  /* 16px also keeps iOS from zooming the page on focus. */
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-tight);
+}
+
+.field:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+.field:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.field:disabled {
+  opacity: 0.5;
+}
+
+/* A native colour input stripped to its swatch. */
+.colour {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: var(--control-height-md);
+  height: var(--control-height-md);
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.colour:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.colour::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colour::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--radius-field);
+}
+
+.colour::-moz-color-swatch {
+  border: none;
+  border-radius: var(--radius-field);
+}

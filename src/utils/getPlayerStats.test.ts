@@ -17,6 +17,18 @@ describe("getPlayerStats", () => {
     );
   });
 
+  it("leaves untimed turns out of totals, counts and averages", () => {
+    const stats = getPlayerStats([
+      { playerIndex: 0, elapsedSeconds: 30 },
+      { playerIndex: 0, elapsedSeconds: 0, untimed: true },
+      { playerIndex: 1, elapsedSeconds: 0, untimed: true },
+    ]);
+
+    expect(stats).toEqual([
+      { playerIndex: 0, totalTime: 30, averageTime: 30, turnCount: 1 },
+    ]);
+  });
+
   it("returns an empty array for no turns", () => {
     expect(getPlayerStats([])).toEqual([]);
   });

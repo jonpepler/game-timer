@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import { Button, ButtonLink, Chip, Heading } from "@/components/ui";
 import styles from "./page.module.css";
 import { isBuiltIn, listDefinitions } from "@/state/definitionRegistry";
 import { deleteCustomDefinition } from "@/state/customDefinitions";
@@ -32,17 +32,25 @@ export default function GamesLibrary() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Games</h1>
-        <Link href="/timer" className={styles.backLink}>
-          ← Back to timer
-        </Link>
+        <Heading level={1}>Games</Heading>
+        <ButtonLink
+          href="/timer"
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft aria-hidden />}
+        >
+          Back to timer
+        </ButtonLink>
       </div>
 
       <div className={styles.actions}>
-        <Link href="/games/new" className={styles.primary}>
-          <Plus size={16} aria-hidden />
+        <ButtonLink
+          href="/games/new"
+          variant="primary"
+          icon={<Plus aria-hidden />}
+        >
           New game definition
-        </Link>
+        </ButtonLink>
       </div>
 
       <ul className={styles.list}>
@@ -53,7 +61,7 @@ export default function GamesLibrary() {
               <div className={styles.rowMain}>
                 <span className={styles.rowName}>
                   {def.name}
-                  {builtIn && <span className={styles.badge}>Built-in</span>}
+                  {builtIn && <Chip tone="muted">Built-in</Chip>}
                 </span>
                 {def.description && (
                   <span className={styles.rowDescription}>
@@ -80,21 +88,23 @@ export default function GamesLibrary() {
               </div>
               {!builtIn && (
                 <div className={styles.rowActions}>
-                  <Link
+                  <ButtonLink
                     href={`/games/edit?id=${encodeURIComponent(def.id)}`}
-                    className={styles.iconButton}
+                    size="sm"
+                    icon={<Pencil aria-hidden />}
                     aria-label={`Edit ${def.name}`}
                   >
-                    <Pencil aria-hidden />
-                  </Link>
-                  <button
-                    type="button"
+                    Edit
+                  </ButtonLink>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={<Trash2 aria-hidden />}
                     onClick={() => handleDelete(def)}
-                    className={styles.iconButton}
                     aria-label={`Delete ${def.name}`}
                   >
-                    <Trash2 aria-hidden />
-                  </button>
+                    Delete
+                  </Button>
                 </div>
               )}
             </li>

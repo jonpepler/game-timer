@@ -1,27 +1,20 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+  gap: var(--space-8);
 }
 
 .bar {
   display: flex;
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-bar);
   overflow: hidden;
   background: var(--color-surface-muted);
   pointer-events: auto;
 }
 
 .segment {
-  transition: width 0.4s ease;
+  transition: width var(--duration-slow) var(--ease-standard);
   position: relative;
   min-width: 2px;
 }

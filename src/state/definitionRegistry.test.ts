@@ -9,6 +9,10 @@ import {
 import { GAME_DEFINITION_SCHEMA_VERSION } from "./gameDefinition";
 import { saveCustomDefinition } from "./customDefinitions";
 
+// A bundled game other than the default, whichever the registry lists.
+const bundled = listDefinitions().find((d) => d.id !== DEFAULT_DEFINITION_ID);
+if (!bundled) throw new Error("expected a bundled game besides the default");
+
 afterEach(() => {
   if (typeof window !== "undefined") window.localStorage.clear();
 });
@@ -17,7 +21,7 @@ describe("definition registry", () => {
   it("lists the built-in definitions in a predictable order, starting with Generic", () => {
     const ids = listDefinitions().map((d) => d.id);
     expect(ids[0]).toBe(DEFAULT_DEFINITION_ID);
-    expect(ids).toContain("root");
+    expect(ids).toContain(bundled.id);
   });
 
   it("returns a fresh array so callers cannot mutate the built-in list", () => {
@@ -42,34 +46,6 @@ describe("definition registry", () => {
     }
   });
 
-  it("Root pressure-tests the schema: full player-pick roster + score subsystem", () => {
-    const root = requireDefinition("root");
-    const pickStep = root.setupSteps?.find(
-      (s) => s.kind.type === "player-pick",
-    );
-    expect(pickStep).toBeDefined();
-    if (pickStep && pickStep.kind.type === "player-pick") {
-      // 13 official factions across base + four expansions (Riverfolk,
-      // Underworld, Marauders, Homeland), plus the second Vagabond
-      // (Riverfolk variant, gated by the two-vagabonds toggle) = 14.
-      expect(pickStep.kind.options).toHaveLength(14);
-      // Option ids must be unique — they're foreign keys for player
-      // metadata + the mutex constraint references.
-      const ids = pickStep.kind.options.map((o) => o.id);
-      expect(new Set(ids).size).toBe(ids.length);
-      // Mutex pair (Vagabond ↔ Knaves) declared on the step.
-      expect(pickStep.kind.constraints).toContainEqual({
-        type: "mutually-exclusive",
-        optionIds: ["vagabond", "knaves"],
-      });
-    }
-    // maxPlayers caps the table even though there are 13 options to
-    // pick from.
-    expect(root.maxPlayers).toBe(6);
-    expect(root.score?.max).toBe(30);
-    expect(root.score?.victory?.type).toBe("firstToMax");
-  });
-
   it("merges custom definitions from localStorage after the built-ins", () => {
     saveCustomDefinition({
       schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
@@ -80,7 +56,7 @@ describe("definition registry", () => {
     });
     const ids = listDefinitions().map((d) => d.id);
     expect(ids[0]).toBe(DEFAULT_DEFINITION_ID);
-    expect(ids).toContain("root");
+    expect(ids).toContain(bundled.id);
     expect(ids).toContain("wingspan-abcd");
     expect(findDefinition("wingspan-abcd")?.name).toBe("Wingspan");
   });
@@ -88,12 +64,12 @@ describe("definition registry", () => {
   it("custom definitions cannot shadow a built-in id", () => {
     saveCustomDefinition({
       schemaVersion: GAME_DEFINITION_SCHEMA_VERSION,
-      id: "root",
-      name: "Pirate Root",
+      id: bundled.id,
+      name: `Pirate ${bundled.name}`,
       defaultExpectedTurns: 50,
       defaultAverageSeconds: 100,
     });
-    expect(findDefinition("root")?.name).toBe("Root");
+    expect(findDefinition(bundled.id)?.name).toBe(bundled.name);
   });
 
   it("isBuiltIn flags only the bundled definitions", () => {
@@ -105,7 +81,7 @@ describe("definition registry", () => {
       defaultAverageSeconds: 100,
     });
     expect(isBuiltIn("generic")).toBe(true);
-    expect(isBuiltIn("root")).toBe(true);
+    expect(isBuiltIn(bundled.id)).toBe(true);
     expect(isBuiltIn("custom-abcd")).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { Field } from "@/components/ui";
 import { useEffect, useState } from "react";
 
 interface NumberFieldProps {
@@ -29,9 +30,9 @@ export function NumberField({
   const [text, setText] = useState(String(value));
 
   // Mirror external value changes (e.g. picking a new game definition
-  // reseeds the field) — but only when the parsed text doesn't already
+  // reseeds the field), but only when the parsed text doesn't already
   // agree, so we don't clobber an in-progress edit.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: text intentionally excluded — only react to value
+  // biome-ignore lint/correctness/useExhaustiveDependencies: text intentionally excluded, only react to value
   useEffect(() => {
     const parsed = parseInt(text, 10);
     if (Number.isNaN(parsed) || parsed !== value) {
@@ -74,7 +75,7 @@ export function NumberField({
   };
 
   return (
-    <input
+    <Field
       type="number"
       inputMode="numeric"
       id={id}

@@ -2,13 +2,20 @@
 
 /*
  * On-screen log panel for debugging real-device sessions where the
- * browser console isn't accessible. Tap the bug icon in the
- * bottom-right to open a panel listing the last N log entries
- * (filtered by level, with copy / clear actions). Hidden behind a
- * single chrome button so it doesn't intrude on normal use.
+ * browser console isn't accessible. The bug button at the end of the
+ * header bar opens a panel listing the last N log entries (filtered by
+ * level, with copy / clear actions).
  */
-import { Bug, Copy, Trash2, Wifi, X } from "lucide-react";
+import { Copy, Trash2, Wifi, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  Chip,
+  type ChipTone,
+  Button,
+  IconButton,
+  SectionLabel,
+  SelectField,
+} from "@/components/ui";
 import styles from "./DebugLogOverlay.module.css";
 import {
   type LogEntry,
@@ -63,7 +70,7 @@ function probeWss(tag: string, url: string) {
       reason: e.reason || "(empty)",
       wasClean: e.wasClean,
     });
-  // Cap the probe lifetime so it doesn't leak — 10s is plenty for
+  // Cap the probe lifetime so it doesn't leak: 10s is plenty for
   // either success or any of the failure codes (1006 abnormal,
   // 1015 TLS, etc.).
   setTimeout(() => {
@@ -94,19 +101,19 @@ function probeEcho() {
   probeWss("echo-lob", "wss://echo.websocket.events");
 }
 
-// Second known-good WSS — Postman's public echo. Lives on different
+// Second known-good WSS: Postman's public echo. Lives on different
 // infrastructure (AWS) from the Lob echo (Cloudflare), so if one fails
 // and the other opens it's a network policy targeting a specific CDN.
 function probeEchoPostman() {
   probeWss("echo-postman", "wss://ws.postman-echo.com/raw");
 }
 
-// One-shot environment snapshot — UA, screen, connection quality —
-// logged the first time the overlay component mounts. Helps us tell
-// what kind of device produced the rest of the log without asking the
-// user to read it off the tablet manually.
+// One-shot environment snapshot: UA, screen, connection quality:
+// logged the first time the page frame mounts. Helps us tell what kind
+// of device produced the rest of the log without asking the user to
+// read it off the tablet manually.
 let envLogged = false;
-function logEnvOnce() {
+export function logEnvOnce() {
   if (envLogged) return;
   envLogged = true;
   if (typeof window === "undefined") return;
@@ -140,6 +147,13 @@ function logEnvOnce() {
   });
 }
 
+const LEVEL_TONE: Record<LogLevel, ChipTone> = {
+  debug: "muted",
+  info: "success",
+  warn: "warning",
+  error: "danger",
+};
+
 const LEVEL_RANK: Record<LogLevel, number> = {
   debug: 10,
   info: 20,
@@ -166,40 +180,35 @@ const formatEntry = (e: LogEntry) => {
   return `${stamp} ${e.level.toUpperCase()} ${tag} ${e.message}${dataStr}`;
 };
 
-export function DebugLogOverlay() {
-  const [open, setOpen] = useState(false);
-  const [entries, setEntries] = useState<LogEntry[]>([]);
+/** The open log: a panel pinned to the bottom of the screen. */
+export function DebugLogPanel({ onClose }: { onClose: () => void }) {
+  const [entries, setEntries] = useState<LogEntry[]>(getLogBuffer);
   const [minLevel, setMinLevel] = useState<LogLevel>("debug");
   const [copied, setCopied] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Seed from the existing ring buffer + subscribe to new entries.
-  useEffect(() => {
-    // Log device info once per session so we know what produced the
-    // rest of the log without asking the user to type it out.
-    logEnvOnce();
-    setEntries(getLogBuffer());
-    return subscribeLogs((entry) => {
-      setEntries((prev) => {
-        const next = [...prev, entry];
-        // Cap on-screen length to avoid runaway re-renders.
-        if (next.length > 600) next.splice(0, next.length - 600);
-        return next;
-      });
-    });
-  }, []);
+  useEffect(
+    () =>
+      subscribeLogs((entry) => {
+        setEntries((prev) => {
+          const next = [...prev, entry];
+          // Cap on-screen length to avoid runaway re-renders.
+          if (next.length > 600) next.splice(0, next.length - 600);
+          return next;
+        });
+      }),
+    [],
+  );
 
-  // Auto-scroll to bottom when new entries arrive AND the panel is
-  // open. The user can scroll up to inspect older history; we don't
-  // pull them back to the bottom mid-read.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: entries is a deliberate re-run trigger — auto-scroll when new entries arrive
+  // Auto-scroll to bottom when new entries arrive. The user can scroll
+  // up to inspect older history; we don't pull them back mid-read.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: entries is a deliberate re-run trigger: auto-scroll when new entries arrive
   useEffect(() => {
-    if (!open) return;
     const el = listRef.current;
     if (!el) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     if (nearBottom) el.scrollTop = el.scrollHeight;
-  }, [entries, open]);
+  }, [entries]);
 
   const visible = entries.filter(
     (e) => LEVEL_RANK[e.level] >= LEVEL_RANK[minLevel],
@@ -212,7 +221,7 @@ export function DebugLogOverlay() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard unavailable — fall back to a manual-select view.
+      // Clipboard unavailable: fall back to a manual-select view.
     }
   };
 
@@ -221,27 +230,14 @@ export function DebugLogOverlay() {
     setEntries([]);
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={styles.toggle}
-        aria-label="Open debug log"
-      >
-        <Bug size={16} aria-hidden />
-      </button>
-    );
-  }
-
   return (
     <div className={styles.panel} role="dialog" aria-label="Debug log">
       <div className={styles.header}>
-        <span className={styles.title}>
+        <SectionLabel as="span">
           Debug log <span className={styles.sha}>· {COMMIT_SHA}</span>
-        </span>
+        </SectionLabel>
         <div className={styles.headerActions}>
-          <select
+          <SelectField
             value={minLevel}
             onChange={(e) => setMinLevel(e.target.value as LogLevel)}
             className={styles.select}
@@ -251,63 +247,53 @@ export function DebugLogOverlay() {
             <option value="info">info+</option>
             <option value="warn">warn+</option>
             <option value="error">error only</option>
-          </select>
-          <button
-            type="button"
+          </SelectField>
+          <Button
+            size="sm"
+            icon={<Wifi aria-hidden />}
             onClick={probeBroker}
-            className={styles.actionButton}
             aria-label="Probe broker WebSocket"
             title="Open a raw WSS to 0.peerjs.com and log the result"
           >
-            <Wifi size={14} aria-hidden />
             Broker
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
+            icon={<Wifi aria-hidden />}
             onClick={probeEcho}
-            className={styles.actionButton}
             aria-label="Probe Lob WebSocket echo"
             title="Open a raw WSS to echo.websocket.events (Lob). If it opens but Broker fails, the broker is rejecting this client."
           >
-            <Wifi size={14} aria-hidden />
             Lob
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
+            icon={<Wifi aria-hidden />}
             onClick={probeEchoPostman}
-            className={styles.actionButton}
             aria-label="Probe Postman WebSocket echo"
-            title="Open a raw WSS to ws.postman-echo.com (AWS-hosted). Different infra from Lob — useful for ruling out CDN-specific blocks."
+            title="Open a raw WSS to ws.postman-echo.com (AWS-hosted). Different infra from Lob, useful for ruling out CDN-specific blocks."
           >
-            <Wifi size={14} aria-hidden />
             Postman
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
+            icon={<Copy aria-hidden />}
             onClick={copyAll}
-            className={styles.actionButton}
             aria-label="Copy log to clipboard"
           >
-            <Copy size={14} aria-hidden />
             {copied ? "Copied" : "Copy"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
+            icon={<Trash2 aria-hidden />}
             onClick={clear}
-            className={styles.actionButton}
             aria-label="Clear log"
           >
-            <Trash2 size={14} aria-hidden />
             Clear
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className={styles.closeButton}
-            aria-label="Close debug log"
-          >
-            <X size={16} aria-hidden />
-          </button>
+          </Button>
+          <IconButton label="Close debug log" tooltip={false} onClick={onClose}>
+            <X aria-hidden />
+          </IconButton>
         </div>
       </div>
       <div className={styles.list} ref={listRef} role="log">
@@ -317,12 +303,12 @@ export function DebugLogOverlay() {
         {visible.map((entry, i) => (
           <div
             key={`${entry.timestamp}-${i}`}
-            className={`${styles.entry} ${styles[`level_${entry.level}`]}`}
+            className={`${styles.entry} ${entry.level === "error" ? styles.error : ""}`}
           >
             <span className={styles.entryTime}>
               {formatTime(entry.timestamp)}
             </span>
-            <span className={styles.entryLevel}>{entry.level}</span>
+            <Chip tone={LEVEL_TONE[entry.level]}>{entry.level}</Chip>
             <span className={styles.entryNs}>[{entry.namespace}]</span>
             <span className={styles.entryMsg}>{entry.message}</span>
             {entry.data !== undefined && (

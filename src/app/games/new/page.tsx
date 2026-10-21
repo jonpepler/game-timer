@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { DefinitionEditor } from "@/components/DefinitionEditor";
 import { saveCustomDefinition } from "@/state/customDefinitions";
 import type { GameDefinition } from "@/state/gameDefinition";
+import { ArrowLeft } from "lucide-react";
+import { ButtonLink, Heading } from "@/components/ui";
 import styles from "../page.module.css";
-import Link from "next/link";
 
 export default function NewGameDefinitionPage() {
   const router = useRouter();
@@ -18,10 +19,15 @@ export default function NewGameDefinitionPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>New game</h1>
-        <Link href="/games" className={styles.backLink}>
-          ← Back to library
-        </Link>
+        <Heading level={1}>New game</Heading>
+        <ButtonLink
+          href="/games"
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft aria-hidden />}
+        >
+          Back to library
+        </ButtonLink>
       </div>
       <DefinitionEditor
         onSave={handleSave}

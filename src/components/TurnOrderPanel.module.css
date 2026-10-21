@@ -1,0 +1,7 @@
+/* Shrinks with its parents so the list inside scrolls when height is
+   short. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
