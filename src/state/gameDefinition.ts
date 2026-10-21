@@ -404,7 +404,7 @@ const TurnListDeclSchema = z.object({
    * `TurnOrder.entryValues`), highest first unless `valueOrder` says
    * otherwise. An entry that arrives at a value goes below the entries
    * already there unless `valueOrder` says otherwise. The order cannot be
-   * dragged, each entry plays once per visit to a phase running the list,
+   * dragged (unless `valueOrder.reorderEqual` allows it among equals), each entry plays once per visit to a phase running the list,
    * and the phase ends when everyone has played.
    */
   orderBy: z.literal("value").optional(),
@@ -414,11 +414,14 @@ const TurnListDeclSchema = z.object({
    * `arrivals` places an entry that arrives at a value already held
    * below the entries there ("below-equals", the default) or above them
    * ("above-equals"). A kind with `joinsAtTop` always goes above.
+   * `reorderEqual` lets the table reorder entries by hand, but only
+   * among neighbours sharing a value; values still decide the rest.
    */
   valueOrder: z
     .object({
       direction: z.enum(["highest-first", "lowest-first"]).optional(),
       arrivals: z.enum(["below-equals", "above-equals"]).optional(),
+      reorderEqual: z.boolean().optional(),
     })
     .optional(),
   // Every entry in this list must be linked to a seated player (its

@@ -27,6 +27,7 @@ import {
 import { EntryName } from "./identity/EntryName";
 import { EntryToken } from "./identity/EntryToken";
 import { typeStyleFor } from "./identity/placement";
+import { equalValueSpan } from "@/state/turnLists";
 
 export interface TurnOrderRow {
   id: string;
@@ -65,6 +66,11 @@ interface TurnOrderListProps {
   activeId: string | null;
   // Absent = read-only (no handles, no add / remove).
   onMove?: (entryId: string, toIndex: number) => void;
+  /**
+   * Moves stay among neighbours sharing a row's value, and only rows
+   * with such a neighbour get a handle. For lists ordered by value.
+   */
+  moveWithinEqualValues?: boolean;
   onRemove?: (entryId: string) => void;
   available?: AddableEntry[];
   onAdd?: (entryId: string) => void;
@@ -146,6 +152,7 @@ export function TurnOrderList({
   rows,
   activeId,
   onMove,
+  moveWithinEqualValues = false,
   onRemove,
   available,
   onAdd,
@@ -162,18 +169,30 @@ export function TurnOrderList({
   const nameOf = (id: string | null) =>
     rows.find((r) => r.id === id)?.name ?? "";
 
+  const values = rows.map((r) => r.value);
+  // The indexes a row may move between.
+  const spanOf = (index: number): [number, number] =>
+    moveWithinEqualValues
+      ? equalValueSpan(values, index)
+      : [0, rows.length - 1];
+  const movable = (index: number) => {
+    const [first, last] = spanOf(index);
+    return onMove !== undefined && first < last;
+  };
+
   const commitMove = (id: string, from: number, to: number) => {
-    const target = Math.max(0, Math.min(rows.length - 1, to));
-    if (!onMove || target === from) return;
-    onMove(id, target);
+    const [first, last] = spanOf(from);
+    if (!onMove || to < first || to > last || to === from) return;
+    onMove(id, to);
     // Work out who is next after the move for the announcement.
     const order = rows.map((r) => r.id).filter((x) => x !== id);
-    order.splice(target, 0, id);
+    order.splice(to, 0, id);
     const at = activeId ? order.indexOf(activeId) : -1;
     const next = order.length > 1 ? order[(at + 1) % order.length] : null;
     setAnnouncement(
-      `${nameOf(id)} moved to position ${target + 1} of ${rows.length}.` +
-        (next ? ` Next up: ${nameOf(next)}.` : ""),
+      `${nameOf(id)} moved to position ${to + 1} of ${rows.length}.` +
+        // Who follows in a value-ordered list is not simply the next row.
+        (next && !moveWithinEqualValues ? ` Next up: ${nameOf(next)}.` : ""),
     );
   };
 
@@ -188,9 +207,9 @@ export function TurnOrderList({
         : e.key === "ArrowDown"
           ? index + 1
           : e.key === "Home"
-            ? 0
+            ? spanOf(index)[0]
             : e.key === "End"
-              ? rows.length - 1
+              ? spanOf(index)[1]
               : null;
     if (to === null) return;
     e.preventDefault();
@@ -234,6 +253,8 @@ export function TurnOrderList({
     drag.mids.forEach((mid, i) => {
       if (i !== drag.from && mid < centre) over++;
     });
+    const [first, last] = spanOf(drag.from);
+    over = Math.max(first, Math.min(last, over));
     setDrag({ ...drag, dy, over });
   };
 
@@ -286,8 +307,9 @@ export function TurnOrderList({
       </div>
       {onMove && (
         <VisuallyHidden as="p" id={instructionsId}>
-          Drag a handle, or focus it and use the up and down arrow keys, to
-          change who goes next.
+          {moveWithinEqualValues
+            ? "Drag a handle, or focus it and use the up and down arrow keys, to change the order among entries that share a value."
+            : "Drag a handle, or focus it and use the up and down arrow keys, to change who goes next."}
         </VisuallyHidden>
       )}
       <ol className={styles.list} aria-label={label}>
@@ -317,7 +339,7 @@ export function TurnOrderList({
               aria-current={isActive ? "step" : undefined}
               data-entry-id={row.id}
             >
-              {onMove && (
+              {movable(index) ? (
                 <IconButton
                   label={`Reorder ${row.name}${playedNote}, position ${index + 1} of ${rows.length}`}
                   tone="plain"
@@ -332,6 +354,8 @@ export function TurnOrderList({
                 >
                   <GripVertical aria-hidden />
                 </IconButton>
+              ) : (
+                onMove && <span className={styles.handleSlot} />
               )}
               {row.symbol ? (
                 <EntryToken

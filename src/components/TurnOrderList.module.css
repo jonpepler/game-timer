@@ -124,6 +124,12 @@
   cursor: grabbing;
 }
 
+/* Holds a handle's room on rows that cannot move, so names line up. */
+.handleSlot {
+  flex: none;
+  width: var(--control-height-md);
+}
+
 /* Room for a Disc beside rows without a token, so names line up. */
 .discSlot {
   flex: none;

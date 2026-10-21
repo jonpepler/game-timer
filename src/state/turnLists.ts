@@ -312,6 +312,29 @@ export const valueOrderOf = (
   };
 };
 
+/** Whether a value-ordered list lets entries sharing a value be reordered by hand. */
+export const reordersEqualValues = (turnOrder: TurnOrder, listId: string) =>
+  isValueOrdered(turnOrder, listId) &&
+  listDecl(turnOrder, listId)?.valueOrder?.reorderEqual === true;
+
+/**
+ * The first and last index of the unbroken run of entries sharing the
+ * value at `index`, the only places a hand move within a value-ordered
+ * list may take that entry. An entry without a value has no equals.
+ */
+export const equalValueSpan = (
+  values: ReadonlyArray<number | undefined>,
+  index: number,
+): [first: number, last: number] => {
+  const value = values[index];
+  if (value === undefined) return [index, index];
+  let first = index;
+  let last = index;
+  while (first > 0 && values[first - 1] === value) first--;
+  while (last < values.length - 1 && values[last + 1] === value) last++;
+  return [first, last];
+};
+
 /**
  * Where an entry arriving at `value` goes in a value-ordered list: after
  * every entry that sorts ahead of it under `valueOrder`, so by default it

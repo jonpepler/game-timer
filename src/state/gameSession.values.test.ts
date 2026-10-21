@@ -543,6 +543,65 @@ describe("a kind that joins at the top", () => {
   });
 });
 
+describe("hand reordering among equal values", () => {
+  const equalsReorderable = () =>
+    run(
+      createInitialGameSessionState({
+        initialAverageSeconds: 300,
+        expectedTurns: 90,
+        players: seats(3),
+        turnOrder: {
+          ...VALUED,
+          lists: VALUED.lists?.map((l) =>
+            l.id === "valued"
+              ? { ...l, valueOrder: { reorderEqual: true } }
+              : l,
+          ),
+        },
+      }),
+      { type: "START", at: 0 },
+      add("a", 80, 0),
+      add("b", 80, 1),
+      add("c", 70, 2),
+      phase("valued"),
+    );
+  const reorder = (entryId: string, toIndex: number): GameSessionAction => ({
+    type: "REORDER_TURN_ENTRY",
+    entryId,
+    toIndex,
+  });
+
+  it("swaps two entries at the same value, and the one now on top goes first", () => {
+    const s = run(equalsReorderable(), reorder("b", 0));
+    expect(order(s)).toEqual(["b80", "a80", "c70"]);
+    expect(active(s)).toBe("b");
+    expect(view(s)?.nextId).toBe("a");
+    expect(view(s)?.reorderEqual).toBe(true);
+  });
+
+  it("refuses a move that would cross a different value", () => {
+    const s = equalsReorderable();
+    expect(run(s, reorder("c", 1))).toBe(s);
+    expect(run(s, reorder("a", 2))).toBe(s);
+  });
+
+  it("does not hand the turn to a played entry moved on top", () => {
+    let s = run(equalsReorderable(), end("same"));
+    expect(order(s)).toEqual(["b80", "a80", "c70"]);
+    expect(active(s)).toBe("b");
+    s = run(s, reorder("a", 0));
+    expect(order(s)).toEqual(["a80", "b80", "c70"]);
+    expect(active(s)).toBe("b");
+  });
+
+  it("undoes a reorder like any other move", () => {
+    const s = equalsReorderable();
+    const undone = run(s, reorder("b", 0), { type: "UNDO" });
+    expect(order(undone)).toEqual(["a80", "b80", "c70"]);
+    expect(active(undone)).toBe("a");
+  });
+});
+
 describe("declared value order", () => {
   const withOrder = (
     valueOrder: NonNullable<

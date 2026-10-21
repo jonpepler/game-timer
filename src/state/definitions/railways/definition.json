@@ -420,6 +420,7 @@
         "label": "Companies",
         "kinds": ["minor", "major", "neutral"],
         "orderBy": "value",
+        "valueOrder": { "reorderEqual": true },
         "ownerRequired": true
       }
     ],

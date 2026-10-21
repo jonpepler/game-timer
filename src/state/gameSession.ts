@@ -28,6 +28,8 @@ import {
   type UndoSnapshot,
   type ValuePoint,
   valueOrderOf,
+  reordersEqualValues,
+  equalValueSpan,
   valueSlot,
   type VariableOrderState,
 } from "./turnLists";
@@ -949,13 +951,44 @@ const reduceSession = (
       const slice = variableSlice(state);
       const list = slice && listContaining(slice, action.entryId);
       if (!slice || !list || !state.turnOrder) return state;
-      // A value-ordered list's order is its values; it is not dragged.
-      if (isValueOrdered(state.turnOrder, list.id)) return state;
       const from = list.order.indexOf(action.entryId);
       const to = Math.max(0, Math.min(list.order.length - 1, action.toIndex));
       if (to === from) return state;
       const order = list.order.filter((id) => id !== action.entryId);
       order.splice(to, 0, action.entryId);
+      if (isValueOrdered(state.turnOrder, list.id)) {
+        /*
+         * A value-ordered list's order is its values. Where the list
+         * allows it, entries sharing a value may swap places by hand, but
+         * a move that would cross a different value is refused.
+         */
+        if (!reordersEqualValues(state.turnOrder, list.id)) return state;
+        const [first, last] = equalValueSpan(
+          list.order.map((id) => findEntry(slice, id)?.value),
+          from,
+        );
+        if (to < first || to > last) return state;
+        log.info("turn order changed", { entryId: action.entryId, to });
+        const moved = { ...list, order };
+        /*
+         * While the running list's next turn is still the first unplayed
+         * entry, it follows the move, so the entry now on top of its
+         * value goes first.
+         */
+        const follows =
+          list.activeEntryId !== null &&
+          isRunningList(state.turnOrder, slice, list.id) &&
+          list.activeEntryId === firstUnplayed(state.turnOrder, slice, list);
+        return {
+          ...state,
+          ...replaceList(slice, {
+            ...moved,
+            activeEntryId: follows
+              ? firstUnplayed(state.turnOrder, slice, moved)
+              : list.activeEntryId,
+          }),
+        };
+      }
       log.info("turn order changed", { entryId: action.entryId, to });
       // Before the running phase's first turn, whoever is on top plays
       // first, so setting the order at the start of a phase decides who
@@ -1767,6 +1800,9 @@ export interface TurnOrderView {
   // Ordered by entry value: no dragging, and each entry plays once per
   // visit to the running phase.
   valueOrdered: boolean;
+  // A value-ordered list whose entries sharing a value may be reordered
+  // by hand.
+  reorderEqual: boolean;
   // Entries that have had their turn in the running phase's current
   // visit (only while this list is running).
   playedIds: string[];
@@ -1816,6 +1852,7 @@ export const selectTurnOrder = (
       .filter((k) => k.prominent)
       .map((k) => k.id),
     valueOrdered,
+    reorderEqual: reordersEqualValues(turnOrder, list.id),
     playedIds: valueOrdered && running ? (list.played ?? []) : [],
     ownerRequired: decl?.ownerRequired ?? false,
   };

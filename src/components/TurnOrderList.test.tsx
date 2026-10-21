@@ -29,13 +29,22 @@ const names = () =>
     .map((li) => li.getAttribute("data-entry-id"));
 
 // Stateful harness so moves re-render like the real page.
-function Harness({ onMove }: { onMove?: (id: string, to: number) => void }) {
-  const [rows, setRows] = useState(ROWS);
+function Harness({
+  onMove,
+  initialRows = ROWS,
+  moveWithinEqualValues,
+}: {
+  onMove?: (id: string, to: number) => void;
+  initialRows?: TurnOrderRow[];
+  moveWithinEqualValues?: boolean;
+}) {
+  const [rows, setRows] = useState(initialRows);
   return (
     <TurnOrderList
       label="Turn order"
       rows={rows}
       activeId="a"
+      moveWithinEqualValues={moveWithinEqualValues}
       onMove={(id, to) => {
         onMove?.(id, to);
         setRows((prev) => {
@@ -91,6 +100,60 @@ describe("TurnOrderList keyboard reordering", () => {
   it("is read-only without onMove", () => {
     render(<TurnOrderList label="Turn order" rows={ROWS} activeId="a" />);
     expect(screen.queryByRole("button", { name: /Reorder/ })).toBeNull();
+  });
+});
+
+describe("TurnOrderList ordered by value", () => {
+  const valued = (id: string, name: string, value: number) => ({
+    ...row(id, name),
+    value,
+  });
+  const VALUED_ROWS = [
+    valued("a", "Alice", 80),
+    valued("b", "Bob", 80),
+    valued("c", "Carol", 70),
+    valued("d", "Dan", 60),
+    valued("e", "Eve", 60),
+  ];
+
+  it("gives a handle only to rows sharing a value with a neighbour", () => {
+    render(<Harness initialRows={VALUED_ROWS} moveWithinEqualValues />);
+    for (const name of ["Alice", "Bob", "Dan", "Eve"])
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^Reorder ${name}`) }),
+      ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Reorder Carol/ })).toBeNull();
+  });
+
+  it("moves a row among its equals and refuses to cross another value", () => {
+    const onMove = vi.fn();
+    render(
+      <Harness
+        initialRows={VALUED_ROWS}
+        moveWithinEqualValues
+        onMove={onMove}
+      />,
+    );
+    const bob = screen.getByRole("button", { name: /^Reorder Bob/ });
+    bob.focus();
+    fireEvent.keyDown(bob, { key: "ArrowDown" });
+    fireEvent.keyDown(bob, { key: "End" });
+    expect(onMove).not.toHaveBeenCalled();
+    fireEvent.keyDown(bob, { key: "ArrowUp" });
+    expect(onMove).toHaveBeenLastCalledWith("b", 0);
+    expect(names()).toEqual(["b", "a", "c", "d", "e"]);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Bob moved to position 1 of 5.",
+    );
+    const dan = screen.getByRole("button", { name: /^Reorder Dan/ });
+    fireEvent.keyDown(dan, { key: "End" });
+    expect(onMove).toHaveBeenLastCalledWith("d", 4);
+    expect(names()).toEqual(["b", "a", "c", "e", "d"]);
+    fireEvent.keyDown(screen.getByRole("button", { name: /^Reorder Dan/ }), {
+      key: "Home",
+    });
+    expect(onMove).toHaveBeenLastCalledWith("d", 3);
+    expect(names()).toEqual(["b", "a", "c", "d", "e"]);
   });
 });
 

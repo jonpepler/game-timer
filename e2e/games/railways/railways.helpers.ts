@@ -240,6 +240,40 @@ export const expectCompanies = async (page: Page, rows: string[]) => {
   }).toPass({ timeout: 10_000 });
 };
 
+/** A company's reorder handle in the Companies list. */
+export const reorderHandle = (page: Page, company: string) =>
+  companiesList(page).getByRole("button", {
+    name: new RegExp(`^Reorder ${namePattern(company)},`),
+  });
+
+/**
+ * Drag `company` by its handle onto the top half of `onto`'s row, so it
+ * lands above it. Pointer events drive the handle for mouse and touch
+ * alike, so one path covers both.
+ */
+export const dragCompanyAbove = async (
+  page: Page,
+  company: string,
+  onto: string,
+) => {
+  await showCompanies(page);
+  const handle = reorderHandle(page, company);
+  await handle.scrollIntoViewIfNeeded();
+  const from = await handle.boundingBox();
+  const to = await companiesList(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByText(exactName(onto)) })
+    .boundingBox();
+  if (!from || !to) throw new Error("companies not laid out");
+  const x = from.x + from.width / 2;
+  const y = from.y + from.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, (y + to.y) / 2, { steps: 5 });
+  await page.mouse.move(x, to.y + 4, { steps: 5 });
+  await page.mouse.up();
+};
+
 /** The president a company's row names. */
 export const expectPresident = async (
   page: Page,

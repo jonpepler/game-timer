@@ -17,6 +17,8 @@ import {
   pricePrompt,
   removeCompany,
   dismissRoundPrompt,
+  dragCompanyAbove,
+  reorderHandle,
   ROUND,
   startRailways,
   stepButton,
@@ -71,6 +73,48 @@ for (const [device, use] of DEVICES) {
       await expectTurn(page, "Resourceful", "Player 3");
       await endTurnWithPriceChange(page, "up");
       await expectTurn(page, "Tunneling", "Player 4");
+    });
+
+    test("p11: the table can fix the order of a stock price stack by hand, and the company now on top operates first", async ({
+      page,
+    }) => {
+      await toOperatingRound(page, [
+        ["Expansive", 70, "Player 1"],
+        ["Resourceful", 70, "Player 2"],
+        ["Tunneling", 60, "Player 3"],
+      ]);
+      await expectTurn(page, "Expansive", "Player 1");
+      // Tunneling has nobody at its price to swap with.
+      await expect(reorderHandle(page, "Tunneling")).toHaveCount(0);
+      await dragCompanyAbove(page, "Resourceful", "Expansive");
+      await expectCompanies(page, [
+        "Resourceful 70",
+        "Expansive 70",
+        "Tunneling 60",
+      ]);
+      await expectTurn(page, "Resourceful", "Player 2");
+      await undo(page);
+      await expectCompanies(page, [
+        "Expansive 70",
+        "Resourceful 70",
+        "Tunneling 60",
+      ]);
+      await expectTurn(page, "Expansive", "Player 1");
+      // A drag past a different price stops at the bottom of the stack.
+      await dragCompanyAbove(page, "Expansive", "Tunneling");
+      await expectCompanies(page, [
+        "Resourceful 70",
+        "Expansive 70",
+        "Tunneling 60",
+      ]);
+      await expectTurn(page, "Resourceful", "Player 2");
+      await endTurnWithPriceChange(page, "same", "Resourceful");
+      await expectCompanies(page, [
+        "Expansive 70",
+        "Resourceful 70*",
+        "Tunneling 60",
+      ]);
+      await expectTurn(page, "Expansive", "Player 1");
     });
 
     test("p15 Distributing earnings: withhold or no train drops one increment, a payout below the price holds, at least the price rises one, at least double rises two", async ({

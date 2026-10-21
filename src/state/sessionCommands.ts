@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { equalValueSpan } from "./turnLists";
 import {
   type GameSessionAction,
   type GameSessionState,
@@ -410,9 +411,16 @@ export const validateCommand = (
     case "REORDER_ENTRY": {
       const list = listOf(state, command.entryId);
       if (!list) return no("Already removed on another device");
-      if (selectTurnOrder(state, list.id)?.valueOrdered)
-        return no("This list orders itself");
-      return OK;
+      const view = selectTurnOrder(state, list.id);
+      if (!view?.valueOrdered) return OK;
+      if (!view.reorderEqual) return no("This list orders itself");
+      const values = view.entries.map((e) => e.value);
+      const from = view.entries.findIndex((e) => e.id === command.entryId);
+      const [first, last] = equalValueSpan(values, from);
+      const to = Math.min(command.toIndex, values.length - 1);
+      return to >= first && to <= last
+        ? OK
+        : no("Only entries at the same value can swap places");
     }
     case "SET_ENTRY_OWNER": {
       if (!findEntry(state, command.entryId)) return no("Unknown entry");

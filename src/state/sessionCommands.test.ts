@@ -637,6 +637,38 @@ describe("validateCommand", () => {
     ).toBe(true);
   });
 
+  it("allows reordering among equal values only where the list says so", () => {
+    const reorderable: TurnOrder = {
+      ...ORDER,
+      lists: ORDER.lists?.map((l) =>
+        l.id === "valued" ? { ...l, valueOrder: { reorderEqual: true } } : l,
+      ),
+    };
+    const state = apply(
+      projectCommand(
+        createInitialGameSessionState({
+          initialAverageSeconds: 300,
+          expectedTurns: 90,
+          players: seats(3),
+          turnOrder: reorderable,
+        }),
+        { type: "END_TURN" },
+        0,
+      ),
+      { type: "ACTIVATE_ENTRY", entryId: "a", value: 80, playerIndex: 1 },
+      { type: "ACTIVATE_ENTRY", entryId: "b", value: 80, playerIndex: 2 },
+      { type: "ACTIVATE_ENTRY", entryId: "t", value: 60, playerIndex: 0 },
+    );
+    const move = (entryId: string, toIndex: number): SessionCommand => ({
+      type: "REORDER_ENTRY",
+      entryId,
+      toIndex,
+    });
+    expect(validateCommand(state, move("b", 0))).toEqual({ ok: true });
+    expect(validateCommand(state, move("t", 1)).ok).toBe(false);
+    expect(validateCommand(state, move("a", 2)).ok).toBe(false);
+  });
+
   it("refuses game actions once the game is over", () => {
     const state = { ...withEntries(), victor: 0 };
     expect(

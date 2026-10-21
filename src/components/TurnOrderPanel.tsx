@@ -106,8 +106,11 @@ export function TurnOrderPanel({
         }))}
         activeId={shownIsRunning ? shown.view.activeId : null}
         onMove={
-          readOnly || shown.view.valueOrdered ? undefined : turnOrder.onMove
+          readOnly || (shown.view.valueOrdered && !shown.view.reorderEqual)
+            ? undefined
+            : turnOrder.onMove
         }
+        moveWithinEqualValues={shown.view.valueOrdered}
         onRemove={readOnly ? undefined : turnOrder.onRemove}
         onRowActions={
           readOnly || !shown.view.valueOrdered

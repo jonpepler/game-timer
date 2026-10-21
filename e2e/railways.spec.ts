@@ -157,8 +157,13 @@ const walkthrough = async (page: Page) => {
     "Agricultural 80",
     "Tunneling 70",
   ]);
-  // A value-ordered list has no drag handles.
-  await expect(page.getByRole("button", { name: /^Reorder / })).toHaveCount(0);
+  // Only companies sharing a price get a handle, to fix their stack order.
+  await expect(
+    page.getByRole("button", {
+      name: /^Reorder (Northern Port|Agricultural),/,
+    }),
+  ).toHaveCount(2);
+  await expect(page.getByRole("button", { name: /^Reorder / })).toHaveCount(2);
   // Founding is not a turn.
   await expect(banner(page, "Player 3")).toBeVisible();
   await snap(page, "found-03-companies-listed");
