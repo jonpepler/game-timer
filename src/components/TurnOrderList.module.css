@@ -20,6 +20,7 @@
 }
 
 .header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -42,6 +43,7 @@
 }
 
 .row {
+  flex-shrink: 0;
   position: relative;
   display: flex;
   align-items: center;

@@ -243,6 +243,14 @@
     pointer-events: auto;
   }
 
+  /* The turn order gives up height to the column, so its list scrolls
+     inside the sheet instead of running past the column's foot. */
+  .column[data-column="right"] > [data-panel="turnOrder"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   .column[data-column="bottom"] {
     grid-area: bottom;
     gap: var(--space-4);
