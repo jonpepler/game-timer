@@ -513,6 +513,24 @@ describe("a kind that joins at the top", () => {
     expect(order(s)).toEqual(["z60"]);
   });
 
+  it("joining while a round is under way sits that round out and leads the next", () => {
+    const underway = run(
+      initTop(),
+      { type: "START", at: 0 },
+      add("a", 80, 0),
+      add("b", 80, 1),
+      add("c", 70, 2),
+      phase("valued"),
+      end("same"),
+      { type: "ACTIVATE_TURN_ENTRY", entry: { id: "z" } },
+    );
+    expect(order(underway)?.[0]).toBe("z80");
+    expect(active(underway)).toBe("b");
+    expect(played(underway)).toContain("z");
+    const nextRound = run(underway, end("same"), end("same"), phase("valued"));
+    expect(active(nextRound)).toBe("z");
+  });
+
   it("moves like any other entry afterwards", () => {
     const s = run(
       initTop(),

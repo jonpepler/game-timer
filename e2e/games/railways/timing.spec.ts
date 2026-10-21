@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
   chooseNextRound,
   DEVICES,
@@ -33,6 +33,11 @@ import {
  * up to 16s with 8 workers and more than the 30s default during load spikes.
  */
 test.describe.configure({ timeout: 60_000 });
+
+const expectCountdown = (page: Page, time: string) =>
+  expect(page.getByRole("button", { name: "Advance turn" })).toContainText(
+    time,
+  );
 
 for (const [device, use] of DEVICES) {
   test.describe(`Railways timing (${device})`, () => {
@@ -79,6 +84,31 @@ for (const [device, use] of DEVICES) {
       await endTurnWithPriceChange(page, "same", "Express");
       await expectRoundComplete(page, ROUND.operating);
       await expectTimeShares(page, { "Player 3": 52.9, "Player 4": 47.1 });
+    });
+
+    test("each kind of round keeps its own average turn time", async ({
+      page,
+    }) => {
+      await installClock(page);
+      await startRailways(page, { priority: "Player 1" });
+      await foundCompanies(page, [["Express", 90, "Player 3"]]);
+      // The Stock Round opens on its declared 45s.
+      await expectCountdown(page, "00:45");
+      // Turns end inside the countdown: fastForward jumps the page clock,
+      // so it would skip the overtime count of a longer turn.
+      await letTimePass(page, 40);
+      await endStockTurn(page);
+      await expectTurn(page, "Player 2");
+      await expectCountdown(page, "00:40");
+      await letTimePass(page, 20);
+      await endStockTurn(page);
+      await expectTurn(page, "Player 3");
+      await expectCountdown(page, "00:30");
+
+      // The Operating Round starts from its own 2:30, not the Stock Round's.
+      await endStockRound(page, "Player 1");
+      await expectTurn(page, "Express", "Player 3");
+      await expectCountdown(page, "02:30");
     });
 
     test("p11 End of Stock Round, agreed: ending the round mid-turn credits the time of the turn that was running", async ({

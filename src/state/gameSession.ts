@@ -1011,14 +1011,32 @@ const reduceSession = (
           top === undefined
             ? turnEntries
             : turnEntries.map((e) => (e.id === id ? { ...e, value: top } : e));
-        log.info("turn entry activated", { entryId: id, listId, top });
+        /*
+         * Joining at the top while a round is under way would hand the
+         * arrival the next turn ahead of entries that were waiting, so it
+         * sits the rest of the round out and leads the next one.
+         */
+        const roundUnderway =
+          top !== undefined &&
+          !state.pendingPhasePrompt &&
+          isRunningList(turnOrder, slice, list.id) &&
+          (list.activeEntryId !== null || (list.played ?? []).length > 0);
+        const joining = roundUnderway
+          ? { ...list, played: [...(list.played ?? []), id] }
+          : list;
+        log.info("turn entry activated", {
+          entryId: id,
+          listId,
+          top,
+          roundUnderway,
+        });
         return {
           ...state,
           ...placeInValueList(
             state,
             turnOrder,
             { ...slice, turnEntries: placed },
-            list,
+            joining,
             id,
             top !== undefined,
           ),
