@@ -1,3 +1,4 @@
+import type { AudioOutput, SoundFile } from "./audioOutput";
 import {
   LOOP_FADE_OUT_SECONDS,
   LOOP_WINDOW_SECONDS,
@@ -7,8 +8,6 @@ import {
 /** Hands-off gap between holding the current gain and the new curve. */
 const RESYNC_SECONDS = 0.02;
 
-type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
-
 /**
  * Plays one sound on a seamless loop under the end of the countdown,
  * shaped by the loop envelope. An HTML audio element's `loop` leaves a
@@ -17,13 +16,10 @@ type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
  *
  * Callers describe where the countdown is (`play`) and when it stops
  * (`pause`, `stop`); the player schedules the start, the swell and the
- * fade on the audio clock. Nothing sounds until `unlock` has run inside
- * a user gesture, which mobile browsers require before audio can start.
+ * fade on the audio clock, once the shared output has been unlocked.
  */
 export class LoopPlayer {
-  private readonly data: Promise<ArrayBuffer | undefined>;
   private context: AudioContext | undefined;
-  private buffer: Promise<AudioBuffer | undefined> | undefined;
   private source: AudioBufferSourceNode | undefined;
   private gain: GainNode | undefined;
   private loopStartedAt = 0;
@@ -31,41 +27,10 @@ export class LoopPlayer {
   private generation = 0;
   private cleanup: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(url: string) {
-    this.data =
-      typeof fetch === "undefined"
-        ? Promise.resolve(undefined)
-        : fetch(url)
-            .then((response) =>
-              response.ok ? response.arrayBuffer() : undefined,
-            )
-            .catch(() => undefined);
-  }
-
-  /**
-   * Create or resume the audio context. Call from a tap or click: iOS
-   * Safari only lets audio start from inside one, and also wants a sound
-   * started there, so a one-frame silent buffer plays too.
-   */
-  unlock(): void {
-    if (typeof AudioContext === "undefined") return;
-    if (!this.context) {
-      /**
-       * Web Audio on iOS follows the ringer switch by default, while the
-       * HTML audio elements the other sounds use do not. Asking for the
-       * playback session keeps every sound on the same footing.
-       */
-      const session = (navigator as AudioSessionNavigator).audioSession;
-      if (session) session.type = "playback";
-      this.context = new AudioContext();
-    }
-    const context = this.context;
-    if (context.state !== "running") void context.resume().catch(() => {});
-    const silence = context.createBufferSource();
-    silence.buffer = context.createBuffer(1, 1, context.sampleRate);
-    silence.connect(context.destination);
-    silence.start();
-  }
+  constructor(
+    private readonly output: AudioOutput,
+    private readonly file: SoundFile,
+  ) {}
 
   /**
    * Follow a countdown at `position` seconds to zero (negative in
@@ -101,27 +66,11 @@ export class LoopPlayer {
     this.stopSource();
   }
 
-  dispose(): void {
-    this.stop();
-    void this.context?.close().catch(() => {});
-    this.context = undefined;
-  }
-
   private async ready(): Promise<AudioBuffer | undefined> {
-    const context = this.context;
+    const context = await this.output.running();
     if (!context) return undefined;
-    // Read through a call: the state changes across the await.
-    const running = () => context.state === "running";
-    if (!running()) {
-      await context.resume().catch(() => {});
-      if (!running()) return undefined;
-    }
-    this.buffer ??= this.data.then((data) =>
-      data
-        ? context.decodeAudioData(data.slice(0)).catch(() => undefined)
-        : undefined,
-    );
-    return this.buffer;
+    this.context = context;
+    return this.file.decode(context);
   }
 
   private schedule(buffer: AudioBuffer, position: number): void {

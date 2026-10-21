@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useRef } from "react";
+import { AudioOutput, SoundFile } from "@/audio/audioOutput";
 import { LoopPlayer } from "@/audio/loopPlayer";
+import { OneShotPlayer } from "@/audio/oneShotPlayer";
 import { findDefinition } from "@/state/definitionRegistry";
 import { resolveSoundUrls } from "@/state/gameSounds";
 
-const preload = (url: string | null): HTMLAudioElement | undefined => {
-  if (!url || typeof Audio === "undefined") return undefined;
-  const audio = new Audio(url);
-  audio.preload = "auto";
-  return audio;
-};
+interface Players {
+  output: AudioOutput;
+  next: OneShotPlayer | undefined;
+  overtime: OneShotPlayer | undefined;
+  loop: LoopPlayer | undefined;
+}
 
 /**
  * The timer's sounds for the active game: the turn chime, the overtime
  * cue, and the loop under the end of the countdown. A game's own files
- * replace the core ones slot by slot.
+ * replace the core ones slot by slot. All three play through one shared
+ * audio output, so the first tap's unlock covers every sound.
  */
 export const useSounds = (definitionId: string | undefined) => {
   const urls = useMemo(
@@ -22,33 +25,41 @@ export const useSounds = (definitionId: string | undefined) => {
     [definitionId],
   );
 
-  const next = useRef<HTMLAudioElement | undefined>(undefined);
-  const overtime = useRef<HTMLAudioElement | undefined>(undefined);
-  const loop = useRef<LoopPlayer | undefined>(undefined);
+  const players = useRef<Players | undefined>(undefined);
 
   useEffect(() => {
-    next.current = preload(urls.next_turn);
-    overtime.current = preload(urls.overtime);
-    const player = urls.last_30 ? new LoopPlayer(urls.last_30) : undefined;
-    loop.current = player;
+    const output = new AudioOutput();
+    const oneShot = (url: string | null) =>
+      url ? new OneShotPlayer(output, new SoundFile(url)) : undefined;
+    const current: Players = {
+      output,
+      next: oneShot(urls.next_turn),
+      overtime: oneShot(urls.overtime),
+      loop: urls.last_30
+        ? new LoopPlayer(output, new SoundFile(urls.last_30))
+        : undefined,
+    };
+    players.current = current;
     return () => {
-      next.current = undefined;
-      overtime.current = undefined;
-      player?.dispose();
-      loop.current = undefined;
+      current.next?.stop();
+      current.overtime?.stop();
+      current.loop?.stop();
+      output.close();
+      players.current = undefined;
     };
   }, [urls]);
 
   return useMemo(
     () => ({
-      playNext: () => void next.current?.play().catch(() => {}),
-      playOvertime: () => void overtime.current?.play().catch(() => {}),
+      playNext: () => players.current?.next?.play(),
+      playOvertime: () => players.current?.overtime?.play(),
       /** Call from a user gesture so later sounds may start */
-      unlockAudio: () => loop.current?.unlock(),
+      unlockAudio: () => players.current?.output.unlock(),
       /** Follow the countdown at `position` seconds to zero; negative in overtime */
-      followCountdown: (position: number) => loop.current?.play(position),
-      pauseLoop: () => loop.current?.pause(),
-      stopLoop: () => loop.current?.stop(),
+      followCountdown: (position: number) =>
+        players.current?.loop?.play(position),
+      pauseLoop: () => players.current?.loop?.pause(),
+      stopLoop: () => players.current?.loop?.stop(),
     }),
     [],
   );

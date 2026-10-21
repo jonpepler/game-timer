@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { probeAudio } from "../../_audio-probe";
+import { expectFaded, probeAudio } from "../../_audio-probe";
 import { ring, startRailways } from "./railways.helpers";
 
 const SOUND = "/game-timer/games/railways/sound";
@@ -30,4 +30,16 @@ test("Railways requests its train sounds under the base path and schedules the l
   expect(loop.duration).toBeCloseTo(150204 / 44100, 3);
   expect(loop.delay).toBeGreaterThan(countdown - 30 - 2);
   expect(loop.delay).toBeLessThanOrEqual(countdown - 30 + 1);
+});
+
+test("Railways' turn whistle fades in and out over half a second", async ({
+  page,
+}) => {
+  const audio = await probeAudio(page);
+  await startRailways(page);
+  await ring(page).click();
+  await expect.poll(() => audio.oneShotStarts()).toHaveLength(1);
+  const [whistle] = await audio.oneShotStarts();
+  expect(whistle.duration).toBeCloseTo(4.88, 1);
+  expectFaded(whistle, 0.5);
 });
