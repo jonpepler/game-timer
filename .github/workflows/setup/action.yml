@@ -4,17 +4,17 @@ runs:
   using: "composite"
   steps:
     - name: "Setup Node"
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
-        node-version: 20
+        node-version-file: .nvmrc
 
     - name: "Cache Dependencies"
       id: cache
-      uses: actions/cache@v3
-      with: 
+      uses: actions/cache@v6
+      with:
         path: node_modules
-        key: node-modules-${{ hashFiles('package-lock.json') }}
-    
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
+
     - name: "Install Dependencies"
       shell: bash
       if: steps.cache.outputs.cache-hit != 'true'
