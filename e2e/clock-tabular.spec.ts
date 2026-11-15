@@ -33,6 +33,8 @@ for (const [name, game] of GAMES) {
             `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
           );
       const original = el.textContent;
+      // Measured at ten times the size, so a renderer that rounds advances to whole pixels barely moves them.
+      el.style.fontSize = `${Number.parseFloat(getComputedStyle(el).fontSize) * 10}px`;
       const worst = (texts: string[]) => {
         let base: number[] | null = null;
         let most = 0;
@@ -57,7 +59,8 @@ for (const [name, game] of GAMES) {
       el.style.fontFamily = "var(--font-face-big-shoulders)";
       el.style.fontWeight = "800";
       await document.fonts.load(
-        `800 20px ${getComputedStyle(el).fontFamily}`,
+        // Only the face itself: its metric fallback is a local() font the machine may lack.
+        `800 20px ${getComputedStyle(el).fontFamily.split(",")[0]}`,
         "0123456789",
       );
       const proportional = worst(times);

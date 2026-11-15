@@ -29,7 +29,9 @@ for (const [face, variable, weight, figures] of FACES) {
         const family = getComputedStyle(document.documentElement)
           .getPropertyValue(variable)
           .trim();
-        await document.fonts.load(`${weight} 40px ${family}`, "0123456789:+");
+        // Only the face itself: its metric fallback is a local() font the machine may lack.
+        const face = family.split(",")[0];
+        await document.fonts.load(`${weight} 40px ${face}`, "0123456789:+");
         const ns = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(ns, "svg");
         svg.setAttribute("viewBox", "0 0 100 100");
@@ -37,17 +39,18 @@ for (const [face, variable, weight, figures] of FACES) {
         document.body.appendChild(svg);
         const width = (glyph: string) => {
           const t = document.createElementNS(ns, "text");
-          t.setAttribute("font-size", "20");
+          // Large, so a renderer that rounds advances to whole pixels barely moves them.
+          t.setAttribute("font-size", "200");
           t.style.cssText = `font-family:${family};font-weight:${weight};font-variant-numeric:${figures}`;
           t.textContent = glyph;
           svg.appendChild(t);
-          return t.getComputedTextLength() / 20;
+          return t.getComputedTextLength() / 200;
         };
         const digits = "0123456789".split("").map(width);
         svg.remove();
         return {
           digits,
-          loaded: document.fonts.check(`${weight} 20px ${family}`),
+          loaded: document.fonts.check(`${weight} 20px ${face}`),
         };
       },
       { variable, weight, figures },

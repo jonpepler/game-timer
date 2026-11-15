@@ -27,7 +27,8 @@ jobs:
 
   # The component tests are left out: their screenshot baselines are macOS renders.
   e2e:
-    runs-on: ubuntu-latest
+    # Playwright 1.60 has no browser build for Ubuntu 26.04, which ubuntu-latest now is.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout
