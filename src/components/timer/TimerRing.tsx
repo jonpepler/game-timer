@@ -47,6 +47,7 @@ const FACE_FAMILY: Record<ResolvedNumeralFace, string> = {
   "inter-600": styles.faceInter,
   "old-standard-700": styles.faceOldStandard,
   "big-shoulders-800": styles.faceBigShoulders,
+  "sorts-mill-goudy-400": styles.faceSortsMillGoudy,
 };
 
 const TRACK = "var(--color-clock-track)";

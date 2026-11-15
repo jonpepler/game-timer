@@ -2,6 +2,7 @@ import type { GameDefinition } from "../gameDefinition";
 import type { BundledTheme } from "../gameTheme";
 import { arcsDefinition, arcsTheme } from "./arcs";
 import { genericDefinition } from "./generic";
+import { oathDefinition, oathTheme } from "./oath";
 import { railwaysDefinition, railwaysTheme } from "./railways";
 import { rootDefinition } from "./root";
 
@@ -15,10 +16,12 @@ export const builtInDefinitions: readonly GameDefinition[] = Object.freeze([
   rootDefinition,
   arcsDefinition,
   railwaysDefinition,
+  oathDefinition,
 ]);
 
 /** Themes bundled with built-in definitions. A game without one keeps the default look. */
 export const builtInThemes: readonly BundledTheme[] = Object.freeze([
   { definitionId: arcsDefinition.id, theme: arcsTheme },
   { definitionId: railwaysDefinition.id, theme: railwaysTheme },
+  { definitionId: oathDefinition.id, theme: oathTheme },
 ]);

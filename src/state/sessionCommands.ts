@@ -116,6 +116,18 @@ export const SessionCommandSchema = z.discriminatedUnion("type", [
     delta: z.number(),
   }),
   command({ type: z.literal("TRIGGER_CONTROL"), controlId: id }),
+  // Give a player one of the definition's roles. Never ends a turn.
+  command({
+    type: z.literal("SET_PLAYER_ROLE"),
+    playerIndex: seat,
+    roleId: id,
+  }),
+  // Answer the check asked when `round` ended.
+  command({
+    type: z.literal("RESOLVE_ROUND_CHECK"),
+    end: z.boolean(),
+    round: z.number().int().positive(),
+  }),
   // Take back the newest undoable event, as the host's Undo does.
   // `atRevision` is the state revision the issuer saw; a stale request
   // (another screen undid or acted first) is rejected, so two taps never
@@ -175,6 +187,10 @@ export const DEFAULT_COMMAND_POLICY: CommandPolicy = {
   DISMISS_PHASE_PROMPT: "table",
   INCREMENT_SCORE: "seat",
   TRIGGER_CONTROL: "seat",
+  // Roles change on the turn they happen, so the seat taking it may set
+  // anyone's, like the host.
+  SET_PLAYER_ROLE: "turn",
+  RESOLVE_ROUND_CHECK: "table",
   // The host's Undo takes back anyone's action, so any seat's may too.
   UNDO: "table",
   SET_PAUSED: "table",
@@ -380,7 +396,11 @@ export const validateCommand = (
   table: TableContext = {},
 ): Verdict => {
   if (isSeatCommand(command)) return validateSeatCommand(state, command, table);
-  if (state.victor !== null && command.type !== "INCREMENT_SCORE")
+  // A game that ended on its round track can be taken back with Undo; a
+  // scored win still takes score corrections.
+  if (state.outcome) {
+    if (command.type !== "UNDO") return no("The game is over");
+  } else if (state.victor !== null && command.type !== "INCREMENT_SCORE")
     return no("The game is over");
   switch (command.type) {
     case "END_TURN": {
@@ -476,6 +496,16 @@ export const validateCommand = (
       return (state.controls ?? []).some((c) => c.id === command.controlId)
         ? OK
         : no("Unknown control");
+    case "SET_PLAYER_ROLE":
+      if (!state.playerRoles?.roles.some((r) => r.id === command.roleId))
+        return no("Unknown role");
+      return command.playerIndex < (state.players?.length ?? 0)
+        ? OK
+        : no("Unknown player");
+    case "RESOLVE_ROUND_CHECK":
+      return state.pendingRoundCheck === command.round
+        ? OK
+        : no("That was already answered");
     case "UNDO":
       if (
         command.atRevision !== undefined &&
@@ -653,6 +683,14 @@ export const commandToAction = (
       };
     case "TRIGGER_CONTROL":
       return { type: "TRIGGER_CONTROL", controlId: command.controlId };
+    case "SET_PLAYER_ROLE":
+      return {
+        type: "SET_PLAYER_ROLE",
+        playerIndex: command.playerIndex,
+        roleId: command.roleId,
+      };
+    case "RESOLVE_ROUND_CHECK":
+      return { type: "RESOLVE_ROUND_CHECK", end: command.end };
     case "UNDO":
       return { type: "UNDO" };
     case "SET_EXPECTED_TURNS":

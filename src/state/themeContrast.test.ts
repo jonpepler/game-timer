@@ -5,10 +5,11 @@ import {
   lightness,
   over,
   parseHex,
+  washCap,
 } from "@/lib/contrast";
 import { LIGHT_PLAYER_PALETTE } from "@/lib/playerVisual";
 import { builtInDefinitions, builtInThemes } from "./definitions";
-import { schemeTokens, type ThemeScheme } from "./gameTheme";
+import type { ThemeScheme } from "./gameTheme";
 
 /*
  * WCAG contrast for every bundled theme, in both schemes: 4.5:1 for text,
@@ -44,13 +45,23 @@ const seatColours = (definitionId: string, scheme: ThemeScheme): string[] => {
   return [...new Set(JSON.stringify(step).match(/#[0-9a-fA-F]{6}\b/g) ?? [])];
 };
 
+// Each scheme, and each role ground within it: a ground swaps only the
+// surfaces, so everything drawn on them must hold there too.
 const cases = builtInThemes.flatMap((bundled) =>
-  SCHEMES.map((scheme) => ({
-    name: `${bundled.theme.name} ${scheme}`,
-    bundled,
-    scheme,
-    c: bundled.theme[scheme].colors,
-  })),
+  SCHEMES.flatMap((scheme) => {
+    const colours = bundled.theme[scheme].colors;
+    return [
+      { name: `${bundled.theme.name} ${scheme}`, bundled, scheme, c: colours },
+      ...Object.entries(bundled.theme[scheme].grounds ?? {}).map(
+        ([role, surfaces]) => ({
+          name: `${bundled.theme.name} ${scheme}, ${role} ground`,
+          bundled,
+          scheme,
+          c: { ...colours, ...surfaces },
+        }),
+      ),
+    ];
+  }),
 );
 
 describe.each(cases)("$name", ({ bundled, scheme, c }) => {
@@ -97,7 +108,7 @@ describe.each(cases)("$name", ({ bundled, scheme, c }) => {
   });
 
   it("the value keeps 3:1 on the strongest overtime wash", () => {
-    const cap = Number(schemeTokens(bundled.theme, scheme)["--clock-wash-cap"]);
+    const cap = washCap(c.text, c["timer-overtime"], c.surface);
     const wash = over(parseHex(c["timer-overtime"]), parseHex(c.surface), cap);
     expect(contrast(parseHex(c.text), wash)).toBeGreaterThanOrEqual(3);
   });
@@ -105,7 +116,7 @@ describe.each(cases)("$name", ({ bundled, scheme, c }) => {
   it("the overtime ornament reads at 3:1 on the strongest overtime wash", () => {
     const face = bundled.theme.clock;
     if (face.ornament.slot === "none" || face.overtime.style !== "wash") return;
-    const cap = Number(schemeTokens(bundled.theme, scheme)["--clock-wash-cap"]);
+    const cap = washCap(c.text, c["timer-overtime"], c.surface);
     const wash = over(parseHex(c["timer-overtime"]), parseHex(c.surface), cap);
     const ink = c["clock-ornament-overtime"] ?? c["clock-ornament"] ?? c.accent;
     expect(contrast(parseHex(ink), wash)).toBeGreaterThanOrEqual(3);
@@ -113,7 +124,7 @@ describe.each(cases)("$name", ({ bundled, scheme, c }) => {
 
   it("each seat stays apart from the overtime wash, or the face separates them", () => {
     const face = bundled.theme.clock;
-    const cap = Number(schemeTokens(bundled.theme, scheme)["--clock-wash-cap"]);
+    const cap = washCap(c.text, c["timer-overtime"], c.surface);
     const wash = over(parseHex(c["timer-overtime"]), parseHex(c.surface), cap);
     const weak = seatColours(bundled.definitionId, scheme).filter(
       (seat) => contrast(parseHex(seat), wash) < 3,
@@ -140,6 +151,15 @@ describe.each(cases)("$name", ({ bundled, scheme, c }) => {
 });
 
 it("every bundled theme is checked", () => {
-  expect(cases.length).toBe(builtInThemes.length * 2);
+  const grounds = builtInThemes.reduce(
+    (n, { theme }) =>
+      n +
+      SCHEMES.reduce(
+        (m, scheme) => m + Object.keys(theme[scheme].grounds ?? {}).length,
+        0,
+      ),
+    0,
+  );
+  expect(cases.length).toBe(builtInThemes.length * 2 + grounds);
   expect(builtInThemes.length).toBeGreaterThan(0);
 });

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "definitionId": "oath",
+  "categories": {
+    "colour": {
+      "white": { "label": "White", "color": "#E9E6DC" },
+      "red": { "label": "Red", "color": "#D9563B" },
+      "blue": { "label": "Blue", "color": "#2F9DB0" },
+      "yellow": { "label": "Yellow", "color": "#F0C63A" },
+      "black": { "label": "Black", "color": "#2A2A2E" },
+      "pink": { "label": "Pink", "color": "#E0607A" },
+      "brown": { "label": "Brown", "color": "#8A5A3B" }
+    }
+  }
+}

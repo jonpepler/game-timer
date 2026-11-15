@@ -330,6 +330,8 @@
 }
 
 .activePlayerText {
+  /* Names often end in a number; old-style figures read "1" as "I". */
+  font-variant-numeric: lining-nums;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;

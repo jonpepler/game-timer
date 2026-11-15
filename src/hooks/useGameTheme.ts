@@ -6,6 +6,7 @@ import { builtInThemes } from "@/state/definitions";
 import {
   type BundledTheme,
   clockNumerals,
+  seatNeedsInk,
   type ThemeScheme,
   themeCss,
 } from "@/state/gameTheme";
@@ -126,6 +127,40 @@ export const useGameTheme = (definitionId: string | undefined) => {
 };
 
 /** The game picked in setup, shown while the wizard is open. Pass undefined once it closes. */
+/**
+ * Names the role whose ground the theme shows while its holder takes their
+ * turn (see the theme's `grounds`). Undefined clears it, so a page shows
+ * the plain surfaces outside play.
+ */
+export const useTurnGround = (roleId: string | undefined) => {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const html = document.documentElement;
+    if (roleId) html.dataset.ground = roleId;
+    else delete html.dataset.ground;
+    return () => {
+      delete html.dataset.ground;
+    };
+  }, [roleId]);
+};
+
+/**
+ * Whether a seat colour needs the ink to read as text on the surface in
+ * play: the theme's surface, or `groundId`'s while a role ground shows.
+ */
+export const useSeatNeedsInk = (
+  colour: string | undefined,
+  groundId: string | undefined,
+): boolean => {
+  const scheme = useColourScheme();
+  const bundled = current();
+  return (
+    !!colour &&
+    !!bundled &&
+    seatNeedsInk(bundled.theme, scheme, groundId, colour)
+  );
+};
+
 export const useGameThemePreview = (definitionId: string | undefined) => {
   useEffect(() => {
     bindSystem();

@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import { EntryIdentitySchema } from "./entryIdentity";
+import { EntryIdentitySchema, EntrySymbolSchema } from "./entryIdentity";
 import { GameSoundsSchema } from "./gameSounds";
 import type { GameSessionAction } from "./gameSession";
 
@@ -293,6 +293,16 @@ const SetupStepKindSchema = z.discriminatedUnion("type", [
     sourceStepId: z.string(),
     order: PickOrderSchema.optional(),
   }),
+  // Give one of the definition's player roles to the seats the table
+  // picks: one seat or none (`noneLabel` names the none choice), or any
+  // number with `many`. Seats given a role by an earlier assign-role
+  // step are not offered. The role is applied when the game starts.
+  z.object({
+    type: z.literal("assign-role"),
+    role: z.string().min(1),
+    many: z.boolean().optional(),
+    noneLabel: z.string().min(1).optional(),
+  }),
   // Choose which seat starts as the turn-order lead. Reads the
   // upstream seat-players roster and
   // records the chosen seat index. `allowRandom` offers a randomise
@@ -327,6 +337,10 @@ const StepVisibilitySchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("module-not-selected"), module: z.string() }),
   z.object({ type: z.literal("toggle-on"), step: z.string() }),
   z.object({ type: z.literal("toggle-off"), step: z.string() }),
+  // Keyed to an earlier assign-role step: whether it gave its role to
+  // any seat.
+  z.object({ type: z.literal("role-assigned"), step: z.string() }),
+  z.object({ type: z.literal("role-unassigned"), step: z.string() }),
 ]);
 export type StepVisibility = z.infer<typeof StepVisibilitySchema>;
 
@@ -606,6 +620,12 @@ export const GameLengthSchema = z.discriminatedUnion("type", [
 ]);
 export type GameLength = z.infer<typeof GameLengthSchema>;
 
+/** A countdown's own words for one left and for any other number left. */
+export const RemainingLabelSchema = z.object({
+  one: z.string().min(1),
+  other: z.string().min(1),
+});
+
 /**
  * A rough model of a whole game, for predicting when it ends: its length
  * in cycles, and what one cycle is made of, as phases (by id) each with a
@@ -615,9 +635,7 @@ export type GameLength = z.infer<typeof GameLengthSchema>;
  */
 export const GameModelSchema = z.object({
   length: GameLengthSchema,
-  remainingLabel: z
-    .object({ one: z.string().min(1), other: z.string().min(1) })
-    .optional(),
+  remainingLabel: RemainingLabelSchema.optional(),
   cycle: z
     .array(
       z.object({
@@ -645,6 +663,47 @@ export const gameModelForSetup = (
 };
 
 export const IMPLICIT_TURN_LIST_ID = "main";
+
+/**
+ * How a game ends, as the end screen tells it. With a `winnerRole`, the
+ * player holding that role at the end is named the winner.
+ */
+export const GameOutcomeSchema = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1).optional(),
+  winnerRole: z.string().min(1).optional(),
+});
+export type GameOutcome = z.infer<typeof GameOutcomeSchema>;
+
+/**
+ * A question put to the table when round `afterRound` ends, such as a
+ * die roll that may end the game. With `whenRoleHeld`, it is only asked
+ * while some player holds that role. `endLabel` ends the game with
+ * `outcome`; `continueLabel` plays on.
+ */
+export const RoundCheckSchema = z.object({
+  afterRound: z.number().int().positive(),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  whenRoleHeld: z.string().min(1).optional(),
+  endLabel: z.string().min(1),
+  continueLabel: z.string().min(1),
+  outcome: GameOutcomeSchema,
+});
+export type RoundCheck = z.infer<typeof RoundCheckSchema>;
+
+/**
+ * Rounds of one turn per seat, as many as the expected turns allow (set a
+ * game's length with `turnsPerPlayer`). The game ends with `limitOutcome`
+ * once the expected turns are played, or earlier through a check. The
+ * footer counts down rounds under `remainingLabel`.
+ */
+export const RoundTrackSchema = z.object({
+  remainingLabel: RemainingLabelSchema,
+  limitOutcome: GameOutcomeSchema,
+  checks: z.array(RoundCheckSchema).optional(),
+});
+export type RoundTrack = z.infer<typeof RoundTrackSchema>;
 
 export const TurnOrderSchema = z
   .object({
@@ -708,6 +767,9 @@ export const TurnOrderSchema = z
     // Variable mode only: a rough model of the whole game, for the
     // predicted finish. See GameModelSchema.
     model: GameModelSchema.optional(),
+    // Round-robin and lead-relative only: a fixed number of rounds and
+    // the questions asked between them. See RoundTrackSchema.
+    rounds: RoundTrackSchema.optional(),
     // What happens when a round completes and no control claimed the
     // next lead. "prompt-lead" shows a full-screen picker asking the
     // table who leads next, for games where the lead can change by a
@@ -809,6 +871,13 @@ export const TurnOrderSchema = z
         });
       }
     });
+    if (order.rounds && order.mode !== "lead-relative") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["rounds"],
+        message: "a round track needs lead-relative order",
+      });
+    }
     order.model?.cycle.forEach((part, i) => {
       if (!phaseIds.includes(part.phase)) {
         ctx.addIssue({
@@ -830,9 +899,12 @@ export type TurnOrder = z.infer<typeof TurnOrderSchema>;
  * - `claim-next-lead`: the acting seat leads the next round. Needs
  *   lead-relative turn order. When it fires, the round-end lead prompt
  *   is skipped because the next lead is already known
+ * - `open-player-roles`: opens the sheet where the table changes any
+ *   player's role. Needs `playerRoles`. Changes nothing by itself
  */
 const ControlEffectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("claim-next-lead") }),
+  z.object({ type: z.literal("open-player-roles") }),
 ]);
 export type ControlEffect = z.infer<typeof ControlEffectSchema>;
 
@@ -876,11 +948,22 @@ const ControlListSchema = z
  * definition can't declare a control that would never be offered.
  */
 const refineControls = (
-  def: { controls?: Control[]; turnOrder?: TurnOrder },
+  def: {
+    controls?: Control[];
+    turnOrder?: TurnOrder;
+    playerRoles?: PlayerRoles;
+  },
   ctx: z.RefinementCtx,
 ) => {
   const leadRelative = def.turnOrder?.mode === "lead-relative";
   def.controls?.forEach((control, i) => {
+    if (control.effect.type === "open-player-roles" && !def.playerRoles) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["controls", i, "effect"],
+        message: `control "${control.id}": open-player-roles needs playerRoles`,
+      });
+    }
     if (control.effect.type === "claim-next-lead" && !leadRelative) {
       ctx.addIssue({
         code: "custom",
@@ -955,6 +1038,133 @@ export const migrateLegacyInterrupt = (input: unknown): unknown => {
   };
 };
 
+/**
+ * Roles players hold, which the table can change at any time. Every
+ * player starts in `defaultRole` unless setup assigns another. A role may
+ * carry a `mark` (an entry symbol) drawn in the player's token and a `color` that replaces
+ * the player's own. A `unique` role has one holder at most: giving it to
+ * a player returns its last holder to the default. The holder of a
+ * `leadsRound` role opens every round, from the next round when it
+ * changes hands during play.
+ */
+export const PlayerRoleSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  mark: EntrySymbolSchema.optional(),
+  color: z.string().min(1).optional(),
+  leadsRound: z.boolean().optional(),
+  unique: z.boolean().optional(),
+});
+export type PlayerRole = z.infer<typeof PlayerRoleSchema>;
+
+export const PlayerRolesSchema = z
+  .object({
+    roles: z.array(PlayerRoleSchema).min(1),
+    defaultRole: z.string().min(1),
+  })
+  .superRefine((spec, ctx) => {
+    const ids = spec.roles.map((r) => r.id);
+    if (new Set(ids).size !== ids.length)
+      ctx.addIssue({
+        code: "custom",
+        path: ["roles"],
+        message: "player role ids must be unique",
+      });
+    if (!ids.includes(spec.defaultRole))
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultRole"],
+        message: `default role "${spec.defaultRole}" is not declared; roles: ${ids.join(", ")}`,
+      });
+  });
+export type PlayerRoles = z.infer<typeof PlayerRolesSchema>;
+
+/**
+ * Cross-field rules for roles: a role that opens the round needs
+ * lead-relative order, and a round check may only name a declared role.
+ */
+const refinePlayerRoles = (
+  def: {
+    playerRoles?: PlayerRoles;
+    turnOrder?: TurnOrder;
+    turnsPerPlayer?: number;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const rounds = def.turnOrder?.rounds;
+  if (rounds && def.turnsPerPlayer === undefined)
+    ctx.addIssue({
+      code: "custom",
+      path: ["turnsPerPlayer"],
+      message: "a round track takes its length from turnsPerPlayer",
+    });
+  rounds?.checks?.forEach((check, i) => {
+    if (
+      def.turnsPerPlayer !== undefined &&
+      check.afterRound >= def.turnsPerPlayer
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["turnOrder", "rounds", "checks", i, "afterRound"],
+        message: `a round check must come before the last round (${def.turnsPerPlayer})`,
+      });
+  });
+  const ids = new Set(def.playerRoles?.roles.map((r) => r.id));
+  if (
+    def.playerRoles?.roles.some((r) => r.leadsRound) &&
+    def.turnOrder?.mode !== "lead-relative"
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["playerRoles", "roles"],
+      message: "a role that leads the round needs lead-relative turn order",
+    });
+  }
+  const named = [
+    ...(def.turnOrder?.rounds?.checks ?? []).flatMap((c) => [
+      c.whenRoleHeld,
+      c.outcome.winnerRole,
+    ]),
+    def.turnOrder?.rounds?.limitOutcome.winnerRole,
+  ].filter((id): id is string => id !== undefined);
+  for (const id of named) {
+    if (!ids.has(id))
+      ctx.addIssue({
+        code: "custom",
+        path: ["turnOrder", "rounds"],
+        message: `round track names role "${id}", which is not a declared player role`,
+      });
+  }
+};
+
+/**
+ * An assign-role step must name a declared role, and only a role that
+ * is not unique may go to many seats.
+ */
+const refineAssignRoleSteps = (
+  steps: ReadonlyArray<{ kind: SetupStepKind }>,
+  playerRoles: PlayerRoles | undefined,
+  ctx: z.RefinementCtx,
+) => {
+  steps.forEach((step, i) => {
+    const kind = step.kind;
+    if (kind.type !== "assign-role") return;
+    const role = playerRoles?.roles.find((r) => r.id === kind.role);
+    if (!role)
+      ctx.addIssue({
+        code: "custom",
+        path: ["setupSteps", i, "kind", "role"],
+        message: `assign-role step names role "${kind.role}", which is not a declared player role`,
+      });
+    else if (kind.many && role.unique)
+      ctx.addIssue({
+        code: "custom",
+        path: ["setupSteps", i, "kind", "many"],
+        message: `role "${role.id}" is unique, so it cannot go to many seats`,
+      });
+  });
+};
+
 // ── GameDefinition ───────────────────────────────────────────────
 const GameDefinitionShape = z.object({
   schemaVersion: z.literal(GAME_DEFINITION_SCHEMA_VERSION),
@@ -986,6 +1196,10 @@ const GameDefinitionShape = z.object({
   turnOrder: TurnOrderSchema.optional(),
   // Turn actions offered during play. See ControlSchema.
   controls: ControlListSchema.optional(),
+  // Roles players hold and can change during play. See PlayerRolesSchema.
+  playerRoles: PlayerRolesSchema.optional(),
+  // Pointers shown on the end screen for what the table does next.
+  afterGame: z.array(z.string().min(1)).optional(),
   // Optional path (relative to the deployment basePath) to a laurel
   // wreath asset wrapping the leading player's head icon in the
   // VictoryBanner. Resolved from the modules file's referenceCatalog
@@ -1011,7 +1225,9 @@ const GameDefinitionShape = z.object({
 export const GameDefinitionSchema = GameDefinitionShape.superRefine(
   (definition, ctx) => {
     refineControls(definition, ctx);
+    refinePlayerRoles(definition, ctx);
     const steps = definition.setupSteps ?? [];
+    refineAssignRoleSteps(steps, definition.playerRoles, ctx);
     const moduleIds = new Set(
       steps.flatMap((s) =>
         s.kind.type === "multi-toggle" ? s.kind.options.map((o) => o.id) : [],
@@ -1020,21 +1236,28 @@ export const GameDefinitionSchema = GameDefinitionShape.superRefine(
     steps.forEach((step, i) => {
       const gate = step.visibleWhen;
       if (!gate) return;
-      if (gate.type === "toggle-on" || gate.type === "toggle-off") {
-        const earlierToggles = steps
+      // A step-keyed gate names an earlier step of the kind it reads.
+      const keyedKind =
+        gate.type === "toggle-on" || gate.type === "toggle-off"
+          ? "toggle"
+          : gate.type === "role-assigned" || gate.type === "role-unassigned"
+            ? "assign-role"
+            : undefined;
+      if (keyedKind && "step" in gate) {
+        const earlier = steps
           .slice(0, i)
-          .filter((s) => s.kind.type === "toggle")
+          .filter((s) => s.kind.type === keyedKind)
           .map((s) => s.id);
-        if (!earlierToggles.includes(gate.step)) {
+        if (!earlier.includes(gate.step)) {
           ctx.addIssue({
             code: "custom",
             path: ["setupSteps", i, "visibleWhen", "step"],
-            message: `Step "${step.id}" is gated on "${gate.step}", which is not an earlier toggle step; earlier toggle steps: ${earlierToggles.join(", ") || "(none)"}`,
+            message: `Step "${step.id}" is gated on "${gate.step}", which is not an earlier ${keyedKind} step; earlier ${keyedKind} steps: ${earlier.join(", ") || "(none)"}`,
           });
         }
         return;
       }
-      if (!moduleIds.has(gate.module)) {
+      if ("module" in gate && !moduleIds.has(gate.module)) {
         ctx.addIssue({
           code: "custom",
           path: ["setupSteps", i, "visibleWhen", "module"],
@@ -1149,6 +1372,16 @@ const StructureSetupStepKindSchema = z.discriminatedUnion("type", [
     sourceStepId: z.string(),
     order: PickOrderSchema.optional(),
   }),
+  // Give one of the definition's player roles to the seats the table
+  // picks: one seat or none (`noneLabel` names the none choice), or any
+  // number with `many`. Seats given a role by an earlier assign-role
+  // step are not offered. The role is applied when the game starts.
+  z.object({
+    type: z.literal("assign-role"),
+    role: z.string().min(1),
+    many: z.boolean().optional(),
+    noneLabel: z.string().min(1).optional(),
+  }),
   // Choose the starting turn-order lead. Passes through unchanged to
   // the resolved schema. See the post-resolve SetupStepKindSchema.
   z.object({
@@ -1189,6 +1422,8 @@ export const GameDefinitionStructureSchema = z
     playerColorFrom: z.string().optional(),
     turnOrder: TurnOrderSchema.optional(),
     controls: ControlListSchema.optional(),
+    playerRoles: PlayerRolesSchema.optional(),
+    afterGame: z.array(z.string().min(1)).optional(),
     // Sibling content modules file. Relative path purely for human
     // readability: the loader doesn't fetch it; the importer threads
     // both JSONs in.
@@ -1196,7 +1431,10 @@ export const GameDefinitionStructureSchema = z
     sounds: GameSoundsSchema.optional(),
     gameSpecificTerms: z.array(z.string()).optional(),
   })
-  .superRefine(refineControls);
+  .superRefine((def, ctx) => {
+    refineControls(def, ctx);
+    refinePlayerRoles(def, ctx);
+  });
 export type GameDefinitionStructure = z.infer<
   typeof GameDefinitionStructureSchema
 >;
@@ -1461,7 +1699,9 @@ export type SetupChoice =
     }
   // The seat (index into the seat-players roster) chosen to start as
   // the turn-order lead. The page seeds the runtime lead anchor from it.
-  | { kind: "select-lead"; seatIndex: number };
+  | { kind: "select-lead"; seatIndex: number }
+  // The seats an assign-role step gave its role to.
+  | { kind: "assign-role"; seatIndices: number[] };
 
 export type SetupContext = Record<string, SetupChoice>;
 
@@ -1485,6 +1725,12 @@ const toggleOn = (stepId: string, context: SetupContext): boolean => {
   return choice?.kind === "toggle" && choice.value;
 };
 
+// Whether the assign-role step `stepId` gave its role to any seat.
+const roleAssigned = (stepId: string, context: SetupContext): boolean => {
+  const choice = context[stepId];
+  return choice?.kind === "assign-role" && choice.seatIndices.length > 0;
+};
+
 // Whether a step's own `visibleWhen` gate lets it appear under the
 // current choices. Ungated steps always appear.
 export const stepVisibleUnderContext = (
@@ -1502,6 +1748,10 @@ export const stepVisibleUnderContext = (
       return toggleOn(gate.step, context);
     case "toggle-off":
       return !toggleOn(gate.step, context);
+    case "role-assigned":
+      return roleAssigned(gate.step, context);
+    case "role-unassigned":
+      return !roleAssigned(gate.step, context);
   }
 };
 

@@ -45,6 +45,9 @@
   --font-face-big-shoulders:
     var(--font-type-condensed), "Arial Narrow", sans-serif;
   --font-face-cinzel: var(--font-theme-cinzel), Georgia, serif;
+  --font-face-sorts-mill-goudy:
+    var(--font-theme-sorts-mill-goudy), Georgia, serif;
+  --font-face-alegreya: var(--font-theme-alegreya), Georgia, serif;
 
   /* The entry type styles (src/components/identity/typeStyles.module.css).
      Each face is self-hosted by src/app/fonts.ts; the fallbacks keep the
@@ -323,6 +326,8 @@ body {
   background-image: var(--ornament-texture);
   background-attachment: fixed;
   font-family: var(--font-body);
+  /* A role ground changes the surface at a turn change: ease it over. */
+  transition: background-color var(--duration-slow) var(--ease-standard);
 }
 
 h1,

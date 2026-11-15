@@ -25,7 +25,12 @@ import {
   type TurnEntryInput,
   type TurnRecord,
 } from "@/state/gameSession";
-import type { Control, ScoreConfig, TurnOrder } from "@/state/gameDefinition";
+import type {
+  Control,
+  PlayerRoles,
+  ScoreConfig,
+  TurnOrder,
+} from "@/state/gameDefinition";
 import { loadSession, saveSession } from "@/state/sessionPersistence";
 
 type UseTimerProps = {
@@ -287,6 +292,12 @@ export const useTimer = ({
     dispatch({ type: "SET_TURN_ORDER", turnOrder });
   const setControls = (controls: Control[] | undefined) =>
     dispatch({ type: "SET_CONTROLS", controls });
+  const setPlayerRoles = (playerRoles: PlayerRoles | undefined) =>
+    dispatch({ type: "SET_PLAYER_ROLES", playerRoles });
+  const setPlayerRole = (playerIndex: number, roleId: string) =>
+    dispatch({ type: "SET_PLAYER_ROLE", playerIndex, roleId });
+  const resolveRoundCheck = (end: boolean) =>
+    dispatch({ type: "RESOLVE_ROUND_CHECK", end });
   const triggerControl = (controlId: string) =>
     dispatch({ type: "TRIGGER_CONTROL", controlId });
   const reorderTurnEntry = (entryId: string, toIndex: number) =>
@@ -374,6 +385,9 @@ export const useTimer = ({
     definitionId: state.definitionId,
     setTurnOrder,
     setControls,
+    setPlayerRoles,
+    setPlayerRole,
+    resolveRoundCheck,
     triggerControl,
     setLead,
     turnOrder: state.turnOrder,

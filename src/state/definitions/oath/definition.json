@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "id": "oath",
+  "name": "Oath",
+  "gameSpecificTerms": [
+    "oath",
+    "chancellor",
+    "citizen",
+    "exile",
+    "usurper",
+    "oathkeeper",
+    "empire",
+    "imperial",
+    "chronicle",
+    "regime",
+    "exhaustion"
+  ],
+  "description": "Oath: New Foundations for 2–7 players. Up to eight rounds, opened by the Chancellor or the first player.",
+  "contentSource": "./modules.json",
+  "defaultExpectedTurns": 32,
+  "turnsPerPlayer": 8,
+  "defaultAverageSeconds": 240,
+  "maxPlayers": 7,
+  "playerColorFrom": "seating",
+  "playerSubheadingFrom": "role",
+  "turnOrder": {
+    "mode": "lead-relative",
+    "rounds": {
+      "remainingLabel": {
+        "one": "round left",
+        "other": "rounds left"
+      },
+      "limitOutcome": {
+        "title": "War Exhaustion",
+        "body": "The game ends after round eight. In order: an Imperial Oathkeeper means the Chancellor wins; else an Exile Usurper wins; else an Exile meeting a revealed Vision wins; else the Chancellor wins."
+      },
+      "checks": [
+        {
+          "afterRound": 5,
+          "title": "End of round 5",
+          "body": "Is the Chancellor or a Citizen the Oathkeeper? If so, roll the end die. The Chancellor wins on a 6.",
+          "whenRoleHeld": "chancellor",
+          "endLabel": "Chancellor wins",
+          "continueLabel": "Play on",
+          "outcome": {
+            "title": "Stable Regime",
+            "body": "A Citizen who meets the Successor goal wins instead.",
+            "winnerRole": "chancellor"
+          }
+        },
+        {
+          "afterRound": 6,
+          "title": "End of round 6",
+          "body": "Is the Chancellor or a Citizen the Oathkeeper? If so, roll the end die. The Chancellor wins on a 5 or 6.",
+          "whenRoleHeld": "chancellor",
+          "endLabel": "Chancellor wins",
+          "continueLabel": "Play on",
+          "outcome": {
+            "title": "Stable Regime",
+            "body": "A Citizen who meets the Successor goal wins instead.",
+            "winnerRole": "chancellor"
+          }
+        },
+        {
+          "afterRound": 7,
+          "title": "End of round 7",
+          "body": "Is the Chancellor or a Citizen the Oathkeeper? If so, roll the end die. The Chancellor wins on 3 to 6.",
+          "whenRoleHeld": "chancellor",
+          "endLabel": "Chancellor wins",
+          "continueLabel": "Play on",
+          "outcome": {
+            "title": "Stable Regime",
+            "body": "A Citizen who meets the Successor goal wins instead.",
+            "winnerRole": "chancellor"
+          }
+        }
+      ]
+    }
+  },
+  "controls": [
+    {
+      "id": "change-roles",
+      "label": "Change roles",
+      "effect": {
+        "type": "open-player-roles"
+      },
+      "availability": {
+        "limit": "unlimited"
+      }
+    }
+  ],
+  "playerRoles": {
+    "defaultRole": "exile",
+    "roles": [
+      {
+        "id": "exile",
+        "label": "Exile"
+      },
+      {
+        "id": "citizen",
+        "label": "Citizen",
+        "mark": "shield"
+      },
+      {
+        "id": "chancellor",
+        "label": "Chancellor",
+        "mark": "crown",
+        "color": "#7B3F8C",
+        "leadsRound": true,
+        "unique": true
+      }
+    ]
+  },
+  "afterGame": [
+    "Resolve the Chronicle task cards in order",
+    "Record lineage points on the era scorepad"
+  ],
+  "setupSteps": [
+    {
+      "id": "seating",
+      "label": "Seat players",
+      "kind": {
+        "type": "seat-players",
+        "minPlayers": 2,
+        "maxPlayers": 7,
+        "defaultPlayerCount": 4,
+        "colorOptionCategory": "colour",
+        "colorOptionIds": [
+          "white",
+          "red",
+          "blue",
+          "yellow",
+          "black",
+          "pink",
+          "brown"
+        ]
+      }
+    },
+    {
+      "id": "chancellor",
+      "label": "Chancellor",
+      "description": "The last game's winner plays the Chancellor in purple and opens every round. With no Chancellor, there is no Empire.",
+      "kind": {
+        "type": "assign-role",
+        "role": "chancellor",
+        "noneLabel": "No Chancellor"
+      }
+    },
+    {
+      "id": "citizens",
+      "label": "Citizens",
+      "description": "Which players start as Citizens? Everyone else starts as an Exile.",
+      "visibleWhen": {
+        "type": "role-assigned",
+        "step": "chancellor"
+      },
+      "kind": {
+        "type": "assign-role",
+        "role": "citizen",
+        "many": true
+      }
+    },
+    {
+      "id": "first-player",
+      "label": "First player",
+      "description": "With no Empire, a random player takes the first player marker and opens every round.",
+      "visibleWhen": {
+        "type": "role-unassigned",
+        "step": "chancellor"
+      },
+      "kind": {
+        "type": "select-lead",
+        "allowRandom": true,
+        "defaultLead": "random"
+      }
+    }
+  ]
+}

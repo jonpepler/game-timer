@@ -3,6 +3,7 @@ import {
   averageOf,
   type GameSessionState,
   phaseAverage,
+  selectRoundsRemaining,
   variableSlice,
 } from "./gameSession";
 import {
@@ -52,10 +53,21 @@ export const selectPrediction = (state: GameSessionState): Prediction => {
     return modelPrediction(state, state.turnOrder, model, slice);
   const turns = state.expectedTurns - state.turns.length;
   const average = averageOf(state.turns, state.initialAverageSeconds);
+  // A round track counts the same budget down in rounds, in its own words.
+  const label = state.turnOrder?.rounds?.remainingLabel;
+  const rounds = selectRoundsRemaining(state);
   return {
     turns,
     seconds: Math.max(0, turns) * average,
-    modelled: false,
+    // The rules fix a round track's length, so the table doesn't edit it.
+    modelled: label !== undefined && rounds !== null,
+    ...(label &&
+      rounds !== null && {
+        remaining: {
+          count: rounds,
+          label: rounds === 1 ? label.one : label.other,
+        },
+      }),
   };
 };
 

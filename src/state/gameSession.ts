@@ -1,6 +1,13 @@
 import { createLogger } from "@/lib/logger";
 import { flatLabel, type NameParts } from "./entryIdentity";
-import type { Control, ScoreConfig, TurnOrder } from "./gameDefinition";
+import type {
+  Control,
+  GameOutcome,
+  PlayerRole,
+  PlayerRoles,
+  ScoreConfig,
+  TurnOrder,
+} from "./gameDefinition";
 import {
   actsInPhase,
   defaultNextPhaseId,
@@ -196,6 +203,18 @@ export interface GameSessionState {
   phaseLog?: PhaseStart[];
   // Every entry value set during the game, oldest first.
   valueHistory?: ValuePoint[];
+  // ── Player roles and the round track (optional) ─────────────────
+  // Roles the definition declares, held in state so the reducer and
+  // companions can apply role changes without the definition. A
+  // player's role lives in their metadata under ROLE_METADATA_KEY.
+  playerRoles?: PlayerRoles;
+  // The round whose end check the table is being asked, while asked.
+  pendingRoundCheck?: number | null;
+  // How the game ended, in the game's words, when it ended on its round
+  // track. `victor` names the winner, if the outcome has one. An outcome
+  // with no victor still ends the game.
+  outcome?: GameEndOutcome | null;
+
   // Variable order only: the session as it stood before each undoable
   // action, newest last. UNDO restores the newest one.
   undoStack?: UndoSnapshot[];
@@ -203,6 +222,15 @@ export interface GameSessionState {
   // exact state it was built against. Absent until the first change.
   revision?: number;
 }
+
+/** How a finished game ended, as its end screen tells it. */
+export interface GameEndOutcome {
+  title: string;
+  body?: string;
+}
+
+/** The player metadata key a player's role is stored under. */
+export const ROLE_METADATA_KEY = "role";
 
 export interface PendingMilestone {
   playerIndex: number;
@@ -240,7 +268,7 @@ export type GameSessionAction = (
   | { type: "SET_SCORE_CONFIG"; scoreConfig: ScoreConfig | undefined }
   | { type: "SET_SCORE"; playerIndex: number; value: number }
   | { type: "INCREMENT_SCORE"; playerIndex: number; delta: number }
-  | { type: "END_GAME"; victor: number | null }
+  | { type: "END_GAME"; victor: number | null; outcome?: GameEndOutcome }
   | { type: "SET_DEFINITION_ID"; definitionId: string | undefined }
   | { type: "DISMISS_MILESTONE" }
   // Lead-relative turn order. SET_TURN_ORDER installs the mode (and
@@ -253,6 +281,13 @@ export type GameSessionAction = (
   // seat, and is ignored unless the control is currently available.
   | { type: "SET_CONTROLS"; controls: Control[] | undefined }
   | { type: "TRIGGER_CONTROL"; controlId: string }
+  // Player roles. SET_PLAYER_ROLES installs the definition's roles;
+  // SET_PLAYER_ROLE gives one player a role. It never ends a turn.
+  // RESOLVE_ROUND_CHECK answers the pending round check: `end` ends the
+  // game with the check's outcome, otherwise play goes on.
+  | { type: "SET_PLAYER_ROLES"; playerRoles: PlayerRoles | undefined }
+  | { type: "SET_PLAYER_ROLE"; playerIndex: number; roleId: string }
+  | { type: "RESOLVE_ROUND_CHECK"; end: boolean }
   // Variable turn order. Reorder moves one entry within its list; the
   // active entry never changes as a result. Activate puts an entry into
   // a list (its membership list unless `listId` is given), at the end
@@ -326,6 +361,7 @@ export interface GameSessionInit {
   // Seat chosen to lead the opening round.
   leadIndex?: number;
   controls?: Control[];
+  playerRoles?: PlayerRoles;
 }
 
 const EMPTY_VARIABLE_SLICE = {
@@ -386,6 +422,9 @@ const initialStateWithoutOpeningAverage = (
   prevLeadAnchor: null,
   controls: params.controls,
   controlsUsedThisRound: [],
+  playerRoles: params.playerRoles,
+  pendingRoundCheck: null,
+  outcome: null,
   ...seedSlice(params.turnOrder, params.players, params.leadIndex),
 });
 
@@ -452,6 +491,126 @@ function withOpeningAverage(state: GameSessionState): GameSessionState {
     ? state
     : { ...state, averageSeconds: openingAverage(state) };
 }
+
+/** A player's role: the one set on them, else the declared default. */
+export const selectPlayerRole = (
+  state: GameSessionState,
+  playerIndex: number,
+): PlayerRole | undefined => {
+  const spec = state.playerRoles;
+  if (!spec) return undefined;
+  const held = state.players?.[playerIndex]?.metadata[ROLE_METADATA_KEY];
+  const id = held?.type === "selected-option" ? held.optionId : undefined;
+  return (
+    spec.roles.find((r) => r.id === id) ??
+    spec.roles.find((r) => r.id === spec.defaultRole)
+  );
+};
+
+const roleHolder = (state: GameSessionState, roleId: string): number | null => {
+  const index = (state.players ?? []).findIndex(
+    (_, i) => selectPlayerRole(state, i)?.id === roleId,
+  );
+  return index === -1 ? null : index;
+};
+
+const roleMetadata = (role: PlayerRole) => ({
+  type: "selected-option" as const,
+  optionId: role.id,
+  label: role.label,
+  ...(role.color ? { color: role.color } : {}),
+});
+
+/**
+ * Give a player a role. A unique role leaves its last holder, who goes
+ * back to the default. A role that leads the round takes the lead at once
+ * before play starts, and from the next round once it has.
+ */
+const setPlayerRole = (
+  state: GameSessionState,
+  playerIndex: number,
+  roleId: string,
+): GameSessionState => {
+  const spec = state.playerRoles;
+  const role = spec?.roles.find((r) => r.id === roleId);
+  const players = state.players;
+  if (!spec || !role || !players?.[playerIndex]) return state;
+  const fallback = spec.roles.find((r) => r.id === spec.defaultRole) ?? role;
+  const withRole = (player: Player, r: PlayerRole): Player => ({
+    ...player,
+    metadata: { ...player.metadata, [ROLE_METADATA_KEY]: roleMetadata(r) },
+  });
+  const next = players.map((p, i) => {
+    if (i === playerIndex) return withRole(p, role);
+    if (role.unique && selectPlayerRole(state, i)?.id === role.id)
+      return withRole(p, fallback);
+    return p;
+  });
+  log.info("player role set", { playerIndex, roleId });
+  if (!role.leadsRound) return { ...state, players: next };
+  if (!state.started && state.turns.length === 0)
+    return {
+      ...state,
+      players: next,
+      leadIndex: playerIndex,
+      roundStartTurnCount: 0,
+    };
+  return { ...state, players: next, claimedNextLead: playerIndex };
+};
+
+/** The end a definition outcome describes, with its winner when it names a role. */
+const endWith = (
+  state: GameSessionState,
+  outcome: GameOutcome,
+): Pick<GameSessionState, "victor" | "outcome"> => ({
+  victor: outcome.winnerRole ? roleHolder(state, outcome.winnerRole) : null,
+  outcome: {
+    title: outcome.title,
+    ...(outcome.body ? { body: outcome.body } : {}),
+  },
+});
+
+/** Whether the game has ended, with a winner or on an outcome. */
+export const selectGameOver = (state: GameSessionState): boolean =>
+  state.victor !== null || !!state.outcome;
+
+const completedRounds = (state: GameSessionState, turnCount: number) => {
+  const seats = state.players?.length ?? 0;
+  return seats ? Math.floor(turnCount / seats) : 0;
+};
+
+/**
+ * The check to ask when round `round` has just ended, if any: one
+ * declared for that round whose role, if it names one, is held.
+ */
+const roundCheckAfter = (state: GameSessionState, round: number) => {
+  const check = state.turnOrder?.rounds?.checks?.find(
+    (c) => c.afterRound === round,
+  );
+  if (!check) return null;
+  if (check.whenRoleHeld && roleHolder(state, check.whenRoleHeld) === null)
+    return null;
+  return round;
+};
+
+/** The round being played, counting from 1. */
+export const selectRoundNumber = (state: GameSessionState): number =>
+  completedRounds(state, state.turns.length) + 1;
+
+/**
+ * Rounds left under the round track, the current one included. The
+ * track's length is the expected turns, one round being a turn per seat.
+ */
+export const selectRoundsRemaining = (
+  state: GameSessionState,
+): number | null => {
+  const seats = state.players?.length ?? 0;
+  if (!state.turnOrder?.rounds || seats === 0) return null;
+  return Math.max(
+    0,
+    Math.ceil((state.expectedTurns - state.turns.length) / seats),
+  );
+};
 
 // Whose turn it is right now. Round-robin (the default) is purely
 // positional: turns taken modulo seat count. Lead-relative anchors each
@@ -591,17 +750,31 @@ const highestScorer = (state: GameSessionState, seatCount: number): number => {
 };
 
 /**
- * Under a `highestAtTurnLimit` victory the game ends once the recorded
- * turns reach the expected turns, and the highest score wins. At the
- * limit a score correction re-ranks the victor; dropping back below it
- * (an undo, or more expected turns) reopens the game.
+ * The game ends once the recorded turns reach the expected turns: under
+ * a round track with its limit outcome, under a `highestAtTurnLimit`
+ * victory with the highest score winning. At the limit a score
+ * correction re-ranks the victor; dropping back below it (an undo, or
+ * more expected turns) reopens the game.
  */
 const withTurnLimitVictory = (
   state: GameSessionState,
   action: GameSessionAction,
 ): GameSessionState => {
-  if (state.scoreConfig?.victory?.type !== "highestAtTurnLimit") return state;
   if (!TURN_LIMIT_JUDGED.has(action.type)) return state;
+  const track = state.turnOrder?.rounds;
+  if (track && state.turnOrder?.mode !== "variable") {
+    const reached =
+      state.expectedTurns > 0 && state.turns.length >= state.expectedTurns;
+    if (reached === !!state.outcome) return state;
+    if (!reached) return { ...state, victor: null, outcome: null };
+    log.info("game ended at the round limit", { turns: state.turns.length });
+    return {
+      ...state,
+      pendingRoundCheck: null,
+      ...endWith(state, track.limitOutcome),
+    };
+  }
+  if (state.scoreConfig?.victory?.type !== "highestAtTurnLimit") return state;
   const seatCount = state.players?.length ?? 0;
   if (seatCount === 0) return state;
   const reached =
@@ -719,6 +892,7 @@ const reduceSession = (
       };
     }
     case "NEXT_TURN": {
+      if (state.outcome || state.pendingRoundCheck != null) return state;
       const slice = variableSlice(state);
       const list =
         slice && state.turnOrder
@@ -746,12 +920,19 @@ const reduceSession = (
       let controlsUsedThisRound = state.controlsUsedThisRound ?? [];
       let pendingLeadPrompt = state.pendingLeadPrompt ?? false;
       let prevLeadAnchor = state.prevLeadAnchor ?? null;
+      let pendingRoundCheck: number | null = null;
       if (
         state.turnOrder?.mode === "lead-relative" &&
         playerCount &&
         turns.length - roundStartTurnCount >= playerCount
       ) {
         controlsUsedThisRound = [];
+        // A round check is asked before any lead prompt: the page holds the
+        // lead picker back while a check is pending.
+        pendingRoundCheck = roundCheckAfter(
+          state,
+          completedRounds(state, turns.length),
+        );
         if (claimedNextLead != null) {
           prevLeadAnchor = { leadIndex, roundStartTurnCount };
           leadIndex = claimedNextLead;
@@ -777,6 +958,7 @@ const reduceSession = (
         controlsUsedThisRound,
         pendingLeadPrompt,
         prevLeadAnchor,
+        pendingRoundCheck,
         ...(slice && list && state.turnOrder
           ? advanceList(state.turnOrder, slice, list)
           : {}),
@@ -831,6 +1013,10 @@ const reduceSession = (
         controlsUsedThisRound: [],
         pendingLeadPrompt: false,
         prevLeadAnchor,
+        pendingRoundCheck: null,
+        // An ending taken back with its turn reopens the game; a turn-limit
+        // ending is re-judged after the undo.
+        ...(state.outcome ? { outcome: null, victor: null } : {}),
         ...(slice && state.turnOrder && popped.phaseId !== undefined
           ? restoreBefore(state.turnOrder, slice, popped)
           : {}),
@@ -895,6 +1081,41 @@ const reduceSession = (
         controls: action.controls,
         controlsUsedThisRound: [],
       };
+    case "SET_PLAYER_ROLES": {
+      const spec = action.playerRoles;
+      const fallback = spec?.roles.find((r) => r.id === spec.defaultRole);
+      const players =
+        fallback && state.players
+          ? state.players.map((p) =>
+              p.metadata[ROLE_METADATA_KEY]
+                ? p
+                : {
+                    ...p,
+                    metadata: {
+                      ...p.metadata,
+                      [ROLE_METADATA_KEY]: roleMetadata(fallback),
+                    },
+                  },
+            )
+          : state.players;
+      return { ...state, playerRoles: spec, players };
+    }
+    case "SET_PLAYER_ROLE":
+      return setPlayerRole(state, action.playerIndex, action.roleId);
+    case "RESOLVE_ROUND_CHECK": {
+      const round = state.pendingRoundCheck;
+      if (round == null) return state;
+      const check = state.turnOrder?.rounds?.checks?.find(
+        (c) => c.afterRound === round,
+      );
+      if (!action.end || !check) return { ...state, pendingRoundCheck: null };
+      log.info("game ended by round check", { round });
+      return {
+        ...state,
+        pendingRoundCheck: null,
+        ...endWith(state, check.outcome),
+      };
+    }
     case "TRIGGER_CONTROL": {
       const control = selectAvailableControls(state).find(
         (c) => c.id === action.controlId,
@@ -1231,7 +1452,11 @@ const reduceSession = (
     }
     case "END_GAME":
       log.info("game ended", { victor: action.victor });
-      return { ...state, victor: action.victor };
+      return {
+        ...state,
+        victor: action.victor,
+        ...(action.outcome ? { outcome: action.outcome } : {}),
+      };
     case "RESET":
       return createInitialGameSessionState({
         initialAverageSeconds: state.initialAverageSeconds,
@@ -1269,7 +1494,12 @@ export const selectAvailableControls = (
 ): Control[] => {
   const controls = state.controls ?? [];
   if (controls.length === 0) return [];
-  if (!state.started || state.victor !== null || state.pendingLeadPrompt)
+  if (
+    !state.started ||
+    selectGameOver(state) ||
+    state.pendingLeadPrompt ||
+    state.pendingRoundCheck != null
+  )
     return [];
   const active = activePlayerIndex(state);
   const used = state.controlsUsedThisRound ?? [];
@@ -1290,6 +1520,8 @@ const effectApplies = (state: GameSessionState, control: Control): boolean => {
   switch (control.effect.type) {
     case "claim-next-lead":
       return state.turnOrder?.mode === "lead-relative";
+    case "open-player-roles":
+      return state.playerRoles !== undefined;
   }
 };
 
@@ -1304,6 +1536,9 @@ const applyControlEffect = (
       if (active === null) return state;
       return { ...state, claimedNextLead: active };
     }
+    // The screen opens the sheet; the role changes are their own commands.
+    case "open-player-roles":
+      return state;
   }
 };
 

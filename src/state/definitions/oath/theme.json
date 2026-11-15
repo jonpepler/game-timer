@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "name": "Oath",
+  "defaultScheme": "dark",
+  "fonts": {
+    "body": "alegreya",
+    "display": "sorts-mill-goudy",
+    "label": "alegreya",
+    "numeric": "sorts-mill-goudy"
+  },
+  "radius": {
+    "control": 8,
+    "field": 8,
+    "chip": 8,
+    "panel": 12,
+    "sheet": 14,
+    "chrome": 8,
+    "tooltip": 6,
+    "bar": 4
+  },
+  "clock": {
+    "track": {
+      "style": "band"
+    },
+    "progress": {
+      "style": "sweep",
+      "weight": "regular",
+      "cap": "round"
+    },
+    "ornament": {
+      "slot": "above",
+      "kind": "rule-star"
+    },
+    "numerals": {
+      "face": "sorts-mill-goudy-400"
+    },
+    "players": {
+      "cap": "round",
+      "active": "weight",
+      "keyline": true
+    },
+    "overtime": {
+      "style": "hatch"
+    },
+    "paused": {
+      "cue": "tone-hollow"
+    }
+  },
+  "dark": {
+    "colors": {
+      "surface": "#2C2839",
+      "surface-elevated": "#3A3249",
+      "surface-muted": "#453B57",
+      "text": "#F4EEF4",
+      "text-muted": "#CAC1D4",
+      "text-subtle": "#C3BACF",
+      "text-dim": "#E2DAE8",
+      "text-inverse": "#2C2839",
+      "border": "#F4EEF433",
+      "border-strong": "#D9B65A",
+      "ring": "#F4EEF466",
+      "accent": "#D9B65A",
+      "danger": "#F6A48C",
+      "on-danger-tint": "#FFE3DB",
+      "success": "#A9CC6A",
+      "on-success-tint": "#DCEBC1",
+      "warning": "#F0C63A",
+      "on-warning-tint": "#FBEFC6",
+      "timer-paused": "#9B92A8",
+      "timer-overtime": "#F29CA8",
+      "timer-active": "#D9B65A",
+      "player-fallback": "#8F8A99",
+      "on-light": "#2C2839",
+      "on-dark": "#F7F3F8",
+      "clock-track": "#15121D",
+      "clock-ornament": "#D9B65A",
+      "clock-ornament-overtime": "#FFF4E0"
+    },
+    "elevation": {
+      "backdrop": "#100C16C2",
+      "shadow": "#000000"
+    },
+    "grounds": {
+      "chancellor": {
+        "surface": "#4E3D5C",
+        "surface-elevated": "#433451",
+        "surface-muted": "#3A2C47",
+        "text-muted": "#DDD5E6",
+        "text-subtle": "#D4CBDE",
+        "text-dim": "#EEE8F2",
+        "accent": "#E8CB72",
+        "border-strong": "#E8CB72",
+        "danger": "#FFB5A0",
+        "timer-overtime": "#FFB3BE",
+        "timer-paused": "#B9AFC6",
+        "on-danger-tint": "#FFEDE8",
+        "on-success-tint": "#EEF6E0",
+        "on-warning-tint": "#FFF4D0",
+        "timer-active": "#E8CB72",
+        "clock-ornament": "#E8CB72"
+      },
+      "citizen": {
+        "surface": "#56446F",
+        "surface-elevated": "#4E3D6A",
+        "surface-muted": "#44355E",
+        "text-muted": "#ECE6F3",
+        "text-subtle": "#E4DCEE",
+        "text-dim": "#F6F2F9",
+        "accent": "#F2DA90",
+        "border-strong": "#F2DA90",
+        "danger": "#FFC9BB",
+        "timer-overtime": "#FFC8D0",
+        "timer-paused": "#CFC6DB",
+        "on-danger-tint": "#FFFFFF",
+        "on-success-tint": "#FFFFFF",
+        "on-warning-tint": "#FFFFFF",
+        "timer-active": "#F2DA90",
+        "clock-ornament": "#F2DA90",
+        "text": "#FFFFFF"
+      },
+      "exile": {
+        "surface": "#E0B870",
+        "surface-elevated": "#E9C788",
+        "surface-muted": "#D3A85C",
+        "text": "#2A2238",
+        "text-muted": "#3E3120",
+        "text-subtle": "#45372A",
+        "text-dim": "#2A2418",
+        "text-inverse": "#F8F6FA",
+        "border": "#1F1D1C47",
+        "border-strong": "#1F1D1C",
+        "ring": "#1F1D1C66",
+        "accent": "#4B2E5C",
+        "danger": "#7A1522",
+        "on-danger-tint": "#3E0A10",
+        "success": "#2F5520",
+        "on-success-tint": "#16290E",
+        "warning": "#5C3D08",
+        "on-warning-tint": "#2A1A02",
+        "timer-paused": "#4E4232",
+        "timer-overtime": "#7A1522",
+        "timer-active": "#4B2E5C",
+        "player-fallback": "#5E5440",
+        "clock-track": "#1F1D1C",
+        "clock-ornament": "#1F1D1C",
+        "clock-ornament-overtime": "#1F1D1C"
+      }
+    }
+  },
+  "light": {
+    "colors": {
+      "surface": "#ECE8F1",
+      "surface-elevated": "#F8F6FA",
+      "surface-muted": "#DFD9E8",
+      "text": "#2A2238",
+      "text-muted": "#514766",
+      "text-subtle": "#5A5070",
+      "text-dim": "#352C47",
+      "text-inverse": "#F8F6FA",
+      "border": "#2A223840",
+      "border-strong": "#2A2238",
+      "ring": "#2A223866",
+      "accent": "#5B3F7A",
+      "danger": "#8A1F2B",
+      "on-danger-tint": "#521018",
+      "success": "#3F6B2A",
+      "on-success-tint": "#223C16",
+      "warning": "#7A5510",
+      "on-warning-tint": "#3A2405",
+      "timer-paused": "#6E6680",
+      "timer-overtime": "#A8324A",
+      "timer-active": "#5B3F7A",
+      "player-fallback": "#7E7790",
+      "on-light": "#2A2238",
+      "on-dark": "#F8F6FA",
+      "clock-track": "#2A2238",
+      "clock-ornament": "#8A6A12",
+      "clock-ornament-overtime": "#2A2238"
+    },
+    "elevation": {
+      "backdrop": "#2A22388C",
+      "shadow": "#2A2238"
+    },
+    "grounds": {
+      "chancellor": {
+        "surface": "#E4D6E6",
+        "surface-elevated": "#F0E7F1",
+        "surface-muted": "#D7C6DA",
+        "timer-overtime": "#8C2238"
+      },
+      "citizen": {
+        "surface": "#DCD6EE",
+        "surface-elevated": "#EAE6F6",
+        "surface-muted": "#CDC5E5",
+        "timer-overtime": "#8C2238"
+      },
+      "exile": {
+        "surface": "#E0B870",
+        "surface-elevated": "#E9C788",
+        "surface-muted": "#D3A85C",
+        "text": "#2A2238",
+        "text-muted": "#3E3120",
+        "text-subtle": "#45372A",
+        "text-dim": "#2A2418",
+        "text-inverse": "#F8F6FA",
+        "border": "#1F1D1C47",
+        "border-strong": "#1F1D1C",
+        "ring": "#1F1D1C66",
+        "accent": "#4B2E5C",
+        "danger": "#7A1522",
+        "on-danger-tint": "#3E0A10",
+        "success": "#2F5520",
+        "on-success-tint": "#16290E",
+        "warning": "#5C3D08",
+        "on-warning-tint": "#2A1A02",
+        "timer-paused": "#4E4232",
+        "timer-overtime": "#7A1522",
+        "timer-active": "#4B2E5C",
+        "player-fallback": "#5E5440",
+        "clock-track": "#1F1D1C",
+        "clock-ornament": "#1F1D1C",
+        "clock-ornament-overtime": "#1F1D1C"
+      }
+    }
+  }
+}

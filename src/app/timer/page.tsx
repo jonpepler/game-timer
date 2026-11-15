@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import styles from "./page.module.css";
 
 import { useWindowSize } from "@/hooks/useWindowSize";
@@ -29,7 +30,11 @@ import { TurnOrderPanel } from "@/components/TurnOrderPanel";
 import {
   type GameSessionState,
   selectNeedsValueStep,
+  selectPlayerRole,
 } from "@/state/gameSession";
+import { RoleSheet } from "@/components/RoleSheet";
+import { RoleToken } from "@/components/identity/RoleToken";
+import { RoundCheckPrompt } from "@/components/RoundCheckPrompt";
 import {
   applySeatCommand,
   type CommandActor,
@@ -52,7 +57,11 @@ import { TurnEntryBanner } from "@/components/identity/EntryBanner";
 import { EventDialog } from "@/components/EventDialog";
 import { LeadPrompt } from "@/components/LeadPrompt";
 import { findDefinition } from "@/state/definitionRegistry";
-import { effectiveScoreMax, turnOrderForSetup } from "@/state/gameDefinition";
+import {
+  effectiveScoreMax,
+  turnOrderForSetup,
+  visibleSetupSteps,
+} from "@/state/gameDefinition";
 import { Plus, Users } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { SchemeToggle } from "@/components/SchemeToggle";
@@ -66,7 +75,12 @@ import {
   playerIcon,
   playerSubheading,
 } from "@/lib/playerVisual";
-import { useColourScheme, useGameTheme } from "@/hooks/useGameTheme";
+import {
+  useColourScheme,
+  useGameTheme,
+  useSeatNeedsInk,
+  useTurnGround,
+} from "@/hooks/useGameTheme";
 import { useSessionHost } from "@/hooks/useSessionHost";
 import {
   PEER_PROTOCOL_VERSION,
@@ -162,6 +176,9 @@ export default function Home() {
     setTurnOrder,
     setLead,
     setControls,
+    setPlayerRoles,
+    setPlayerRole,
+    resolveRoundCheck,
     triggerControl,
     turnOrder,
     pendingLeadPrompt,
@@ -365,6 +382,12 @@ export default function Home() {
         break;
       case "TRIGGER_CONTROL":
         triggerControl(command.controlId);
+        break;
+      case "SET_PLAYER_ROLE":
+        setPlayerRole(command.playerIndex, command.roleId);
+        break;
+      case "RESOLVE_ROUND_CHECK":
+        resolveRoundCheck(command.end);
         break;
       case "UNDO":
         undo();
@@ -879,13 +902,31 @@ export default function Home() {
     setTurnOrder(incoming.players ? turnOrder : undefined);
     // Controls act for seats, so they need player tracking too.
     setControls(incoming.players ? definition?.controls : undefined);
-    const leadChoice = incoming.setupContext
-      ? Object.values(incoming.setupContext).find(
-          (c) => c.kind === "select-lead",
-        )
-      : undefined;
+    // Only steps the table saw count: a hidden step keeps its default.
+    const shownChoices =
+      incoming.setupContext && definition
+        ? visibleSetupSteps(definition, incoming.setupContext).map(
+            (step) => incoming.setupContext?.[step.id],
+          )
+        : Object.values(incoming.setupContext ?? {});
+    const leadChoice = shownChoices.find((c) => c?.kind === "select-lead");
     if (leadChoice?.kind === "select-lead" && incoming.players?.length)
       setLead(Math.min(leadChoice.seatIndex, incoming.players.length - 1));
+    // Roles from setup apply last, so a role that opens the round sets
+    // the opening lead.
+    setPlayerRoles(incoming.players ? definition?.playerRoles : undefined);
+    if (incoming.players && definition?.setupSteps)
+      for (const step of definition.setupSteps) {
+        const choice = incoming.setupContext?.[step.id];
+        if (
+          step.kind.type !== "assign-role" ||
+          choice?.kind !== "assign-role" ||
+          !shownChoices.includes(choice)
+        )
+          continue;
+        for (const seatIndex of choice.seatIndices)
+          setPlayerRole(seatIndex, step.kind.role);
+      }
     // When the wizard sets autoStart (last seat just confirmed
     // their pick), start the clock so the table doesn't have to tap
     // the screen to begin.
@@ -1208,18 +1249,44 @@ export default function Home() {
   // to close the celebratory overlay and reveal the timer view
   // again (e.g. to check the final scoreboard or undo). Reset
   // whenever a new victor is declared so the banner re-fires.
+  // A game that ended on its round track carries an outcome in its own
+  // words, with or without a winner.
+  const outcome = state.outcome ?? null;
+  const ended = victor !== null || outcome !== null;
   const [victorDismissed, setVictorDismissed] = useState(false);
   useEffect(() => {
-    if (victor === null) setVictorDismissed(false);
-  }, [victor]);
+    if (!ended) setVictorDismissed(false);
+  }, [ended]);
 
-  // Stop the timer the moment a victor is declared so the banner
-  // doesn't sit over a still-running countdown.
+  // Stop the timer the moment the game ends so the banner doesn't sit
+  // over a still-running countdown.
   useEffect(() => {
-    if (victor !== null) pause();
-  }, [victor, pause]);
+    if (ended) pause();
+  }, [ended, pause]);
 
-  const showVictoryHero = victorPlayer != null && !victorDismissed;
+  const showVictoryHero =
+    (victorPlayer != null || outcome !== null) && !victorDismissed;
+  // The page takes the acting player's role ground while a game runs.
+  const groundId =
+    state.started && !ended && !isOpen && currentPlayerIndex !== null
+      ? selectPlayerRole(state, currentPlayerIndex)?.id
+      : undefined;
+  useTurnGround(groundId);
+  // A seat colour too faint on the ground in play draws its name in ink.
+  const nameInk = useSeatNeedsInk(activePlayer?.color, groundId);
+  const pendingCheck =
+    state.pendingRoundCheck != null
+      ? state.turnOrder?.rounds?.checks?.find(
+          (c) => c.afterRound === state.pendingRoundCheck,
+        )
+      : undefined;
+
+  // Roles, and the sheet the table changes them in during play.
+  const playerRoles = state.playerRoles;
+  const [changingRoles, setChangingRoles] = useState(false);
+  const roleOf = (playerIndex: number) => selectPlayerRole(state, playerIndex);
+  const activeRole =
+    currentPlayerIndex !== null ? roleOf(currentPlayerIndex) : undefined;
 
   const hasPlayers = (players?.length ?? 0) > 0;
   const [renamingPlayers, setRenamingPlayers] = useState(false);
@@ -1242,6 +1309,10 @@ export default function Home() {
     turnPhases?.phases.find((p) => p.id === turnPhases.activeId)?.label ?? "";
 
   const declaredControls = state.controls ?? [];
+  // The roles control opens the sheet here; the changes are commands.
+  const roleControl = declaredControls.find(
+    (c) => c.effect.type === "open-player-roles",
+  );
   const panelNodes: Record<PanelId, ReactNode> = {
     turnActions:
       declaredControls.length > 0 ? (
@@ -1249,7 +1320,9 @@ export default function Home() {
           controls={declaredControls}
           availableIds={availableControls.map((c) => c.id)}
           onTrigger={(controlId) =>
-            runHostCommand({ type: "TRIGGER_CONTROL", controlId })
+            controlId === roleControl?.id
+              ? setChangingRoles(true)
+              : runHostCommand({ type: "TRIGGER_CONTROL", controlId })
           }
         />
       ) : null,
@@ -1360,17 +1433,30 @@ export default function Home() {
             ) : activePlayer ? (
               <div
                 className={styles.activePlayer}
-                style={{ color: activePlayer.color }}
+                style={
+                  {
+                    color: activePlayer.color,
+                    ...(nameInk ? { "--seat-text-ink": "100%" } : {}),
+                  } as CSSProperties
+                }
               >
                 {/* Player meeple, tinted to the player colour via
                   mask-image. When there's no icon (Generic / no
                   setup), the player's name itself carries the
                   colour. */}
-                <PlayerMeeple
-                  iconSrc={activePlayer.iconSrc}
-                  color={activePlayer.color}
-                  silhouetteClassName={styles.activePlayerMeeple}
-                />
+                {activeRole && !activePlayer.iconSrc ? (
+                  <RoleToken
+                    color={activePlayer.color}
+                    role={activeRole}
+                    size={36}
+                  />
+                ) : (
+                  <PlayerMeeple
+                    iconSrc={activePlayer.iconSrc}
+                    color={activePlayer.color}
+                    silhouetteClassName={styles.activePlayerMeeple}
+                  />
+                )}
 
                 <span className={styles.activePlayerText}>
                   <span className={styles.activePlayerName}>
@@ -1470,10 +1556,14 @@ export default function Home() {
         // Escape key. The underlying view stays mounted so when
         // dismissed the user sees the final state.
         <VictoryBanner
-          victor={{
-            ...victorPlayer!,
-            iconSrc: victorPlayer!.headIconSrc ?? victorPlayer!.iconSrc,
-          }}
+          victor={
+            victorPlayer && {
+              ...victorPlayer,
+              iconSrc: victorPlayer.headIconSrc ?? victorPlayer.iconSrc,
+            }
+          }
+          outcome={outcome ?? undefined}
+          notes={activeDef?.afterGame}
           laurelSrc={activeDef?.vpLaurelPath}
           onDismiss={() => setVictorDismissed(true)}
         />
@@ -1516,6 +1606,33 @@ export default function Home() {
           />
         )}
       {entryControls.overlays}
+      {pendingCheck && !isOpen && (
+        <RoundCheckPrompt
+          check={pendingCheck}
+          onAnswer={(end) =>
+            runHostCommand({
+              type: "RESOLVE_ROUND_CHECK",
+              end,
+              round: pendingCheck.afterRound,
+            })
+          }
+        />
+      )}
+      {changingRoles && playerRoles && players && !isOpen && (
+        <RoleSheet
+          title={roleControl?.label ?? "Roles"}
+          roles={playerRoles.roles}
+          players={players.map((p, i) => ({
+            name: p.name,
+            color: playerViews?.[i]?.color ?? "var(--color-text)",
+            roleId: roleOf(i)?.id ?? playerRoles.defaultRole,
+          }))}
+          onChange={(playerIndex, roleId) =>
+            runHostCommand({ type: "SET_PLAYER_ROLE", playerIndex, roleId })
+          }
+          onClose={() => setChangingRoles(false)}
+        />
+      )}
       {renamingPlayers && !isOpen && players && (
         <PlayersSheet
           players={players}
@@ -1532,7 +1649,7 @@ export default function Home() {
           onDismiss={() => setMismatchedPeerVersion(null)}
         />
       )}
-      {!victorPlayer && (
+      {(!victorPlayer || outcome) && (
         <Footer
           {...{
             remainingTurns,

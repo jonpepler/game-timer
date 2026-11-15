@@ -20,6 +20,8 @@
 .dismissHint {
   margin-top: var(--space-8);
   pointer-events: none;
+  /* The phone backdrop aligns its children to the end, like a sheet. */
+  align-self: center;
 }
 
 .hero {
@@ -200,4 +202,43 @@
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* The game's own words for how it ended, and what comes next. They
+   read as text, not in the winner's colour. */
+.outcomeTitle {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.outcomeBody {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body);
+}
+
+.notes {
+  margin: 0;
+  padding-left: var(--space-24);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body);
+}
+
+.victorNamePlain {
+  composes: victorName;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--victor-color);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+/* The overlay's words keep clear of the screen edges and centre on it,
+   on a phone too, where the backdrop itself drops its padding. */
+.overlay .hero {
+  width: 100%;
+  padding-inline: var(--space-24);
 }

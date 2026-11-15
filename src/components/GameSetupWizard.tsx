@@ -300,6 +300,10 @@ const defaultContext = (definition: GameDefinition): SetupContext => {
       case "dealt-resolve":
         ctx[step.id] = { kind: "dealt-resolve", confirmedIds: [] };
         break;
+      case "assign-role":
+        // Nobody holds the role until the table picks.
+        ctx[step.id] = { kind: "assign-role", seatIndices: [] };
+        break;
       case "select-lead": {
         // The step's declared default seat; the screen lets the user
         // reassign or randomise. A random default draws from the seats
@@ -1431,15 +1435,53 @@ function StepScreen({
         Math.max(seats.length - 1, 0),
       );
       return (
-        <SelectLeadScreen
+        <SeatPickScreen
           step={step}
-          seats={seats}
-          allowRandom={step.kind.allowRandom ?? false}
-          selectedIndex={current}
-          onChange={(seatIndex) =>
+          seats={seats.map((seat, index) => ({ ...seat, index }))}
+          pick={{ kind: "one", allowRandom: step.kind.allowRandom ?? false }}
+          selected={[current]}
+          onChange={([seatIndex]) =>
             setContext((prev) => ({
               ...prev,
-              [step.id]: { kind: "select-lead", seatIndex },
+              [step.id]: { kind: "select-lead", seatIndex: seatIndex ?? 0 },
+            }))
+          }
+        />
+      );
+    }
+    case "assign-role": {
+      const seatStep = steps.find((s) => s.kind.type === "seat-players");
+      const seatChoice = seatStep ? context[seatStep.id] : undefined;
+      const seats = seatChoice?.kind === "seat-players" ? seatChoice.seats : [];
+      // Seats an earlier assign-role step gave a role keep it.
+      const earlier = steps.slice(0, steps.indexOf(step));
+      const taken = new Set(
+        earlier.flatMap((s) => {
+          const c = context[s.id];
+          return c?.kind === "assign-role" ? c.seatIndices : [];
+        }),
+      );
+      const choice = context[step.id];
+      const selected =
+        choice?.kind === "assign-role"
+          ? choice.seatIndices.filter((i) => i < seats.length && !taken.has(i))
+          : [];
+      return (
+        <SeatPickScreen
+          step={step}
+          seats={seats
+            .map((seat, index) => ({ ...seat, index }))
+            .filter((seat) => !taken.has(seat.index))}
+          pick={
+            step.kind.many
+              ? { kind: "many" }
+              : { kind: "optional", noneLabel: step.kind.noneLabel ?? "None" }
+          }
+          selected={selected}
+          onChange={(seatIndices) =>
+            setContext((prev) => ({
+              ...prev,
+              [step.id]: { kind: "assign-role", seatIndices },
             }))
           }
         />
@@ -1450,22 +1492,37 @@ function StepScreen({
   }
 }
 
-// Pick which seat starts as the turn-order lead. Lists the seated roster as chips; an optional Randomise
-// button rolls a fair starting lead. The chosen seat index is stored
-// generically: the timer page seeds its lead anchor from it.
-function SelectLeadScreen({
+/** How a seat-pick screen chooses: one seat, one seat or none, or many. */
+type SeatPick =
+  | { kind: "one"; allowRandom: boolean }
+  | { kind: "optional"; noneLabel: string }
+  | { kind: "many" };
+
+/**
+ * Choose seats from the seated roster: the opening lead (one seat, with
+ * an optional fair Randomise), or who holds a role (one seat or none, or
+ * any number as checkboxes). Seats keep their roster index, so a screen
+ * that offers only some seats still reports the right ones.
+ */
+function SeatPickScreen({
   step,
   seats,
-  allowRandom,
-  selectedIndex,
+  pick,
+  selected,
   onChange,
 }: {
   step: SetupStep;
-  seats: Array<{ id: string; name: string }>;
-  allowRandom: boolean;
-  selectedIndex: number;
-  onChange: (seatIndex: number) => void;
+  seats: Array<{ id: string; name: string; index: number }>;
+  pick: SeatPick;
+  selected: number[];
+  onChange: (seatIndices: number[]) => void;
 }) {
+  const toggle = (index: number) =>
+    onChange(
+      selected.includes(index)
+        ? selected.filter((i) => i !== index)
+        : [...selected, index].sort((a, b) => a - b),
+    );
   return (
     <>
       <Heading
@@ -1479,23 +1536,46 @@ function SelectLeadScreen({
       {step.description && (
         <p className={styles.screenSubtitle}>{step.description}</p>
       )}
-      {seats.length === 0 ? (
+      {seats.length === 0 && pick.kind === "one" ? (
         <p className={styles.screenSubtitle}>Seat players first.</p>
+      ) : pick.kind === "many" ? (
+        <div className={styles.toggleList}>
+          {seats.map((seat) => (
+            <Toggle
+              key={seat.id}
+              label={seat.name}
+              checked={selected.includes(seat.index)}
+              onChange={() => toggle(seat.index)}
+            />
+          ))}
+        </div>
       ) : (
         <>
           <div className={styles.chipGrid}>
-            {seats.map((seat, i) => (
+            {seats.map((seat) => (
               <ListRow
                 key={seat.id}
                 label={seat.name}
-                pressed={i === selectedIndex}
-                onClick={() => onChange(i)}
+                pressed={selected[0] === seat.index}
+                onClick={() => onChange([seat.index])}
                 aria-label={seat.name}
               />
             ))}
+            {pick.kind === "optional" && (
+              <ListRow
+                label={pick.noneLabel}
+                pressed={selected.length === 0}
+                onClick={() => onChange([])}
+                aria-label={pick.noneLabel}
+              />
+            )}
           </div>
-          {allowRandom && (
-            <Button onClick={() => onChange(randomIndex(seats.length))}>
+          {pick.kind === "one" && pick.allowRandom && (
+            <Button
+              onClick={() =>
+                onChange([seats[randomIndex(seats.length)]?.index ?? 0])
+              }
+            >
               <Dices size={14} aria-hidden /> Randomise
             </Button>
           )}

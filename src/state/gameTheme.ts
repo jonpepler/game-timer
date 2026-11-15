@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { washCap } from "@/lib/contrast";
+import { contrastHex, luminance, parseHex, washCap } from "@/lib/contrast";
 import {
   type ClockFace,
   ClockFaceSchema,
@@ -41,6 +41,14 @@ export const THEME_FACES = {
   },
   cinzel: {
     stack: "var(--font-face-cinzel)",
+    numerals: null,
+  },
+  "sorts-mill-goudy": {
+    stack: "var(--font-face-sorts-mill-goudy)",
+    numerals: "sorts-mill-goudy-400",
+  },
+  alegreya: {
+    stack: "var(--font-face-alegreya)",
     numerals: null,
   },
 } as const satisfies Record<
@@ -151,6 +159,26 @@ const ColoursSchema = z
     }
   });
 
+const GroundSchema = z
+  .object({
+    ...(Object.fromEntries(
+      [...REQUIRED_COLOUR_TOKENS, ...OPTIONAL_COLOUR_TOKENS].map((t) => [
+        t,
+        ColourSchema.optional(),
+      ]),
+    ) as {
+      [K in
+        | (typeof REQUIRED_COLOUR_TOKENS)[number]
+        | (typeof OPTIONAL_COLOUR_TOKENS)[number]]: z.ZodOptional<
+        typeof ColourSchema
+      >;
+    }),
+    surface: SolidSchema,
+    "surface-elevated": SolidSchema,
+    "surface-muted": SolidSchema,
+  })
+  .strict();
+
 const SchemeSchema = z
   .object({
     colors: ColoursSchema,
@@ -173,6 +201,14 @@ const SchemeSchema = z
       })
       .strict()
       .default({ frame: "none", texture: "none" }),
+    /**
+     * Grounds keyed by a player role id: while a holder of that role takes
+     * their turn, the page takes these colours instead. A ground sets the
+     * three surfaces and may set any other colour token, such as dark ink
+     * for a light ground on a dark scheme; the rest come from the scheme.
+     * Each ground must hold the scheme's contrast on its own.
+     */
+    grounds: z.record(z.string().min(1), GroundSchema).optional(),
   })
   .strict()
   .superRefine((s, ctx) => {
@@ -411,6 +447,24 @@ export const schemeTokens = (
   return out;
 };
 
+/**
+ * Whether a seat colour needs the ink to be read as text on the surface in
+ * play: under 3:1 on the scheme's surface, or the ground's while one is
+ * shown. Colours that are not hex (CSS variables) are left as they are.
+ */
+export const seatNeedsInk = (
+  theme: GameTheme,
+  scheme: ThemeScheme,
+  groundId: string | undefined,
+  colour: string,
+): boolean => {
+  if (!/^#[0-9a-f]{6}$/i.test(colour)) return false;
+  const s = theme[scheme];
+  const surface =
+    (groundId ? s.grounds?.[groundId]?.surface : undefined) ?? s.colors.surface;
+  return contrastHex(colour, surface) < 3;
+};
+
 /** The stylesheet that applies `theme` while its id is on the html element. */
 export const themeCss = ({ definitionId, theme }: BundledTheme): string =>
   (["light", "dark"] as const)
@@ -418,6 +472,27 @@ export const themeCss = ({ definitionId, theme }: BundledTheme): string =>
       const body = Object.entries(schemeTokens(theme, scheme))
         .map(([name, value]) => `  ${name}: ${value};`)
         .join("\n");
-      return `html[data-game-theme="${definitionId}"][data-scheme="${scheme}"] {\n  color-scheme: ${scheme};\n${body}\n}`;
+      const scope = `html[data-game-theme="${definitionId}"][data-scheme="${scheme}"]`;
+      const grounds = Object.entries(theme[scheme].grounds ?? {}).map(
+        ([role, ground]) => {
+          const colours = { ...theme[scheme].colors, ...ground };
+          // A light ground reads like the light scheme: names pulled to the
+          // ink, pale seats held stronger.
+          const light = luminance(parseHex(ground.surface)) > 0.35;
+          const lines = [
+            ...Object.entries(ground)
+              .filter(([, value]) => value !== undefined)
+              .map(([token, value]) => `  --color-${token}: ${value};`),
+            `  --clock-wash-cap: ${washCap(colours.text, colours["timer-overtime"], ground.surface)};`,
+            `  --clock-inactive-opacity: ${light ? "0.5" : "0.3"};`,
+            `  --seat-text-ink: ${light ? "100%" : "0%"};`,
+          ];
+          return `${scope}[data-ground="${role}"] {\n${lines.join("\n")}\n}`;
+        },
+      );
+      return [
+        `${scope} {\n  color-scheme: ${scheme};\n${body}\n}`,
+        ...grounds,
+      ].join("\n");
     })
     .join("\n");

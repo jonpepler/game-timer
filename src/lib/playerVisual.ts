@@ -7,7 +7,7 @@
  * metadata is absent (generic game, no setup step has fired yet),
  * we fall back to a positional palette.
  */
-import type { Player } from "@/state/gameSession";
+import { type Player, ROLE_METADATA_KEY } from "@/state/gameSession";
 
 // Distinct, accessible colours for anonymous-player games. First N
 // players get these in order; the wrap-around lets larger games still
@@ -42,15 +42,17 @@ export const fallbackColor = (
   return palette[playerIndex % palette.length] ?? "#888";
 };
 
-// Get the colour to render for this player. Prefers metadata declared
-// by playerVisualFrom; otherwise falls back to the positional palette
-// for the scheme on screen.
+// Get the colour to render for this player. A role that carries a
+// colour wins; then metadata declared by playerVisualFrom; otherwise the
+// positional palette for the scheme on screen.
 export const playerColor = (
   player: Player | undefined,
   playerIndex: number,
   visualKey: string | undefined,
   scheme: "light" | "dark" = "dark",
 ): string => {
+  const role = player?.metadata[ROLE_METADATA_KEY];
+  if (role?.type === "selected-option" && role.color) return role.color;
   if (player && visualKey) {
     const meta = player.metadata[visualKey];
     if (meta?.type === "selected-option" && meta.color) return meta.color;

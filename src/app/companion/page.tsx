@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
@@ -29,12 +30,19 @@ import { PlayerMeeple } from "@/components/PlayerMeeple";
 import { EventDialog } from "@/components/EventDialog";
 import { FullScreen } from "@/components/FullScreen";
 import { SchemeToggle } from "@/components/SchemeToggle";
-import { useColourScheme, useGameTheme } from "@/hooks/useGameTheme";
+import {
+  useColourScheme,
+  useGameTheme,
+  useSeatNeedsInk,
+  useTurnGround,
+} from "@/hooks/useGameTheme";
 import { getPlayerStats } from "@/utils/getPlayerStats";
 import {
   createInitialGameSessionState,
   selectAvailableControls,
   selectCurrentPlayerIndex,
+  selectGameOver,
+  selectPlayerRole,
   selectTurnOrder,
   selectTurnPhases,
   selectUntimedTurnLabel,
@@ -46,6 +54,9 @@ import {
   playerSubheading,
 } from "@/lib/playerVisual";
 import { TurnActions } from "@/components/TurnActions";
+import { RoleSheet } from "@/components/RoleSheet";
+import { RoleToken } from "@/components/identity/RoleToken";
+import { RoundCheckPrompt } from "@/components/RoundCheckPrompt";
 import { TurnEntryBanner } from "@/components/identity/EntryBanner";
 import { createLogger } from "@/lib/logger";
 import type {
@@ -567,8 +578,14 @@ function CompanionScreen() {
     sendCommand({ type: "INCREMENT_SCORE", playerIndex: claimedSlot, delta });
   };
 
-  const triggerControl = (controlId: string) =>
-    sendCommand({ type: "TRIGGER_CONTROL", controlId });
+  // The roles control opens the sheet here; the changes are commands the
+  // host checks like any other.
+  const [changingRoles, setChangingRoles] = useState(false);
+  const triggerControl = (controlId: string) => {
+    const control = state?.controls?.find((c) => c.id === controlId);
+    if (control?.effect.type === "open-player-roles") setChangingRoles(true);
+    else sendCommand({ type: "TRIGGER_CONTROL", controlId });
+  };
 
   // Wizard-time pick response. Sent in answer to a SETUP_TURN from
   // the host; the host applies it to the wizard's setupContext.
@@ -682,6 +699,8 @@ function CompanionScreen() {
     state?.victor !== undefined && state?.victor !== null
       ? playerViews[state.victor]
       : undefined;
+  // Over with a winner, or on an outcome that names none.
+  const ended = state ? selectGameOver(state) : false;
   const prediction = state ? selectPrediction(state) : null;
   const remaining = Math.max(0, prediction?.turns ?? 0);
   const scoresVisible = !!(
@@ -699,13 +718,34 @@ function CompanionScreen() {
         }
       : undefined;
   const isMyTurn =
-    claimedSlot !== null && activePlayerIndex === claimedSlot && !victorPlayer;
+    claimedSlot !== null && activePlayerIndex === claimedSlot && !ended;
+  // Roles, and whether this phone may change them now (the host's rule).
+  const playerRoles = state?.playerRoles;
+  const activeRole =
+    state && activePlayerIndex !== null
+      ? selectPlayerRole(state, activePlayerIndex)
+      : undefined;
+  const groundId =
+    state?.started && !ended && activePlayerIndex !== null
+      ? activeRole?.id
+      : undefined;
+  useTurnGround(groundId);
+  const nameInk = useSeatNeedsInk(activePlayer?.color, groundId);
+  const roleControl = state?.controls?.find(
+    (c) => c.effect.type === "open-player-roles",
+  );
+  const pendingCheck =
+    state?.pendingRoundCheck != null
+      ? state.turnOrder?.rounds?.checks?.find(
+          (c) => c.afterRound === state.pendingRoundCheck,
+        )
+      : undefined;
   // The host's own rule decides, so a shared turn no seat owns can be
   // ended from any seated phone.
   const canEndTurn =
     !!state &&
     claimedSlot !== null &&
-    !victorPlayer &&
+    !ended &&
     authorizeCommand(
       state,
       { type: "END_TURN" },
@@ -716,7 +756,7 @@ function CompanionScreen() {
   const seatless =
     !!state?.started && playerViews.length === 0 && !pendingSeating;
   const actsForTable =
-    (claimedSlot !== null || seatless) && !victorPlayer && !versionMismatch;
+    (claimedSlot !== null || seatless) && !ended && !versionMismatch;
   const revision = state?.revision ?? 0;
   // A sent undo locks the button until the host's state moves on (or it
   // refuses), so a double tap cannot read as a second undo.
@@ -746,7 +786,7 @@ function CompanionScreen() {
   // Controls available to this companion's seat right now. The host
   // re-validates every trigger.
   const availableControlIds =
-    state && claimedSlot !== null && !victorPlayer
+    state && claimedSlot !== null && !ended
       ? selectAvailableControls(state, claimedSlot).map((c) => c.id)
       : [];
   // Lift the End-my-turn optimistic lock once the host has
@@ -763,7 +803,7 @@ function CompanionScreen() {
   // The host's turn-entry UI: the turn order with its actions, the value
   // question, the end-of-phase prompts and the combine sheet. A screen
   // without a seat only watches.
-  const canAct = claimedSlot !== null && !victorPlayer && !versionMismatch;
+  const canAct = claimedSlot !== null && !ended && !versionMismatch;
   const entryControls = useTurnEntryControls({
     state: state ?? NO_STATE,
     players: playerViews,
@@ -970,8 +1010,12 @@ function CompanionScreen() {
 
         {state && (
           <>
-            {victorPlayer ? (
-              <VictoryBanner victor={victorPlayer} />
+            {ended ? (
+              <VictoryBanner
+                victor={victorPlayer}
+                outcome={state.outcome ?? undefined}
+                notes={definition?.afterGame}
+              />
             ) : activeEntry?.label !== undefined && turnOrderView ? (
               <div className={styles.activePlayer}>
                 <TurnEntryBanner
@@ -985,14 +1029,25 @@ function CompanionScreen() {
               activePlayer && (
                 <div
                   className={styles.activePlayer}
-                  style={{ color: activePlayer.color }}
+                  style={
+                    {
+                      color: activePlayer.color,
+                      ...(nameInk ? { "--seat-text-ink": "100%" } : {}),
+                    } as CSSProperties
+                  }
                 >
                   <PlayerMeeple
                     iconSrc={activePlayer.iconSrc}
                     color={activePlayer.color}
                     headClassName={styles.activePlayerHead}
                     silhouetteClassName={styles.activePlayerMeeple}
-                    fallback={<Disc color={activePlayer.color} size="lg" />}
+                    fallback={
+                      <RoleToken
+                        color={activePlayer.color}
+                        role={activeRole}
+                        size={36}
+                      />
+                    }
                   />
                   <span className={styles.activePlayerText}>
                     <span>
@@ -1137,7 +1192,7 @@ function CompanionScreen() {
               + time-share so other content can flow above it. The
               auto margin pushes it to the viewport bottom when there
               IS spare room. */}
-            {claimedPlayer && !victorPlayer && (
+            {claimedPlayer && !ended && (
               <div className={styles.endTurnSlot}>
                 <TurnActions
                   controls={state.controls ?? []}
@@ -1187,6 +1242,33 @@ function CompanionScreen() {
             onDismiss={() => setRefusal(null)}
           />
         )
+      )}
+      {pendingCheck && claimedSlot !== null && (
+        <RoundCheckPrompt
+          check={pendingCheck}
+          onAnswer={(end) =>
+            sendCommand({
+              type: "RESOLVE_ROUND_CHECK",
+              end,
+              round: pendingCheck.afterRound,
+            })
+          }
+        />
+      )}
+      {changingRoles && canAct && playerRoles && state?.players && (
+        <RoleSheet
+          title={roleControl?.label ?? "Roles"}
+          roles={playerRoles.roles}
+          players={state.players.map((p, i) => ({
+            name: playerViews[i]?.name ?? p.name,
+            color: playerViews[i]?.color ?? "var(--color-text)",
+            roleId: selectPlayerRole(state, i)?.id ?? playerRoles.defaultRole,
+          }))}
+          onChange={(playerIndex, roleId) =>
+            sendCommand({ type: "SET_PLAYER_ROLE", playerIndex, roleId })
+          }
+          onClose={() => setChangingRoles(false)}
+        />
       )}
       {renamingPlayers && canAct && !pendingSeating && state?.players && (
         <PlayersSheet

@@ -8,17 +8,24 @@ import { NUMERAL_METRICS } from "../src/state/clockFace";
  * fixed-pitch cells. The stored digit advance must match the font.
  */
 
+/** Each face with the figure style the clock sets it in. */
 const FACES = [
-  ["inter-600", "--font-inter", 600],
-  ["old-standard-700", "--font-type-serif", 700],
-  ["big-shoulders-800", "--font-type-condensed", 800],
+  ["inter-600", "--font-inter", 600, "tabular-nums"],
+  ["old-standard-700", "--font-type-serif", 700, "tabular-nums"],
+  ["big-shoulders-800", "--font-type-condensed", 800, "tabular-nums"],
+  [
+    "sorts-mill-goudy-400",
+    "--font-theme-sorts-mill-goudy",
+    400,
+    "tabular-nums lining-nums",
+  ],
 ] as const;
 
-for (const [face, variable, weight] of FACES) {
+for (const [face, variable, weight, figures] of FACES) {
   test(`${face} figures keep the clock steady`, async ({ page }) => {
     await page.goto("/game-timer/timer");
     const measured = await page.evaluate(
-      async ({ variable, weight }) => {
+      async ({ variable, weight, figures }) => {
         const family = getComputedStyle(document.documentElement)
           .getPropertyValue(variable)
           .trim();
@@ -31,7 +38,7 @@ for (const [face, variable, weight] of FACES) {
         const width = (glyph: string) => {
           const t = document.createElementNS(ns, "text");
           t.setAttribute("font-size", "20");
-          t.style.cssText = `font-family:${family};font-weight:${weight};font-variant-numeric:tabular-nums`;
+          t.style.cssText = `font-family:${family};font-weight:${weight};font-variant-numeric:${figures}`;
           t.textContent = glyph;
           svg.appendChild(t);
           return t.getComputedTextLength() / 20;
@@ -43,7 +50,7 @@ for (const [face, variable, weight] of FACES) {
           loaded: document.fonts.check(`${weight} 20px ${family}`),
         };
       },
-      { variable, weight },
+      { variable, weight, figures },
     );
     expect(measured.loaded).toBe(true);
     const widest = Math.max(...measured.digits);

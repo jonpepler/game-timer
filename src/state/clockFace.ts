@@ -13,6 +13,7 @@ export const NUMERAL_FACES = [
   "inter-600",
   "old-standard-700",
   "big-shoulders-800",
+  "sorts-mill-goudy-400",
 ] as const;
 export type NumeralFace = (typeof NUMERAL_FACES)[number];
 export type ResolvedNumeralFace = Exclude<NumeralFace, "body">;
@@ -264,6 +265,13 @@ export const NUMERAL_METRICS: Record<ResolvedNumeralFace, NumeralMetrics> = {
     cellMode: false,
     cell: { digit: 0.58, colon: 0.28, plus: 0.94 },
     drawnSign: { width: 0.46, bar: 0.12, cy: -0.125 },
+  },
+  "sorts-mill-goudy-400": {
+    size: 20.39,
+    dy: 0.877,
+    spread: 0,
+    cellMode: false,
+    cell: { digit: 0.527, colon: 0.26, plus: 0.527 },
   },
   "big-shoulders-800": {
     size: 18.31,

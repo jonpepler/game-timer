@@ -1,8 +1,10 @@
 import {
+  Alegreya,
   Alfa_Slab_One,
   Archivo,
   Big_Shoulders_Display,
   Cinzel,
+  Sorts_Mill_Goudy,
   Old_Standard_TT,
   Poiret_One,
   Saira_Stencil_One,
@@ -93,4 +95,22 @@ const cinzel = Cinzel({
   variable: "--font-theme-cinzel",
 });
 
-export const themeFontVariables = cinzel.variable;
+const sortsMillGoudy = Sorts_Mill_Goudy({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  preload: false,
+  variable: "--font-theme-sorts-mill-goudy",
+});
+
+const alegreya = Alegreya({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: false,
+  variable: "--font-theme-alegreya",
+});
+
+export const themeFontVariables = [cinzel, sortsMillGoudy, alegreya]
+  .map((font) => font.variable)
+  .join(" ");

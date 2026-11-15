@@ -68,3 +68,30 @@ describe("playerSubheading", () => {
     expect(playerSubheading(p, undefined)).toBeUndefined();
   });
 });
+
+describe("playerColor with a role", () => {
+  const role = (color?: string): Player["metadata"] => ({
+    role: {
+      type: "selected-option",
+      optionId: "head",
+      label: "Head",
+      ...(color ? { color } : {}),
+    },
+  });
+
+  it("draws a player in their role's colour over their own", () => {
+    const player = make("Ann", {
+      ...withPick("Ann", "red", "Red", "#ff0000").metadata,
+      ...role("#7b3f8c"),
+    });
+    expect(playerColor(player, 0, "pick")).toBe("#7b3f8c");
+  });
+
+  it("keeps the player's own colour when the role has none", () => {
+    const player = make("Ann", {
+      ...withPick("Ann", "red", "Red", "#ff0000").metadata,
+      ...role(),
+    });
+    expect(playerColor(player, 0, "pick")).toBe("#ff0000");
+  });
+});

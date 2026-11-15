@@ -38,6 +38,13 @@
   font-weight: var(--font-weight-heavy);
 }
 
+/* Old-style figures by default: the clock asks for lining ones. */
+.faceSortsMillGoudy {
+  font-family: var(--font-face-sorts-mill-goudy);
+  font-weight: var(--font-weight-regular);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 /* Below 160px the ornament's hairlines fall under a device pixel. */
 @container (max-width: 159px) {
   .ornament {
